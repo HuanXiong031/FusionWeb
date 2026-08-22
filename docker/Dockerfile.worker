@@ -1,0 +1,100 @@
+# syntax=docker/dockerfile:1.7
+
+# FusionWeb Worker 本体
+FROM golang:1.25-bookworm AS worker-builder
+WORKDIR /src
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
+COPY go.mod go.sum ./
+COPY backend/engine/lib/gonmap/go.mod backend/engine/lib/gonmap/go.sum ./backend/engine/lib/gonmap/
+COPY backend/engine/lib/dnsx/go.mod backend/engine/lib/dnsx/go.sum ./backend/engine/lib/dnsx/
+COPY backend/engine/lib/gologger/go.mod backend/engine/lib/gologger/go.sum ./backend/engine/lib/gologger/
+COPY backend/engine/lib/httpx/go.mod backend/engine/lib/httpx/go.sum ./backend/engine/lib/httpx/
+COPY backend/engine/lib/nuclei/go.mod backend/engine/lib/nuclei/go.sum ./backend/engine/lib/nuclei/
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/fusionweb-worker ./worker
+
+# 扫描 CLI 在 CI 构建镜像时编译，部署机器只拉取镜像。
+FROM golang:1.26-bookworm AS scanner-tool-base
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
+ENV GOSUMDB=off
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM scanner-tool-base AS tool-httpx
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.10.0
+
+FROM scanner-tool-base AS tool-nuclei
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+
+FROM scanner-tool-base AS tool-naabu
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.6.1
+
+FROM scanner-tool-base AS tool-subfinder
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.15.0
+
+FROM scanner-tool-base AS tool-dnsx
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=1 go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.3.0
+
+FROM scanner-tool-base AS tool-ffuf
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go install -v github.com/ffuf/ffuf/v2@v2.2.1
+
+FROM debian:bookworm-slim
+ARG DEBIAN_MIRROR=http://deb.debian.org/debian
+ARG DEBIAN_SECURITY_MIRROR=http://deb.debian.org/debian-security
+RUN sed -i \
+      -e "s|http://deb.debian.org/debian|${DEBIAN_MIRROR}|g" \
+      -e "s|http://security.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g" \
+      -e "s|http://deb.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g" \
+      /etc/apt/sources.list.d/debian.sources \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && printf 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n' > /etc/apt/apt.conf.d/keep-cache
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates tzdata dumb-init iputils-ping \
+       nmap masscan chromium fonts-noto-cjk libpcap0.8
+WORKDIR /app
+COPY --from=worker-builder /out/fusionweb-worker /usr/local/bin/fusionweb-worker
+COPY --from=tool-httpx /go/bin/httpx /usr/local/bin/httpx
+COPY --from=tool-nuclei /go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=tool-naabu /go/bin/naabu /usr/local/bin/naabu
+COPY --from=tool-subfinder /go/bin/subfinder /usr/local/bin/subfinder
+COPY --from=tool-dnsx /go/bin/dnsx /usr/local/bin/dnsx
+COPY --from=tool-ffuf /go/bin/ffuf /usr/local/bin/ffuf
+COPY data /opt/fusionweb-data
+COPY docker/worker-entrypoint.sh /usr/local/bin/fusionweb-worker-entrypoint
+RUN chmod +x /usr/local/bin/fusionweb-worker-entrypoint \
+    && httpx -version \
+    && nuclei -version \
+    && naabu -version \
+    && subfinder -version \
+    && dnsx -version \
+    && ffuf -V \
+    && nmap --version | head -n 1 \
+    && masscan --version 2>&1 | head -n 1 \
+    && chromium --version
+ENV TZ=Asia/Shanghai
+ENV CHROME_BIN=/usr/bin/chromium
+ENV FUSIONWEB_DATA_DIR=/app/data
+ENTRYPOINT ["dumb-init", "--", "/usr/local/bin/fusionweb-worker-entrypoint"]
+CMD ["fusionweb-worker"]
+

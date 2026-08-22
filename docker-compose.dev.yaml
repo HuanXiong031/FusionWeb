@@ -1,0 +1,39 @@
+name: fusionweb-dev
+
+# 本文件是源码构建覆盖层：
+# docker compose -f docker-compose.yaml -f docker-compose.dev.yaml --env-file .env up -d --build
+services:
+  postgres:
+    ports: ["${FUSIONWEB_PG_PORT:-5432}:5432"]
+
+  redis:
+    ports: ["${FUSIONWEB_REDIS_PORT:-6379}:6379"]
+
+  minio:
+    ports:
+      - "${FUSIONWEB_MINIO_PORT:-9000}:9000"
+      - "${FUSIONWEB_MINIO_CONSOLE_PORT:-9001}:9001"
+
+  fusionweb-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+      args:
+        GOPROXY: ${FUSIONWEB_GO_PROXY:-https://goproxy.cn,direct}
+    image: fusionweb-api:dev
+
+  fusionweb-web:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: fusionweb-web:dev
+
+  fusionweb-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+      args:
+        GOPROXY: ${FUSIONWEB_GO_PROXY:-https://goproxy.cn,direct}
+        DEBIAN_MIRROR: ${FUSIONWEB_DEBIAN_MIRROR:-http://deb.debian.org/debian}
+        DEBIAN_SECURITY_MIRROR: ${FUSIONWEB_DEBIAN_SECURITY_MIRROR:-http://deb.debian.org/debian-security}
+    image: fusionweb-worker:dev

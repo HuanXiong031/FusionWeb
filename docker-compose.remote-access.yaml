@@ -1,0 +1,15 @@
+name: fusionweb
+
+# 仅在需要让远程 Worker 直连 PostgreSQL、Redis、MinIO 时叠加此文件。
+# 生产环境请把 FUSIONWEB_INFRA_BIND 限制为 VPN/内网地址，并配置防火墙。
+services:
+  postgres:
+    ports:
+      - "${FUSIONWEB_INFRA_BIND:-127.0.0.1}:${FUSIONWEB_PG_PORT:-5432}:5432"
+  redis:
+    ports:
+      - "${FUSIONWEB_INFRA_BIND:-127.0.0.1}:${FUSIONWEB_REDIS_PORT:-6379}:6379"
+  minio:
+    ports:
+      - "${FUSIONWEB_INFRA_BIND:-127.0.0.1}:${FUSIONWEB_MINIO_PORT:-9000}:9000"
+      - "${FUSIONWEB_INFRA_BIND:-127.0.0.1}:${FUSIONWEB_MINIO_CONSOLE_PORT:-9001}:9001"

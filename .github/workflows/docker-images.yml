@@ -1,0 +1,166 @@
+name: Build and publish FusionWeb images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  POSTGRES_VERSION: 17-alpine
+  REDIS_VERSION: 7.4-alpine
+  MINIO_VERSION: RELEASE.2025-07-23T15-54-02Z
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      image_prefix: ${{ steps.release.outputs.image_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate release configuration and VERSION
+        id: release
+        shell: bash
+        env:
+          ACR_NAMESPACE: ${{ vars.ALIYUN_REGISTRY_NAMESPACE }}
+          ACR_USERNAME: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "${ACR_NAMESPACE}" ]] || { echo "Missing repository variable: ALIYUN_REGISTRY_NAMESPACE" >&2; exit 1; }
+          [[ -n "${ACR_USERNAME}" ]] || { echo "Missing secret: ALIYUN_REGISTRY_USERNAME" >&2; exit 1; }
+          [[ -n "${ACR_PASSWORD}" ]] || { echo "Missing secret: ALIYUN_REGISTRY_PASSWORD" >&2; exit 1; }
+
+          version="$(tr -d '\r\n[:space:]' < VERSION)"
+          [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
+            echo "Invalid VERSION: ${version}" >&2
+            exit 1
+          }
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            [[ "${tag_version}" == "${version}" ]] || {
+              echo "Git tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+              exit 1
+            }
+          fi
+
+          image_prefix="${REGISTRY}/${ACR_NAMESPACE}/fusionweb"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "image_prefix=${image_prefix}" >> "${GITHUB_OUTPUT}"
+          echo "Publishing FusionWeb ${version} to ${image_prefix}-*"
+
+  build-business-images:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: .
+            dockerfile: docker/Dockerfile.api
+            cache_scope: fusionweb-api
+          - name: web
+            context: frontend
+            dockerfile: frontend/Dockerfile
+            cache_scope: fusionweb-web
+          - name: worker
+            context: .
+            dockerfile: docker/Dockerfile.worker
+            cache_scope: fusionweb-worker-scanner-tools
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+
+      - name: Build and push fusionweb-${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ needs.prepare.outputs.image_prefix }}-${{ matrix.name }}:${{ needs.prepare.outputs.version }}
+            ${{ needs.prepare.outputs.image_prefix }}-${{ matrix.name }}:latest
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+          build-args: |
+            GOPROXY=https://goproxy.cn,direct
+
+  mirror-runtime-images:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install skopeo
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+
+      - name: Login to Alibaba Cloud ACR
+        shell: bash
+        env:
+          ACR_USERNAME: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "${ACR_PASSWORD}" | skopeo login "${REGISTRY}" --username "${ACR_USERNAME}" --password-stdin
+
+      - name: Mirror PostgreSQL, Redis and MinIO for linux/amd64
+        shell: bash
+        env:
+          IMAGE_PREFIX: ${{ needs.prepare.outputs.image_prefix }}
+        run: |
+          set -euo pipefail
+          skopeo copy --override-os linux --override-arch amd64 --all=false \
+            "docker://docker.io/library/postgres:${POSTGRES_VERSION}" \
+            "docker://${IMAGE_PREFIX}-postgres:${POSTGRES_VERSION}"
+          skopeo copy --override-os linux --override-arch amd64 --all=false \
+            "docker://docker.io/library/redis:${REDIS_VERSION}" \
+            "docker://${IMAGE_PREFIX}-redis:${REDIS_VERSION}"
+          skopeo copy --override-os linux --override-arch amd64 --all=false \
+            "docker://docker.io/minio/minio:${MINIO_VERSION}" \
+            "docker://${IMAGE_PREFIX}-minio:${MINIO_VERSION}"
+
+  release-summary:
+    needs: [prepare, build-business-images, mirror-runtime-images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write release summary
+        shell: bash
+        run: |
+          cat >> "${GITHUB_STEP_SUMMARY}" <<EOF
+          ## FusionWeb ${{ needs.prepare.outputs.version }}
+
+          Published public-image candidates for \`linux/amd64\`:
+
+          - \`${{ needs.prepare.outputs.image_prefix }}-api:${{ needs.prepare.outputs.version }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-web:${{ needs.prepare.outputs.version }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-worker:${{ needs.prepare.outputs.version }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-postgres:${{ env.POSTGRES_VERSION }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-redis:${{ env.REDIS_VERSION }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-minio:${{ env.MINIO_VERSION }}\`
+
+          API, Web and Worker also received the \`latest\` tag. Repository visibility must be configured as public in ACR.
+          EOF

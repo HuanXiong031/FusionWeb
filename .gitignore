@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/.next-dev/
+node_modules/
+*.exe
+*.log
+.DS_Store
+Thumbs.db
+frontend/out/
+frontend/logs-next/
+.bat-script-test/
+data/
+.git.disabled/

@@ -1,0 +1,346 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-sidebar: var(--sidebar);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-accent: var(--accent);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info-foreground: var(--info-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --radius-card: 8px;
+}
+
+:root,
+:root[data-theme="vercel"] {
+  color-scheme: light;
+  --background: #f7f7f8;
+  --foreground: #111111;
+  --card: #ffffff;
+  --panel: #f2f2f3;
+  --raised: #e9e9eb;
+  --sidebar: #ffffff;
+  --border: #dcdcdf;
+  --muted: #5f6066;
+  --subtle: #8a8b91;
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --accent: #9333ea;
+  --success-foreground: #166534;
+  --warning-foreground: #854d0e;
+  --danger-foreground: #991b1b;
+  --info-foreground: #1d4ed8;
+  --accent-foreground: #6b21a8;
+  --scrollbar-track: #f7f7f8;
+  --scrollbar-thumb: #b8bbc2;
+  --selection: rgba(17, 17, 17, 0.16);
+}
+
+:root[data-theme="vercel-dark"],
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #080808;
+  --panel: #101010;
+  --raised: #171717;
+  --sidebar: #0d0d0d;
+  --border: #262626;
+  --muted: #a3a3a3;
+  --subtle: #737373;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --accent: #a78bfa;
+  --success-foreground: #bbf7d0;
+  --warning-foreground: #fde68a;
+  --danger-foreground: #fecaca;
+  --info-foreground: #bfdbfe;
+  --accent-foreground: #ddd6fe;
+  --scrollbar-track: #000000;
+  --scrollbar-thumb: #404040;
+  --selection: rgba(250, 250, 250, 0.22);
+}
+
+:root[data-theme="violet-bloom"] {
+  color-scheme: light;
+  --background: #fbf7ff;
+  --foreground: #23182f;
+  --card: #ffffff;
+  --panel: #f4ecff;
+  --raised: #eadcff;
+  --sidebar: #ffffff;
+  --border: #decdf3;
+  --muted: #6c5f7f;
+  --subtle: #9383aa;
+  --success: #16a34a;
+  --warning: #c08403;
+  --danger: #dc2626;
+  --info: #7c3aed;
+  --accent: #0d9488;
+  --success-foreground: #166534;
+  --warning-foreground: #854d0e;
+  --danger-foreground: #991b1b;
+  --info-foreground: #5b21b6;
+  --accent-foreground: #0f766e;
+  --scrollbar-track: #fbf7ff;
+  --scrollbar-thumb: #c7afe8;
+  --selection: rgba(124, 58, 237, 0.18);
+}
+
+:root[data-theme="bubblegum"] {
+  color-scheme: light;
+  --background: #fff7fb;
+  --foreground: #2b1722;
+  --card: #ffffff;
+  --panel: #ffeaf4;
+  --raised: #ffd7e8;
+  --sidebar: #ffffff;
+  --border: #f5bfd6;
+  --muted: #805a6c;
+  --subtle: #ad7f95;
+  --success: #0f9f6e;
+  --warning: #c26a00;
+  --danger: #e11d48;
+  --info: #db2777;
+  --accent: #2563eb;
+  --success-foreground: #047857;
+  --warning-foreground: #92400e;
+  --danger-foreground: #9f1239;
+  --info-foreground: #9d174d;
+  --accent-foreground: #1d4ed8;
+  --scrollbar-track: #fff7fb;
+  --scrollbar-thumb: #efa8c9;
+  --selection: rgba(219, 39, 119, 0.18);
+}
+
+:root[data-theme="quantum-rose"] {
+  color-scheme: dark;
+  --background: #130810;
+  --foreground: #fff1f7;
+  --card: #1d0d18;
+  --panel: #281121;
+  --raised: #35172c;
+  --sidebar: #10070d;
+  --border: #4b243e;
+  --muted: #d8a8c1;
+  --subtle: #a9748e;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --info: #f472b6;
+  --accent: #38bdf8;
+  --success-foreground: #bbf7d0;
+  --warning-foreground: #fde68a;
+  --danger-foreground: #fecdd3;
+  --info-foreground: #fbcfe8;
+  --accent-foreground: #bae6fd;
+  --scrollbar-track: #130810;
+  --scrollbar-thumb: #6d3359;
+  --selection: rgba(244, 114, 182, 0.26);
+}
+
+:root[data-theme="clean-slate"] {
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --panel: #f1f5f9;
+  --raised: #e2e8f0;
+  --sidebar: #ffffff;
+  --border: #cbd5e1;
+  --muted: #475569;
+  --subtle: #64748b;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+  --accent: #9333ea;
+  --success-foreground: #065f46;
+  --warning-foreground: #92400e;
+  --danger-foreground: #991b1b;
+  --info-foreground: #075985;
+  --accent-foreground: #6b21a8;
+  --scrollbar-track: #f8fafc;
+  --scrollbar-thumb: #94a3b8;
+  --selection: rgba(2, 132, 199, 0.17);
+}
+
+:root[data-theme="cosmic-night"] {
+  color-scheme: dark;
+  --background: #050712;
+  --foreground: #eef2ff;
+  --card: #0a1020;
+  --panel: #101827;
+  --raised: #172033;
+  --sidebar: #070b16;
+  --border: #27324a;
+  --muted: #a8b3cf;
+  --subtle: #6f7a96;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+  --info: #60a5fa;
+  --accent: #a78bfa;
+  --success-foreground: #bbf7d0;
+  --warning-foreground: #fde68a;
+  --danger-foreground: #fecdd3;
+  --info-foreground: #bfdbfe;
+  --accent-foreground: #ddd6fe;
+  --scrollbar-track: #050712;
+  --scrollbar-thumb: #33415f;
+  --selection: rgba(96, 165, 250, 0.24);
+}
+
+:root[data-theme="cyberpunk"] {
+  color-scheme: dark;
+  --background: #090b0f;
+  --foreground: #ecfeff;
+  --card: #0d1217;
+  --panel: #111a20;
+  --raised: #17242b;
+  --sidebar: #070b10;
+  --border: #21414a;
+  --muted: #9ee9ef;
+  --subtle: #5eb7c2;
+  --success: #39ff88;
+  --warning: #facc15;
+  --danger: #ff2d75;
+  --info: #22d3ee;
+  --accent: #a855f7;
+  --success-foreground: #b6ffd4;
+  --warning-foreground: #fef08a;
+  --danger-foreground: #ffb3ca;
+  --info-foreground: #a5f3fc;
+  --accent-foreground: #e9d5ff;
+  --scrollbar-track: #090b0f;
+  --scrollbar-thumb: #1c6470;
+  --selection: rgba(34, 211, 238, 0.25);
+}
+
+:root[data-theme="eva-unit-01"] {
+  color-scheme: dark;
+  --background: #0c0712;
+  --foreground: #f4edff;
+  --card: #130d1d;
+  --panel: #1b1128;
+  --raised: #241633;
+  --sidebar: #0b0710;
+  --border: #3d2a55;
+  --muted: #cab7e8;
+  --subtle: #8f75b8;
+  --success: #84cc16;
+  --warning: #facc15;
+  --danger: #ef4444;
+  --info: #a855f7;
+  --accent: #22d3ee;
+  --success-foreground: #d9f99d;
+  --warning-foreground: #fef08a;
+  --danger-foreground: #fecaca;
+  --info-foreground: #e9d5ff;
+  --accent-foreground: #a5f3fc;
+  --scrollbar-track: #0c0712;
+  --scrollbar-thumb: #543675;
+  --selection: rgba(132, 204, 22, 0.24);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+body {
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--info) 62%, transparent);
+  color: var(--foreground);
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+  background: color-mix(in srgb, var(--info) 60%, transparent) !important;
+  background-color: color-mix(in srgb, var(--info) 60%, transparent) !important;
+}
+
+.cm-editor .cm-content ::selection {
+  background: color-mix(in srgb, var(--info) 60%, transparent) !important;
+  background-color: color-mix(in srgb, var(--info) 60%, transparent) !important;
+  color: #ffffff !important;
+}
+
+.cm-editor .cm-selectionMatch,
+.cm-editor .cm-searchMatch,
+.cm-editor .cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--info) 38%, transparent) !important;
+  background-color: color-mix(in srgb, var(--info) 38%, transparent) !important;
+}
+
+.chart-tooltip {
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  color: var(--foreground) !important;
+}

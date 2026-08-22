@@ -1,0 +1,14 @@
+.env
+.git
+frontend/node_modules
+frontend/.next
+frontend/.next-dev
+frontend/out
+frontend/dist
+node_modules
+tools
+config
+*.exe
+*.syso
+*.ico
+报告.md

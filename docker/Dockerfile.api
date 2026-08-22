@@ -1,0 +1,24 @@
+FROM golang:1.25-alpine AS builder
+WORKDIR /src
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=$GOPROXY
+COPY go.mod go.sum ./
+COPY backend/engine/lib/gonmap/go.mod backend/engine/lib/gonmap/go.sum ./backend/engine/lib/gonmap/
+COPY backend/engine/lib/dnsx/go.mod backend/engine/lib/dnsx/go.sum ./backend/engine/lib/dnsx/
+COPY backend/engine/lib/gologger/go.mod backend/engine/lib/gologger/go.sum ./backend/engine/lib/gologger/
+COPY backend/engine/lib/httpx/go.mod backend/engine/lib/httpx/go.sum ./backend/engine/lib/httpx/
+COPY backend/engine/lib/nuclei/go.mod backend/engine/lib/nuclei/go.sum ./backend/engine/lib/nuclei/
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/fusionweb-api .
+
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates tzdata wget openssl
+WORKDIR /app
+COPY --from=builder /out/fusionweb-api /usr/local/bin/fusionweb-api
+COPY data /opt/fusionweb-data
+COPY docker/entrypoint.sh /usr/local/bin/fusionweb-entrypoint
+RUN chmod +x /usr/local/bin/fusionweb-entrypoint
+EXPOSE 8082
+ENTRYPOINT ["/usr/local/bin/fusionweb-entrypoint"]
+CMD ["fusionweb-api"]
