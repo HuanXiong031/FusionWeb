@@ -1,0 +1,24 @@
+id: realor-RAPAgent-version
+
+info:
+  name: 瑞友天翼应用虚拟化系统版本获取
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: app="REALOR-天翼应用虚拟化系统"
+  reference:
+    - 
+  tags: versions
+
+http:
+  - raw:
+      - |
+        GET /RAPAgent.XGI?CMD=GetRegInfo HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+
+    matchers:
+      - type: dsl
+        name: version
+        dsl:
+          - "status_code == 200 && contains (body,'Version')"

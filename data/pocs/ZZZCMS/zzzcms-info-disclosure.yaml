@@ -1,0 +1,33 @@
+id: zzzcms-info-disclosure
+
+info:
+  name: Zzzcms 1.75 - Information Disclosure
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        GET /plugins/webuploader/js/webconfig.php HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'var adminpath'
+          - 'var imageMaxSize='
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200
+

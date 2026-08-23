@@ -1,0 +1,29 @@
+id: yonyou-nc-info-leak
+
+info:
+  name: Yonyou UFIDA NC - Information Exposure
+  author: HuanXiong
+  severity: medium
+  description: |-
+    
+  reference:
+    - 
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/service/~iufo/com.ufida.web.action.ActionServlet?TableSelectedID&TreeSelectedID&action=nc.ui.iufo.release.InfoReleaseAction&method=createBBSRelease"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "iufo/web/images/usericon.gif"
+          - "/iufo/web/images/tree/tree_plus.gif"
+        condition: and
+
+      - type: status
+        status:
+          - 200
+

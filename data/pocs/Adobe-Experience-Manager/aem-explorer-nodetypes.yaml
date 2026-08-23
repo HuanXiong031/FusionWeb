@@ -1,0 +1,31 @@
+id: aem-explorer-nodetypes
+
+info:
+  name: Adobe AEM Explorer NodeTypes Exposure
+  author: HuanXiong
+  severity: high
+  
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/crx/explorer/nodetypes/index.jsp"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - 'nodetypeadmin'
+          - 'Registered Node Types'
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200
+

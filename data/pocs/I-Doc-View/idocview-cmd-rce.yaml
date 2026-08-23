@@ -1,0 +1,26 @@
+id: idocview-cmd-rce
+
+info:
+  name: iDocView cmd.json RCE
+  author: HuanXiong
+  severity: critical
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /system/cmd.json HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        part: status_code
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - '"code":"1"'
+        condition: and

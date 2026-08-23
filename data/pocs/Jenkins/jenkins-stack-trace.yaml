@@ -1,0 +1,26 @@
+id: jenkins-stack-trace
+
+info:
+  name: Detect Jenkins in Debug Mode with Stack Traces Enabled
+  author: HuanXiong
+  severity: low
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/adjuncts/3a890183/"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "java.lang.StringIndexOutOfBoundsException"
+          - "String index out of range"
+        part: body
+        condition: and
+      - type: status
+        status:
+          - 500
+

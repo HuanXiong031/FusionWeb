@@ -1,0 +1,28 @@
+id: zhiyuan-file-upload
+
+info:
+  name: Zhiyuan OA Arbitrary File Upload Vulnerability
+  author: HuanXiong
+  severity: critical
+
+  tags: File Upload
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/seeyon/thirdpartyController.do.css/..;/ajax.do"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "java.lang.NullPointerException:null"
+
+      - type: word
+        words:
+          - "text/html"
+        part: header
+
+      - type: status
+        status:
+          - 200

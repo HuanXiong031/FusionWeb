@@ -1,0 +1,26 @@
+id: ruoyi-druid-unauth
+
+info:
+  name: 若依Driud未授权访问
+  author: HuanXiong
+  severity: high
+  description: |-
+    若依Driud未授权访问
+
+  tags: Unauthorized
+
+http:
+  - raw:
+      - |
+        GET /prod-api/druid/websession.html HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "Web Session Stat"
+        part: body

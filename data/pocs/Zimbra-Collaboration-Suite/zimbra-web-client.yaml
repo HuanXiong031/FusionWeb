@@ -1,0 +1,32 @@
+id: zimbra-web-client
+
+info:
+  name: Zimbra Panel - Detect
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/zimbraAdmin/"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "<title>Zimbra Administration</title>"
+
+      - type: status
+        status:
+          - 200
+
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - 'AjxPackage\.setQueryString\("v=(.+)"\);'
+

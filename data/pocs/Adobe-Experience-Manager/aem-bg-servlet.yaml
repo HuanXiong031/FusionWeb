@@ -1,0 +1,24 @@
+id: aem-bg-servlet
+
+info:
+  name: AEM BG-Servlets
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/system/bgservlets/test.css'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - '<br/>Flushing output<br/>'
+

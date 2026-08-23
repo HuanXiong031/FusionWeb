@@ -1,0 +1,25 @@
+id: zabbix-dashboards-access
+
+info:
+  name: zabbix-dashboards-access
+  author: HuanXiong
+  severity: medium
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/zabbix/zabbix.php?action=dashboard.list"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "Create dashboard"
+          - "Zabbix SIA"
+        condition: and
+
+      - type: status
+        status:
+          - 200

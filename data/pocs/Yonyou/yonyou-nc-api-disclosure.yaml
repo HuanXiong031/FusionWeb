@@ -1,0 +1,29 @@
+id: yonyou-nc-api-disclosure
+
+info:
+  name: 用友NC service接口信息泄露
+  author: HuanXiong
+  severity: medium
+  description: |-
+    
+  reference:
+    - 
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        GET /uapws/service HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "<a href=\"http"
+          - "/uapws/service"
+        part: body
+        condition: and

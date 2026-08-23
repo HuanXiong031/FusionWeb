@@ -1,0 +1,26 @@
+id: jenkins-openuser-register
+
+info:
+  name: Jenkins Open User registration
+  author: HuanXiong
+  severity: medium
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/signup"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Create an account! [Jenkins]"
+      - type: word
+        part: header
+        words:
+          - "text/html"
+      - type: status
+        status:
+          - 200

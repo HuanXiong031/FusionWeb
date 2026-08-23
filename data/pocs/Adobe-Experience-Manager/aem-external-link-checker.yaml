@@ -1,0 +1,31 @@
+id: aem-external-link-checker
+
+info:
+  name: Adobe AEM External Link Checker Exposure
+  author: HuanXiong
+  severity: high
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/etc/linkchecker.html"
+      - "{{BaseURL}}/var/linkchecker.html"
+
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>External Link Checker</title>'
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200

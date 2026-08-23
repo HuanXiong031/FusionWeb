@@ -1,0 +1,28 @@
+id: aem-debugging-libraries
+
+info:
+  name: Adobe AEM Debugging Client Libraries
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/libs/cq/ui/content/dumplibs.html"
+      - "{{BaseURL}}/libs/granite/ui/content/dumplibs.validate.html"
+      - "{{BaseURL}}/libs/granite/ui/content/dumplibs.rebuild.html"
+      - "{{BaseURL}}/libs/granite/ui/content/dumplibs.test.html"
+      - "{{BaseURL}}/libs/granite/ui/content/dumplibs.html"
+
+    stop-at-first-match: true
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '<title>Client Libraries</title>'
+          - '<title>Rebuild Client Libraries</title>'
+          - '<title>Client Libraries Test Output</title>'
+        condition: or
+

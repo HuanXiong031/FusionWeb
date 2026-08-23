@@ -1,0 +1,19 @@
+id: everything-listing
+
+info:
+  name: Everything Server Exposure
+  author: HuanXiong
+  severity: high
+  tags: Unauthorized
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: 未授权访问
+        dsl:
+          - "status_code==200 && contains_all(body,'<title>Everything</title>','indexof')"

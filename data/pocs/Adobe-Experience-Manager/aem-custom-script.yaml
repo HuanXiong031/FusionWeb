@@ -1,0 +1,44 @@
+id: aem-custom-script
+
+info:
+  name: Adobe AEM Custom Scripts Exposure
+  author: HuanXiong
+  severity: high
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/apps.tidy.infinity.json"
+      - "{{BaseURL}}{{path}}"
+
+    iterate-all: true
+
+    extractors:
+      - type: json
+        part: body
+        name: path
+        json:
+          - '.[]'
+        internal: true
+    stop-at-first-match: true
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"jcr:primaryType":'
+          - '"jcr:createdBy":'
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - application/json
+
+      - type: status
+        status:
+          - 200
+

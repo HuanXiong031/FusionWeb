@@ -1,0 +1,33 @@
+id: tianqing-info-leak
+
+info:
+  name: Tianqing Info Leak
+  author: HuanXiong
+  severity: medium
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/dbstat/gettablessize"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "schema_name"
+          - "table_name"
+          - "table_size"
+        condition: and
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+      - type: status
+        status:
+          - 200
+

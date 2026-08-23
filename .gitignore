@@ -13,5 +13,4 @@ Thumbs.db
 frontend/out/
 frontend/logs-next/
 .bat-script-test/
-data/
 .git.disabled/

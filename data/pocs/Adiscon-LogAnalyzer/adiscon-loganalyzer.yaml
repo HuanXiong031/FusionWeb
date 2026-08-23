@@ -1,0 +1,34 @@
+id: adiscon-loganalyzer
+
+info:
+  name: Adiscon LogAnalyzer - Information Disclosure
+  author: HuanXiong
+  severity: high
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'Adiscon LogAnalyzer'
+          - 'value="SYSLOG"'
+          - 'value="EVTRPT"'
+          - 'value="WEBLOG"'
+        condition: and
+
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: header
+        words:
+          - 'text/html'
+

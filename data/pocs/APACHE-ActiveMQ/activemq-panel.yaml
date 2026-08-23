@@ -1,0 +1,22 @@
+id: activemq-panel
+
+info:
+  name: Apache ActiveMQ Exposure
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}'
+
+    matchers:
+      - type: word
+        words:
+          - '<h2>Welcome to the Apache ActiveMQ!</h2>'
+          - '<title>Apache ActiveMQ</title>'
+        condition: and
+
+

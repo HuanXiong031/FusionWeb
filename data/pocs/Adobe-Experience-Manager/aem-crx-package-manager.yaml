@@ -1,0 +1,30 @@
+id: aem-crx-package-manager
+
+info:
+  name: Adobe AEM CRX Package Manager - Panel Detect
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/crx/packmgr/index.jsp"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>CRX Package Manager</title>'
+
+      - type: word
+        part: header
+        words:
+          - text/html
+
+      - type: status
+        status:
+          - 200
+
+

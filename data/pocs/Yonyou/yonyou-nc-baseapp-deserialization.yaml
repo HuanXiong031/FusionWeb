@@ -1,0 +1,23 @@
+id: yonyou-nc-baseapp-deserialization
+
+info:
+  name: Yonyou NC BaseApp UploadServlet - Deserialization Detect
+  author: HuanXiong
+  severity: high
+  description: |-
+    
+  reference:
+    - 
+  tags: RCE
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/service/~baseapp/UploadServlet"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'status_code_1 == 200 && contains_all(body_1,"java.io","EOFExceptionYI")'
+        condition: and
+

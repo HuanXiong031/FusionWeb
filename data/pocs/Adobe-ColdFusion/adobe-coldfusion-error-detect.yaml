@@ -1,0 +1,26 @@
+id: adobe-coldfusion-error-detect
+
+info:
+  name: Adobe ColdFusion Detector
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/_something_.cfm"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'ColdFusion documentation'
+
+      - type: status
+        status:
+          - 404
+
+

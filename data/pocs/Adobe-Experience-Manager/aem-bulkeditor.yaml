@@ -1,0 +1,25 @@
+id: aem-bulkeditor
+
+info:
+  name: AEM BulkEditor
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/etc/importers/bulkeditor.html"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - '<title>AEM BulkEditor</title>'
+
+      - type: status
+        status:
+          - 200
+

