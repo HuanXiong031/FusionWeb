@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  REGISTRY: ${{ vars.ALIYUN_REGISTRY_HOST || 'crpi-bw40e2qu21b597zs.cn-hangzhou.personal.cr.aliyuncs.com' }}
   POSTGRES_VERSION: 17-alpine
   REDIS_VERSION: 7.4-alpine
   MINIO_VERSION: RELEASE.2025-07-23T15-54-02Z

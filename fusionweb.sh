@@ -105,11 +105,8 @@ validate_image_prefix() {
   local prefix
   prefix="$(get_env FUSIONWEB_IMAGE_PREFIX)"
   [[ -n "${prefix}" ]] || fail ".env 中缺少 FUSIONWEB_IMAGE_PREFIX。"
-  if [[ "${prefix}" == *your-acr-namespace* ]]; then
-    fail "请先把 .env 中的 your-acr-namespace 替换为真实的阿里云 ACR 命名空间。"
-  fi
-  [[ "${prefix}" == registry.cn-hangzhou.aliyuncs.com/*/fusionweb ]] || \
-    warn "当前镜像前缀不是计划中的杭州 ACR 格式：${prefix}"
+  [[ "${prefix}" == *cn-hangzhou*/*/fusionweb ]] || \
+    warn "当前镜像前缀不是计划中的杭州 ACR FusionWeb 格式：${prefix}"
 }
 
 install_docker_linux() {

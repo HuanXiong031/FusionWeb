@@ -215,7 +215,7 @@ func handleWorkerInstallCommand(c *gin.Context) {
 	server := scheme + "://" + host
 	image := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_IMAGE"))
 	if image == "" {
-		image = "registry.cn-hangzhou.aliyuncs.com/your-acr-namespace/fusionweb-worker:0.1.0"
+		image = "crpi-bw40e2qu21b597zs.cn-hangzhou.personal.cr.aliyuncs.com/fusionweb/fusionweb-worker:0.1.0"
 	}
 	externalPGDSN := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_PG_DSN"))
 	externalRedisAddr := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR"))
@@ -236,9 +236,6 @@ func handleWorkerInstallCommand(c *gin.Context) {
 	warnings := make([]string, 0, 2)
 	if !strings.Contains(image, "/") {
 		warnings = append(warnings, "Worker 镜像看起来是本地镜像名；远程机器必须能够从镜像仓库拉取该镜像，或预先导入镜像。")
-	}
-	if strings.Contains(image, "your-acr-namespace") {
-		warnings = append(warnings, "Worker 镜像仍使用 ACR 命名空间占位符，请先配置主节点 FUSIONWEB_IMAGE_PREFIX 并重启 API。")
 	}
 	if len(missing) > 0 {
 		warnings = append(warnings, "远程 Worker 部署参数尚未配置完整，请先在主节点 .env 中补齐缺失项并重启 API。")

@@ -148,13 +148,10 @@ if not defined ENV_VALUE (
   echo [FusionWeb] %ENV_FILE% 中缺少 FUSIONWEB_IMAGE_PREFIX。
   exit /b 1
 )
-echo !ENV_VALUE! | findstr /L /C:"your-acr-namespace" >nul
-if not errorlevel 1 (
-  echo [FusionWeb] 请先把 %ENV_FILE% 中的 your-acr-namespace 替换为真实的阿里云 ACR 命名空间。
-  exit /b 1
-)
-echo !ENV_VALUE! | findstr /B /L /C:"registry.cn-hangzhou.aliyuncs.com/" >nul
-if errorlevel 1 echo [FusionWeb] 提示：当前镜像前缀不是计划中的杭州 ACR 地址：!ENV_VALUE!
+echo !ENV_VALUE! | findstr /L /C:"cn-hangzhou" >nul
+if errorlevel 1 echo [FusionWeb] 提示：当前镜像前缀不是杭州 ACR 地址：!ENV_VALUE!
+echo !ENV_VALUE! | findstr /L /C:"/fusionweb" >nul
+if errorlevel 1 echo [FusionWeb] 提示：当前镜像前缀不是 FusionWeb 仓库前缀：!ENV_VALUE!
 exit /b 0
 
 :validate_compose

@@ -1,7 +1,7 @@
 name: fusionweb-remote-worker
 services:
   fusionweb-worker:
-    image: ${FUSIONWEB_IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/your-acr-namespace/fusionweb}-worker:${FUSIONWEB_VERSION:-0.1.0}
+    image: ${FUSIONWEB_IMAGE_PREFIX:-crpi-bw40e2qu21b597zs.cn-hangzhou.personal.cr.aliyuncs.com/fusionweb/fusionweb}-worker:${FUSIONWEB_VERSION:-0.1.0}
     restart: unless-stopped
     environment:
       FUSIONWEB_SERVER: ${FUSIONWEB_SERVER:-https://host.docker.internal:${FUSIONWEB_HTTPS_PORT:-8988}}
