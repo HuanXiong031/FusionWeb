@@ -6,6 +6,7 @@ set "SCRIPT_VERSION=2.0.0"
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b 1
 set "COMPOSE_FILE=docker-compose.yaml"
+set "REMOTE_ACCESS_FILE=docker-compose.remote-access.yaml"
 set "ENV_FILE=.env"
 set "ENV_EXAMPLE=.env.example"
 set "VERSION_FILE=VERSION"
@@ -111,6 +112,85 @@ if "!NEED_SECRET!"=="1" (
 )
 exit /b 0
 
+:is_loopback_host
+set "HOST_CHECK=%~1"
+if not defined HOST_CHECK exit /b 0
+if /I "%~1"=="127.0.0.1" exit /b 0
+if /I "%~1"=="localhost" exit /b 0
+if /I "%~1"=="::1" exit /b 0
+exit /b 1
+
+:detect_primary_ip
+set "DETECTED_HOST_IP="
+for /f "usebackq delims=" %%I in (`powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$route=Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric,InterfaceMetric | Select-Object -First 1; $ip=$null; if($route){$ip=Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $route.InterfaceIndex -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | Select-Object -ExpandProperty IPAddress -First 1}; if(-not $ip){$ip=Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | Select-Object -ExpandProperty IPAddress -First 1}; if($ip){Write-Output $ip}"`) do if not defined DETECTED_HOST_IP set "DETECTED_HOST_IP=%%I"
+exit /b 0
+
+:set_compose_args
+set COMPOSE_ARGS=--env-file "%ENV_FILE%" -f "%COMPOSE_FILE%"
+call :get_env "FUSIONWEB_INFRA_BIND"
+set "INFRA_BIND_VALUE=!ENV_VALUE!"
+if not defined INFRA_BIND_VALUE set "INFRA_BIND_VALUE=127.0.0.1"
+call :is_loopback_host "!INFRA_BIND_VALUE!"
+if errorlevel 1 (
+  if exist "%REMOTE_ACCESS_FILE%" (
+    set COMPOSE_ARGS=!COMPOSE_ARGS! -f "%REMOTE_ACCESS_FILE%"
+  )
+)
+exit /b 0
+
+:sync_remote_connection_env
+call :get_env "FUSIONWEB_INFRA_BIND"
+set "CURRENT_BIND=!ENV_VALUE!"
+set "BIND_HOST=!CURRENT_BIND!"
+call :is_loopback_host "!BIND_HOST!"
+if not errorlevel 1 set "BIND_HOST="
+if /I "!CURRENT_BIND!"=="0.0.0.0" set "BIND_HOST="
+if not defined BIND_HOST (
+  call :detect_primary_ip
+  if defined DETECTED_HOST_IP set "BIND_HOST=!DETECTED_HOST_IP!"
+)
+if not defined BIND_HOST (
+  echo [FusionWeb] 未能自动探测当前主机 IPv4，已跳过远程 Worker 连接参数回填。
+  exit /b 0
+)
+call :get_env "FUSIONWEB_REMOTE_HOST"
+set "EXTERNAL_HOST=!ENV_VALUE!"
+if not defined EXTERNAL_HOST set "EXTERNAL_HOST=!BIND_HOST!"
+call :get_env "POSTGRES_USER"
+set "POSTGRES_USER_VALUE=!ENV_VALUE!"
+if not defined POSTGRES_USER_VALUE set "POSTGRES_USER_VALUE=fusionweb"
+call :get_env "POSTGRES_PASSWORD"
+set "POSTGRES_PASSWORD_VALUE=!ENV_VALUE!"
+if not defined POSTGRES_PASSWORD_VALUE (
+  echo [FusionWeb] POSTGRES_PASSWORD 为空，暂时无法回填 FUSIONWEB_WORKER_EXTERNAL_PG_DSN。
+  exit /b 0
+)
+call :get_env "POSTGRES_DB"
+set "POSTGRES_DB_VALUE=!ENV_VALUE!"
+if not defined POSTGRES_DB_VALUE set "POSTGRES_DB_VALUE=fusionweb"
+call :get_env "FUSIONWEB_PG_PORT"
+set "PG_PORT_VALUE=!ENV_VALUE!"
+if not defined PG_PORT_VALUE set "PG_PORT_VALUE=5432"
+call :get_env "FUSIONWEB_REDIS_PORT"
+set "REDIS_PORT_VALUE=!ENV_VALUE!"
+if not defined REDIS_PORT_VALUE set "REDIS_PORT_VALUE=6379"
+call :get_env "FUSIONWEB_MINIO_PORT"
+set "MINIO_PORT_VALUE=!ENV_VALUE!"
+if not defined MINIO_PORT_VALUE set "MINIO_PORT_VALUE=9000"
+set "PG_DSN=postgres://!POSTGRES_USER_VALUE!:!POSTGRES_PASSWORD_VALUE!@!EXTERNAL_HOST!:!PG_PORT_VALUE!/!POSTGRES_DB_VALUE!?sslmode=disable"
+set "REDIS_ADDR=!EXTERNAL_HOST!:!REDIS_PORT_VALUE!"
+set "MINIO_ENDPOINT=http://!EXTERNAL_HOST!:!MINIO_PORT_VALUE!"
+call :set_env "FUSIONWEB_INFRA_BIND" "!BIND_HOST!"
+if errorlevel 1 exit /b 1
+call :set_env "FUSIONWEB_WORKER_EXTERNAL_PG_DSN" "!PG_DSN!"
+if errorlevel 1 exit /b 1
+call :set_env "FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR" "!REDIS_ADDR!"
+if errorlevel 1 exit /b 1
+call :set_env "FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT" "!MINIO_ENDPOINT!"
+if errorlevel 1 exit /b 1
+echo [FusionWeb] 已自动回填远程 Worker 连接参数：!EXTERNAL_HOST!
+exit /b 0
+
 :ensure_env
 if not exist "%ENV_EXAMPLE%" (
   echo [FusionWeb] 缺少 %ENV_EXAMPLE%。
@@ -140,6 +220,8 @@ if errorlevel 1 exit /b 1
 call :ensure_secret "FUSIONWEB_BASIC_PASS" "" "18"
 if errorlevel 1 exit /b 1
 call :ensure_secret "FUSIONWEB_WORKER_KEY" "change-me-worker-key" "32"
+if errorlevel 1 exit /b 1
+call :sync_remote_connection_env
 exit /b %errorlevel%
 
 :validate_image_prefix
@@ -159,7 +241,17 @@ if not exist "%COMPOSE_FILE%" (
   echo [FusionWeb] 缺少 %COMPOSE_FILE%。
   exit /b 1
 )
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" config --quiet
+call :set_compose_args
+if errorlevel 1 exit /b 1
+call :get_env "FUSIONWEB_INFRA_BIND"
+set "INFRA_BIND_VALUE=!ENV_VALUE!"
+if not defined INFRA_BIND_VALUE set "INFRA_BIND_VALUE=127.0.0.1"
+call :is_loopback_host "!INFRA_BIND_VALUE!"
+if errorlevel 1 if not exist "%REMOTE_ACCESS_FILE%" (
+  echo [FusionWeb] 缺少 %REMOTE_ACCESS_FILE%。
+  exit /b 1
+)
+docker compose !COMPOSE_ARGS! config --quiet
 if errorlevel 1 (
   echo [FusionWeb] Compose 或环境配置无效。
   exit /b 1
@@ -210,6 +302,8 @@ if not exist "%ENV_FILE%" (
   exit /b 1
 )
 call :validate_image_prefix
+if errorlevel 1 exit /b 1
+call :sync_remote_connection_env
 exit /b %errorlevel%
 
 :install
@@ -219,16 +313,22 @@ call :ensure_env
 if errorlevel 1 exit /b 1
 call :validate_image_prefix
 if errorlevel 1 exit /b 1
+call :sync_remote_connection_env
+if errorlevel 1 exit /b 1
 call :validate_compose
 if errorlevel 1 exit /b 1
 echo [FusionWeb] 正在拉取六个 linux/amd64 镜像……
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" pull
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! pull
 if errorlevel 1 (
   echo [FusionWeb] 镜像拉取失败。请确认 ACR 仓库已公开、命名空间正确且镜像已发布。
   exit /b 1
 )
 echo [FusionWeb] 正在启动 PostgreSQL、Redis、MinIO、API、Web 和默认 Worker……
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" up -d --remove-orphans --wait --wait-timeout 600
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! up -d --remove-orphans --wait --wait-timeout 600
 if errorlevel 1 (
   echo [FusionWeb] 服务启动失败，请运行 fusionweb.bat logs 查看日志。
   exit /b 1
@@ -248,7 +348,9 @@ call :require_runtime_env
 if errorlevel 1 exit /b 1
 call :validate_compose
 if errorlevel 1 exit /b 1
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" up -d --remove-orphans --wait --wait-timeout 600
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! up -d --remove-orphans --wait --wait-timeout 600
 if errorlevel 1 exit /b 1
 call :check_containers
 if errorlevel 1 exit /b 1
@@ -260,7 +362,9 @@ call :check_docker
 if errorlevel 1 exit /b 1
 call :require_runtime_env
 if errorlevel 1 exit /b 1
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" stop
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! stop
 if errorlevel 1 exit /b 1
 echo [FusionWeb] FusionWeb 已停止，数据卷保留。
 exit /b 0
@@ -272,9 +376,13 @@ call :require_runtime_env
 if errorlevel 1 exit /b 1
 call :validate_compose
 if errorlevel 1 exit /b 1
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" stop
+call :set_compose_args
 if errorlevel 1 exit /b 1
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" up -d --remove-orphans --wait --wait-timeout 600
+docker compose !COMPOSE_ARGS! stop
+if errorlevel 1 exit /b 1
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! up -d --remove-orphans --wait --wait-timeout 600
 if errorlevel 1 exit /b 1
 call :check_containers
 if errorlevel 1 exit /b 1
@@ -286,7 +394,9 @@ call :check_docker
 if errorlevel 1 exit /b 1
 call :require_runtime_env
 if errorlevel 1 exit /b 1
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" ps
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! ps
 call :check_containers
 exit /b %errorlevel%
 
@@ -311,9 +421,13 @@ if not defined REQUESTED_SERVICE set "REQUESTED_SERVICE=all"
 call :normalize_service "!REQUESTED_SERVICE!"
 if errorlevel 1 exit /b 1
 if defined LOG_SERVICE (
-  docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" logs -f --tail 200 "!LOG_SERVICE!"
+  call :set_compose_args
+if errorlevel 1 exit /b 1
+  docker compose !COMPOSE_ARGS! logs -f --tail 200 "!LOG_SERVICE!"
 ) else (
-  docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" logs -f --tail 200
+  call :set_compose_args
+if errorlevel 1 exit /b 1
+  docker compose !COMPOSE_ARGS! logs -f --tail 200
 )
 exit /b %errorlevel%
 
@@ -414,12 +528,18 @@ call :set_env "FUSIONWEB_VERSION" "!NEW_VERSION!"
 if errorlevel 1 exit /b 1
 call :validate_image_prefix
 if errorlevel 1 exit /b 1
+call :sync_remote_connection_env
+if errorlevel 1 exit /b 1
 call :validate_compose
 if errorlevel 1 exit /b 1
 echo [FusionWeb] 正在从 !OLD_VERSION! 升级到 !NEW_VERSION!……
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" pull
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! pull
 if errorlevel 1 goto :upgrade_failed
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" up -d --remove-orphans --wait --wait-timeout 600
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! up -d --remove-orphans --wait --wait-timeout 600
 if errorlevel 1 goto :upgrade_failed
 call :check_containers
 if errorlevel 1 goto :upgrade_failed
@@ -447,7 +567,9 @@ if not "!DELETE_CONFIRM!"=="DELETE" (
   echo [FusionWeb] 已取消卸载。
   exit /b 0
 )
-docker compose --env-file "%ENV_FILE%" -f "%COMPOSE_FILE%" down -v --remove-orphans
+call :set_compose_args
+if errorlevel 1 exit /b 1
+docker compose !COMPOSE_ARGS! down -v --remove-orphans
 if errorlevel 1 exit /b 1
 echo [FusionWeb] 容器和数据卷已删除；源码与 .env 已保留。
 exit /b 0
@@ -472,4 +594,5 @@ echo   help          显示帮助
 echo.
 echo 日志服务名：postgres、redis、minio、api、web、worker、all
 exit /b 0
+
 

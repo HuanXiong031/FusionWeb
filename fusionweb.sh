@@ -4,6 +4,7 @@ set -u
 SCRIPT_VERSION="2.0.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yaml"
+REMOTE_ACCESS_FILE="${SCRIPT_DIR}/docker-compose.remote-access.yaml"
 ENV_FILE="${SCRIPT_DIR}/.env"
 ENV_EXAMPLE="${SCRIPT_DIR}/.env.example"
 VERSION_FILE="${SCRIPT_DIR}/VERSION"
@@ -29,8 +30,22 @@ confirm() {
   [[ "${answer}" =~ ^[Yy]$ ]]
 }
 
+is_loopback_host() {
+  local host="${1:-}"
+  case "${host}" in
+    ""|127.0.0.1|localhost|::1) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 compose() {
-  docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
+  local files=(--env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+  local bind
+  bind="$(get_env FUSIONWEB_INFRA_BIND)"
+  if ! is_loopback_host "${bind}" && [[ -f "${REMOTE_ACCESS_FILE}" ]]; then
+    files+=(-f "${REMOTE_ACCESS_FILE}")
+  fi
+  docker compose "${files[@]}" "$@"
 }
 
 read_version_file() {
@@ -82,6 +97,62 @@ ensure_secret() {
   fi
 }
 
+detect_primary_ip() {
+  local detected=""
+  if command_exists ip; then
+    detected="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "src") { print $(i+1); exit }}')"
+    if [[ -z "${detected}" ]]; then
+      detected="$(ip -o -4 addr show scope global up 2>/dev/null | awk '{split($4, a, "/"); print a[1]; exit}')"
+    fi
+  fi
+  if [[ -z "${detected}" ]] && command_exists hostname; then
+    detected="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  fi
+  printf '%s' "${detected}"
+}
+
+sync_remote_connection_env() {
+  local current_bind bind_host external_host postgres_user postgres_password postgres_db
+  local pg_port redis_port minio_port pg_dsn redis_addr minio_endpoint
+
+  current_bind="$(get_env FUSIONWEB_INFRA_BIND)"
+  bind_host="${current_bind}"
+  if is_loopback_host "${bind_host}" || [[ -z "${bind_host}" || "${bind_host}" == "0.0.0.0" ]]; then
+    bind_host="$(detect_primary_ip)"
+  fi
+  if [[ -z "${bind_host}" ]]; then
+    warn "未能自动探测主机 IPv4，已跳过远程 Worker 连接参数回填。"
+    return 0
+  fi
+
+  external_host="$(get_env FUSIONWEB_REMOTE_HOST)"
+  if [[ -z "${external_host}" ]]; then
+    external_host="${bind_host}"
+  fi
+
+  postgres_user="$(get_env POSTGRES_USER)"; postgres_user="${postgres_user:-fusionweb}"
+  postgres_password="$(get_env POSTGRES_PASSWORD)"
+  postgres_db="$(get_env POSTGRES_DB)"; postgres_db="${postgres_db:-fusionweb}"
+  pg_port="$(get_env FUSIONWEB_PG_PORT)"; pg_port="${pg_port:-5432}"
+  redis_port="$(get_env FUSIONWEB_REDIS_PORT)"; redis_port="${redis_port:-6379}"
+  minio_port="$(get_env FUSIONWEB_MINIO_PORT)"; minio_port="${minio_port:-9000}"
+
+  if [[ -z "${postgres_password}" ]]; then
+    warn "POSTGRES_PASSWORD 为空，暂时无法回填 FUSIONWEB_WORKER_EXTERNAL_PG_DSN。"
+    return 0
+  fi
+
+  pg_dsn="postgres://${postgres_user}:${postgres_password}@${external_host}:${pg_port}/${postgres_db}?sslmode=disable"
+  redis_addr="${external_host}:${redis_port}"
+  minio_endpoint="http://${external_host}:${minio_port}"
+
+  set_env FUSIONWEB_INFRA_BIND "${bind_host}"
+  set_env FUSIONWEB_WORKER_EXTERNAL_PG_DSN "${pg_dsn}"
+  set_env FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR "${redis_addr}"
+  set_env FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT "${minio_endpoint}"
+  info "已自动回填远程 Worker 连接参数：${external_host}"
+}
+
 ensure_env() {
   [[ -f "${ENV_EXAMPLE}" ]] || fail "缺少 .env.example。"
   if [[ ! -f "${ENV_FILE}" ]]; then
@@ -99,6 +170,7 @@ ensure_env() {
   ensure_secret FUSIONWEB_JWT_SECRET "" 48
   ensure_secret FUSIONWEB_BASIC_PASS "" 18
   ensure_secret FUSIONWEB_WORKER_KEY change-me-worker-key 32
+  sync_remote_connection_env
 }
 
 validate_image_prefix() {
@@ -142,7 +214,12 @@ check_docker() {
 
 validate_compose() {
   [[ -f "${COMPOSE_FILE}" ]] || fail "缺少 docker-compose.yaml。"
-  compose config --quiet || fail "docker-compose.yaml 或 .env 配置无效。"
+  local bind
+  bind="$(get_env FUSIONWEB_INFRA_BIND)"
+  if ! is_loopback_host "${bind}" && [[ ! -f "${REMOTE_ACCESS_FILE}" ]]; then
+    fail "缺少 docker-compose.remote-access.yaml。"
+  fi
+  compose config --quiet || fail "Compose 或 .env 配置无效。"
 }
 
 check_containers() {
@@ -194,6 +271,7 @@ cmd_install() {
 require_runtime_env() {
   [[ -f "${ENV_FILE}" ]] || fail "尚未创建 .env，请先运行 ./fusionweb.sh install。"
   validate_image_prefix
+  sync_remote_connection_env
 }
 
 cmd_start() {
@@ -290,6 +368,7 @@ cmd_upgrade() {
 
   set_env FUSIONWEB_VERSION "${new_version}"
   validate_image_prefix
+  sync_remote_connection_env
   validate_compose
   info "正在从 ${old_version} 升级到 ${new_version}……"
   if ! compose pull || ! compose up -d --remove-orphans --wait --wait-timeout 600; then
