@@ -7,7 +7,9 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -204,50 +206,324 @@ func handleWorkerDelete(c *gin.Context) {
 
 func handleWorkerInstallCommand(c *gin.Context) {
 	cfg := config.Get()
-	scheme := c.GetHeader("X-Forwarded-Proto")
-	if scheme == "" {
-		scheme = "https"
+	requestScheme := detectRequestScheme(c)
+	requestHost := detectRequestHost(c)
+	requestHostOnly, requestPort := splitHostPort(requestHost)
+	infraBind := strings.TrimSpace(os.Getenv("FUSIONWEB_INFRA_BIND"))
+	if infraBind == "" {
+		infraBind = "127.0.0.1"
 	}
-	host := c.GetHeader("X-Forwarded-Host")
-	if host == "" {
-		host = c.Request.Host
+	infraReadyHost := strings.TrimSpace(infraBind)
+	if isWildcardHost(infraReadyHost) {
+		infraReadyHost = requestHostOnly
 	}
-	server := scheme + "://" + host
+	if infraReadyHost == "" {
+		infraReadyHost = requestHostOnly
+	}
+	serverHost := requestHost
+	if (requestHostOnly == "" || isLoopbackHost(requestHostOnly) || isWildcardHost(requestHostOnly)) && infraReadyHost != "" && !isLoopbackHost(infraReadyHost) && !isWildcardHost(infraReadyHost) {
+		serverHost = joinHostPort(infraReadyHost, requestPort)
+	}
+	if strings.TrimSpace(serverHost) == "" {
+		serverHost = requestHost
+	}
+	server := strings.TrimRight(requestScheme+"://"+serverHost, "://")
 	image := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_IMAGE"))
 	if image == "" {
 		image = "crpi-bw40e2qu21b597zs.cn-hangzhou.personal.cr.aliyuncs.com/fusionweb/fusionweb-worker:0.1.0"
 	}
-	externalPGDSN := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_PG_DSN"))
-	externalRedisAddr := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR"))
-	externalMinIOEndpoint := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT"))
+
+	explicitPGDSN := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_PG_DSN"))
+	explicitRedisAddr := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR"))
+	explicitMinIOEndpoint := strings.TrimSpace(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT"))
+	pgPort := envOrDefault("FUSIONWEB_PG_PORT", "5432")
+	redisPort := envOrDefault("FUSIONWEB_REDIS_PORT", "6379")
+	minioPort := envOrDefault("FUSIONWEB_MINIO_PORT", "9000")
+
+	derivedHost := ""
+	if !isLoopbackHost(infraReadyHost) && !isWildcardHost(infraReadyHost) {
+		derivedHost = infraReadyHost
+	} else if !isLoopbackHost(requestHostOnly) && !isWildcardHost(requestHostOnly) {
+		derivedHost = requestHostOnly
+	}
+
+	pgDSN := explicitPGDSN
+	if pgDSN == "" && derivedHost != "" {
+		pgDSN = buildExternalPGDSN(derivedHost, pgPort)
+	}
+	redisAddr := explicitRedisAddr
+	if redisAddr == "" && derivedHost != "" {
+		redisAddr = joinHostPort(derivedHost, redisPort)
+	}
+	minioEndpoint := explicitMinIOEndpoint
+	if minioEndpoint == "" && derivedHost != "" {
+		minioEndpoint = buildHTTPURL("http", derivedHost, minioPort)
+	}
+
 	missing := make([]string, 0, 4)
+	warnings := make([]string, 0, 6)
+	ready := true
+	needsRemoteAccess := explicitPGDSN == "" || explicitRedisAddr == "" || explicitMinIOEndpoint == ""
+
 	if strings.TrimSpace(cfg.WorkerKey) == "" {
 		missing = append(missing, "FUSIONWEB_WORKER_KEY")
+		ready = false
 	}
-	if externalPGDSN == "" {
+	if strings.TrimSpace(serverHost) == "" || isLoopbackHost(extractHostOnly(serverHost)) || isWildcardHost(extractHostOnly(serverHost)) {
+		warnings = append(warnings, "当前页面访问地址仍是 localhost/127.0.0.1；远程 Worker 无法回连主节点 API。请改用 https://<主机内网IP>:8988 打开前端后重新生成命令。")
+		ready = false
+	}
+	if pgDSN == "" {
 		missing = append(missing, "FUSIONWEB_WORKER_EXTERNAL_PG_DSN")
+		ready = false
 	}
-	if externalRedisAddr == "" {
+	if redisAddr == "" {
 		missing = append(missing, "FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR")
+		ready = false
 	}
-	if externalMinIOEndpoint == "" {
+	if minioEndpoint == "" {
 		missing = append(missing, "FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT")
+		ready = false
 	}
-	warnings := make([]string, 0, 2)
+	if needsRemoteAccess {
+		if isLoopbackHost(infraBind) {
+			warnings = append(warnings, "当前 FUSIONWEB_INFRA_BIND=127.0.0.1，PostgreSQL/Redis/MinIO 只监听本机。远程 Worker 部署前必须叠加 docker-compose.remote-access.yaml，并把 FUSIONWEB_INFRA_BIND 改成主机内网 IP 或 0.0.0.0。")
+			ready = false
+		} else {
+			warnings = append(warnings, "当前安装命令使用主节点自身的 PostgreSQL/Redis/MinIO 端口；请确认主节点是通过 docker-compose.remote-access.yaml 启动的，并且防火墙已放行这些内网端口。")
+		}
+	}
 	if !strings.Contains(image, "/") {
 		warnings = append(warnings, "Worker 镜像看起来是本地镜像名；远程机器必须能够从镜像仓库拉取该镜像，或预先导入镜像。")
 	}
-	if len(missing) > 0 {
-		warnings = append(warnings, "远程 Worker 部署参数尚未配置完整，请先在主节点 .env 中补齐缺失项并重启 API。")
-	}
-	compose := fmt.Sprintf("services:\n  fusionweb-worker:\n    image: %s\n    restart: unless-stopped\n    environment:\n      FUSIONWEB_SERVER: %s\n      FUSIONWEB_KEY: %s\n      FUSIONWEB_NAME: ${FUSIONWEB_NAME:-remote-worker}\n      FUSIONWEB_CONCURRENCY: ${FUSIONWEB_CONCURRENCY:-5}\n      FUSIONWEB_INSECURE_TLS: ${FUSIONWEB_INSECURE_TLS:-true}\n      FUSIONWEB_PG_DSN: %s\n      FUSIONWEB_REDIS_ADDR: %s\n      FUSIONWEB_REDIS_PASSWORD: %s\n      FUSIONWEB_REDIS_DB: %d\n      FUSIONWEB_REDIS_PREFIX: %s\n      FUSIONWEB_MINIO_ENDPOINT: %s\n      FUSIONWEB_MINIO_ACCESS_KEY: %s\n      FUSIONWEB_MINIO_SECRET_KEY: %s\n      FUSIONWEB_MINIO_BUCKET: %s\n      FUSIONWEB_MINIO_REGION: %s\n      FUSIONWEB_MINIO_USE_SSL: %t\n      FUSIONWEB_DATA_DIR: /app/data\n    volumes:\n      - fusionweb_worker_data:/app/data\nvolumes:\n  fusionweb_worker_data:\n", image, composeQuoted(server), composeQuoted(cfg.WorkerKey), composeQuoted(externalPGDSN), composeQuoted(externalRedisAddr), composeQuoted(cfg.RedisPassword), cfg.RedisDB, composeQuoted(cfg.RedisPrefix), composeQuoted(externalMinIOEndpoint), composeQuoted(cfg.MinIOAccessKey), composeQuoted(cfg.MinIOSecretKey), composeQuoted(cfg.MinIOBucket), composeQuoted(cfg.MinIORegion), cfg.MinIOUseSSL)
+
+	missing = uniqueStrings(missing)
+	warnings = uniqueStrings(warnings)
+	suggestedEnv := buildSuggestedWorkerEnv(derivedHost, infraBind, pgPort, redisPort, minioPort, pgDSN, redisAddr, minioEndpoint)
+
+	compose := fmt.Sprintf(`services:
+  fusionweb-worker:
+    image: %s
+    restart: unless-stopped
+    environment:
+      FUSIONWEB_SERVER: %s
+      FUSIONWEB_KEY: %s
+      FUSIONWEB_NAME: ${FUSIONWEB_NAME:-remote-worker}
+      FUSIONWEB_CONCURRENCY: ${FUSIONWEB_CONCURRENCY:-5}
+      FUSIONWEB_INSECURE_TLS: ${FUSIONWEB_INSECURE_TLS:-true}
+      FUSIONWEB_PG_DSN: %s
+      FUSIONWEB_REDIS_ADDR: %s
+      FUSIONWEB_REDIS_PASSWORD: %s
+      FUSIONWEB_REDIS_DB: %d
+      FUSIONWEB_REDIS_PREFIX: %s
+      FUSIONWEB_MINIO_ENDPOINT: %s
+      FUSIONWEB_MINIO_ACCESS_KEY: %s
+      FUSIONWEB_MINIO_SECRET_KEY: %s
+      FUSIONWEB_MINIO_BUCKET: %s
+      FUSIONWEB_MINIO_REGION: %s
+      FUSIONWEB_MINIO_USE_SSL: %t
+      FUSIONWEB_DATA_DIR: /app/data
+    volumes:
+      - fusionweb_worker_data:/app/data
+volumes:
+  fusionweb_worker_data:
+`, image, composeQuoted(server), composeQuoted(cfg.WorkerKey), composeQuoted(pgDSN), composeQuoted(redisAddr), composeQuoted(cfg.RedisPassword), cfg.RedisDB, composeQuoted(cfg.RedisPrefix), composeQuoted(minioEndpoint), composeQuoted(cfg.MinIOAccessKey), composeQuoted(cfg.MinIOSecretKey), composeQuoted(cfg.MinIOBucket), composeQuoted(cfg.MinIORegion), cfg.MinIOUseSSL)
 	encoded := base64.StdEncoding.EncodeToString([]byte(compose))
 	linux := fmt.Sprintf("mkdir -p fusionweb-worker && echo '%s' | base64 -d > fusionweb-worker/docker-compose.yaml && cd fusionweb-worker && docker compose pull && docker compose up -d --wait --wait-timeout 600", encoded)
-	windows := fmt.Sprintf("New-Item -ItemType Directory -Force fusionweb-worker | Out-Null; [IO.File]::WriteAllBytes('fusionweb-worker\\docker-compose.yaml',[Convert]::FromBase64String('%s')); Set-Location fusionweb-worker; docker compose pull; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; docker compose up -d --wait --wait-timeout 600", encoded)
+	windows := fmt.Sprintf(`New-Item -ItemType Directory -Force fusionweb-worker | Out-Null; [IO.File]::WriteAllBytes('fusionweb-worker\docker-compose.yaml',[Convert]::FromBase64String('%s')); Set-Location fusionweb-worker; docker compose pull; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; docker compose up -d --wait --wait-timeout 600`, encoded)
 	SuccessResponse(c, gin.H{
-		"ready": len(missing) == 0, "missing": missing, "warnings": warnings,
-		"server": server, "image": image, "compose": compose, "linux": linux, "windows": windows,
+		"ready":             ready,
+		"missing":           missing,
+		"warnings":          warnings,
+		"server":            server,
+		"image":             image,
+		"compose":           compose,
+		"linux":             linux,
+		"windows":           windows,
+		"pgDsn":             pgDSN,
+		"redisAddr":         redisAddr,
+		"minioEndpoint":     minioEndpoint,
+		"needsRemoteAccess": needsRemoteAccess,
+		"suggestedEnv":      suggestedEnv,
 	})
+}
+
+func detectRequestScheme(c *gin.Context) string {
+	scheme := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto"))
+	if scheme != "" {
+		return scheme
+	}
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func detectRequestHost(c *gin.Context) string {
+	host := strings.TrimSpace(c.GetHeader("X-Forwarded-Host"))
+	if host == "" {
+		host = strings.TrimSpace(c.Request.Host)
+	}
+	if idx := strings.Index(host, ","); idx >= 0 {
+		host = strings.TrimSpace(host[:idx])
+	}
+	return host
+}
+
+func splitHostPort(host string) (string, string) {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return "", ""
+	}
+	if strings.Contains(host, "://") {
+		if parsed, err := url.Parse(host); err == nil {
+			host = parsed.Host
+		}
+	}
+	if parsedHost, parsedPort, err := net.SplitHostPort(host); err == nil {
+		return strings.Trim(parsedHost, "[]"), parsedPort
+	}
+	trimmed := strings.Trim(host, "[]")
+	if strings.Count(trimmed, ":") == 1 {
+		parts := strings.SplitN(trimmed, ":", 2)
+		return strings.Trim(parts[0], "[]"), parts[1]
+	}
+	return trimmed, ""
+}
+
+func extractHostOnly(host string) string {
+	hostOnly, _ := splitHostPort(host)
+	return hostOnly
+}
+
+func joinHostPort(host, port string) string {
+	host = strings.TrimSpace(host)
+	port = strings.TrimSpace(port)
+	if host == "" {
+		return ""
+	}
+	if port == "" {
+		return host
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func isLoopbackHost(host string) bool {
+	host = strings.Trim(strings.TrimSpace(host), "[]")
+	if host == "" {
+		return true
+	}
+	switch strings.ToLower(host) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
+
+func isWildcardHost(host string) bool {
+	host = strings.Trim(strings.TrimSpace(host), "[]")
+	return host == "0.0.0.0" || host == "::"
+}
+
+func buildExternalPGDSN(host, port string) string {
+	user := envOrDefault("POSTGRES_USER", "fusionweb")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	databaseName := envOrDefault("POSTGRES_DB", "fusionweb")
+	query := url.Values{}
+	query.Set("sslmode", "disable")
+	return (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     joinHostPort(host, port),
+		Path:     "/" + databaseName,
+		RawQuery: query.Encode(),
+	}).String()
+}
+
+func buildHTTPURL(scheme, host, port string) string {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return ""
+	}
+	return (&url.URL{Scheme: scheme, Host: joinHostPort(host, port)}).String()
+}
+
+func buildSuggestedWorkerEnv(host, infraBind, pgPort, redisPort, minioPort, pgDSN, redisAddr, minioEndpoint string) string {
+	suggestedHost := strings.TrimSpace(host)
+	if suggestedHost == "" || isLoopbackHost(suggestedHost) || isWildcardHost(suggestedHost) {
+		suggestedHost = "<主节点内网IP>"
+	}
+	suggestedBind := strings.TrimSpace(infraBind)
+	if suggestedBind == "" || isLoopbackHost(suggestedBind) || isWildcardHost(suggestedBind) {
+		suggestedBind = suggestedHost
+	}
+	if suggestedBind == "" {
+		suggestedBind = "<主节点内网IP>"
+	}
+	if strings.TrimSpace(pgDSN) == "" {
+		user := envOrDefault("POSTGRES_USER", "fusionweb")
+		databaseName := envOrDefault("POSTGRES_DB", "fusionweb")
+		pgDSN = fmt.Sprintf("postgres://%s:<POSTGRES_PASSWORD>@%s/%s?sslmode=disable", user, joinHostPortForDisplay(suggestedHost, pgPort), databaseName)
+	}
+	if strings.TrimSpace(redisAddr) == "" {
+		redisAddr = joinHostPortForDisplay(suggestedHost, redisPort)
+	}
+	if strings.TrimSpace(minioEndpoint) == "" {
+		minioEndpoint = fmt.Sprintf("http://%s", joinHostPortForDisplay(suggestedHost, minioPort))
+	}
+	lines := []string{
+		"# 写入 C:\\Codex\\FusionWeb\\.env 或部署目录 .env 后重启主节点 API",
+		fmt.Sprintf("FUSIONWEB_INFRA_BIND=%s", suggestedBind),
+		fmt.Sprintf("FUSIONWEB_WORKER_EXTERNAL_PG_DSN=%s", pgDSN),
+		fmt.Sprintf("FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR=%s", redisAddr),
+		fmt.Sprintf("FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT=%s", minioEndpoint),
+		"",
+		"# 然后使用 remote-access 覆盖层重启主节点",
+		"docker compose --env-file .env -f docker-compose.yaml -f docker-compose.remote-access.yaml up -d --remove-orphans --wait --wait-timeout 600",
+	}
+	return strings.Join(lines, "\n")
+}
+
+func joinHostPortForDisplay(host, port string) string {
+	host = strings.TrimSpace(host)
+	port = strings.TrimSpace(port)
+	if host == "" {
+		return ""
+	}
+	if port == "" {
+		return host
+	}
+	return host + ":" + port
+}
+
+func uniqueStrings(values []string) []string {
+	if len(values) == 0 {
+		return values
+	}
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func composeQuoted(value string) string {

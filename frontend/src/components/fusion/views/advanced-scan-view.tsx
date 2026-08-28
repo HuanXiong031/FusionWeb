@@ -136,6 +136,7 @@ import {
   getTasks,
   getUsers,
   getVulnResults,
+  getWorkers,
   getVulnVerifyWorkbench,
   getVulnVerifyGroups,
   importFingerprint,
@@ -172,6 +173,7 @@ import {
   type TaskConfig,
   type TaskRow,
   type UserProfile,
+  type WorkerNode,
 } from '@/lib/api'
 import { asList, cn, compactNumber, formatTime, getStatusLabel, getStatusTone, parseTargets, unwrap } from '@/lib/utils'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, EmptyState, Field, Input, Modal, Select, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@/components/ui'
@@ -382,6 +384,7 @@ export function AdvancedScanView({
     jsMaxJSPerTarget: 200,
     enableDingTalk: false,
     dingTalkKeyId: '',
+    assignedWorker: '',
   })
   React.useEffect(() => {
     if (!fixedTaskType) return
@@ -391,10 +394,18 @@ export function AdvancedScanView({
     })
   }, [fixedTaskType])
   const dingTalkKeysQuery = useQuery({ queryKey: ['dingtalk-keys'], queryFn: getDingTalkKeys, enabled: !demoMode })
+  const workersQuery = useQuery({
+    queryKey: ['workers'],
+    queryFn: async () => unwrap<WorkerNode[]>(await getWorkers()),
+    enabled: !demoMode,
+    staleTime: 15000,
+  })
   const dingTalkKeys = demoMode
     ? [{ id: 1, name: '默认钉钉机器人', notifyWebScanComplete: true, notifyPortScanComplete: true, enabled: true }]
     : unwrap<DingTalkKey[]>(dingTalkKeysQuery.data) || []
   const availableDingTalkKeys = dingTalkKeys.filter((item) => item.enabled !== false)
+  const workers = demoMode ? [] : (workersQuery.data || [])
+  const onlineWorkers = React.useMemo(() => workers.filter((item) => item.status === 'online'), [workers])
   const targetCount = parseTargets(draft.targetInput).length
   const currentPortRange = draft.taskType === 'port'
     ? (draft.portGroup === 'custom' ? draft.customPortRange : portGroups.find((item) => item.value === draft.portGroup)?.ports || draft.customPortRange)
@@ -504,6 +515,7 @@ export function AdvancedScanView({
         scan_all_pocs_when_no_fingerprint: draft.scanAllPocsWhenNoFingerprint,
         enable_active_fingerprint: draft.enableActiveFingerprint,
         enable_screenshot: draft.enableScreenshot,
+        assigned_worker: draft.assignedWorker || '',
         ding_talk_key_id: draft.enableDingTalk ? Number(draft.dingTalkKeyId) || 0 : 0,
       }
       return createTask(payload)
@@ -555,7 +567,7 @@ export function AdvancedScanView({
                   })}
                 </div>
               ) : null}
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <Field label="任务名称" hint="留空自动生成">
                   <Input value={draft.taskName} onChange={(event) => setDraft({ ...draft, taskName: event.target.value })} placeholder="例如：重点资产扫描" />
                 </Field>
@@ -573,6 +585,23 @@ export function AdvancedScanView({
                     <Input value={scanModeLabels[draft.scanMode] || taskTypeLabels[draft.taskType]} readOnly />
                   </Field>
                 )}
+                <Field
+                  label="执行节点"
+                  hint={demoMode ? '演示模式固定为自动分配' : workersQuery.isError ? '节点列表加载失败，将按自动分配执行' : onlineWorkers.length > 0 ? '选择后任务只会投递到该节点' : '暂无在线节点，留空则进入公共队列等待可用节点'}
+                >
+                  <Select
+                    value={draft.assignedWorker}
+                    onChange={(event) => setDraft({ ...draft, assignedWorker: event.target.value })}
+                    disabled={!demoMode && workersQuery.isLoading}
+                  >
+                    <option value="">自动分配</option>
+                    {onlineWorkers.map((worker) => (
+                      <option key={worker.name} value={worker.name}>
+                        {worker.name}（{worker.os || 'unknown'}/{worker.arch || 'unknown'}，并发 {worker.concurrency || 0}）
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
               </div>
               <Field label="任务目标" hint={targetHintForTaskType(draft.taskType)}>
                 <Textarea
@@ -817,6 +846,7 @@ export function AdvancedScanView({
             <PreviewLine label="任务类型" value={taskTypeLabels[draft.taskType]} />
             <PreviewLine label="目标数量" value={`${targetCount} 个`} />
             <PreviewLine label="扫描模式" value={scanModeLabels[draft.scanMode] || draft.scanMode} />
+            <PreviewLine label="执行节点" value={draft.assignedWorker || '自动分配'} />
             <PreviewLine label="结果表" value={moduleResultTables[draft.taskType]} />
             {scanTool ? <PreviewLine label="工具" value={scanTool} /> : null}
             {draft.taskType === 'port' ? <PreviewLine label="端口范围" value={currentPortRange || '-'} /> : null}

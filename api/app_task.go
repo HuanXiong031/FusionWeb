@@ -5,23 +5,67 @@ import (
 	"FusionWeb/backend/models"
 	"FusionWeb/backend/service"
 	"FusionWeb/backend/utils"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
-func normalizeTaskConfig(config *models.TaskConfig) {
+var ErrInvalidAssignedWorker = errors.New("invalid assigned worker")
+
+func normalizeTaskConfig(config *models.TaskConfig) error {
 	if config == nil {
-		return
+		return nil
+	}
+	config.AssignedWorker = strings.TrimSpace(config.AssignedWorker)
+	if strings.EqualFold(config.AssignedWorker, "auto") {
+		config.AssignedWorker = ""
 	}
 	if config.PortsThreshold <= 0 || config.PortsThreshold > 65535 {
 		config.PortsThreshold = 65535
 	}
+	if err := validateAssignedWorker(config.AssignedWorker); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateAssignedWorker(workerName string) error {
+	workerName = strings.TrimSpace(workerName)
+	if workerName == "" {
+		return nil
+	}
+	client := database.GetRedis()
+	if client == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	values, err := client.HGetAll(ctx, database.RedisKey("worker", workerName)).Result()
+	if err != nil {
+		return fmt.Errorf("校验执行节点失败: %w", err)
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("%w: 指定节点不存在: %s", ErrInvalidAssignedWorker, workerName)
+	}
+	lastHeartbeat := strings.TrimSpace(values["last_heartbeat"])
+	if lastHeartbeat == "" {
+		return fmt.Errorf("%w: 指定节点尚未完成注册: %s", ErrInvalidAssignedWorker, workerName)
+	}
+	ts, err := time.Parse(time.RFC3339Nano, lastHeartbeat)
+	if err != nil || time.Since(ts) > 120*time.Second || strings.EqualFold(strings.TrimSpace(values["status"]), "offline") {
+		return fmt.Errorf("%w: 指定节点当前离线: %s", ErrInvalidAssignedWorker, workerName)
+	}
+	return nil
 }
 
 func (a *App) StartScanTask(config models.TaskConfig) (string, error) {
-	normalizeTaskConfig(&config)
+	if err := normalizeTaskConfig(&config); err != nil {
+		return "", err
+	}
 	return a.scheduler.SubmitTask(&config)
 }
 
@@ -31,7 +75,9 @@ func (a *App) StopTaskWithUser(taskID string, userID uint) error {
 }
 
 func (a *App) StartScanTaskWithUser(config models.TaskConfig, userID uint) (string, error) {
-	normalizeTaskConfig(&config)
+	if err := normalizeTaskConfig(&config); err != nil {
+		return "", err
+	}
 	return a.scheduler.SubmitTaskWithUser(&config, userID)
 }
 

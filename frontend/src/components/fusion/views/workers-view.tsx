@@ -29,7 +29,7 @@ function Metric({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-card border border-border bg-background px-3 py-2">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+      <div className="mt-1 break-all text-sm font-semibold text-foreground">{value}</div>
     </div>
   )
 }
@@ -46,17 +46,17 @@ function UsageBar({ value }: { value: number }) {
   )
 }
 
-function CommandPanel({ value, label, enabled = true }: { value: string; label: string; enabled?: boolean }) {
+function CommandPanel({ value, label }: { value: string; label: string }) {
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-foreground">{label}</span>
-        <Button size="sm" variant="outline" onClick={() => copyText(value, label)} disabled={!value || !enabled}>
+        <Button size="sm" variant="outline" onClick={() => copyText(value, label)} disabled={!value}>
           <Clipboard className="size-4" />
           复制
         </Button>
       </div>
-      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-card border border-border bg-background p-4 font-mono text-xs leading-6 text-foreground">{value || '正在生成...'}</pre>
+      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-card border border-border bg-background p-4 font-mono text-xs leading-6 text-foreground">{value || '暂无内容'}</pre>
     </div>
   )
 }
@@ -69,14 +69,16 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     staleTime: 30_000,
   })
   const data = query.data
+  const statusTone = data?.ready ? 'success' : 'danger'
+  const statusLabel = data?.ready ? '可直接部署' : '需先补齐远程访问'
 
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
       title="添加远程 Worker"
-      description="在目标机器执行对应命令，即可生成 Compose 文件并启动 Worker 容器。"
-      className="max-w-4xl"
+      description="在目标机器执行对应命令即可生成 Compose 文件并启动 Worker 容器。下方会同时展示主节点 API、PostgreSQL、Redis、MinIO 的远程连接信息。"
+      className="max-w-5xl"
     >
       {query.isLoading ? (
         <div className="flex min-h-52 items-center justify-center text-sm text-muted"><RefreshCw className="mr-2 size-4 animate-spin" />正在生成部署代码...</div>
@@ -84,32 +86,56 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
         <EmptyState title="部署代码生成失败" description={(query.error as any)?.message || '请检查 API 和 Worker 配置'} />
       ) : (
         <div className="grid gap-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Metric label="主节点地址" value={data?.server || '-'} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <Metric label="部署状态" value={<Badge tone={statusTone as any}>{statusLabel}</Badge>} />
+            <Metric label="主节点 API" value={data?.server || '-'} />
             <Metric label="Worker 镜像" value={data?.image || '-'} />
+            <Metric label="PostgreSQL" value={data?.pgDsn || '-'} />
+            <Metric label="Redis" value={data?.redisAddr || '-'} />
+            <Metric label="MinIO" value={data?.minioEndpoint || '-'} />
           </div>
+
           {data?.ready ? (
-            <div className="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm leading-6 text-warning-foreground">
-              远程 Worker 必须能够访问主节点 API、PostgreSQL、Redis 和 MinIO。部署代码包含连接凭据，请仅在受信任的目标机器上执行。
+            <div className="rounded-card border border-success/30 bg-success/10 p-3 text-sm leading-6 text-success-foreground">
+              部署代码已生成。远程 Worker 需要同时访问主节点 API、PostgreSQL、Redis 和 MinIO；建议只在内网/VPN 环境使用这些命令。
             </div>
           ) : (
             <div className="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm leading-6 text-danger">
-              <div className="font-semibold">远程部署配置尚未完成</div>
-              <div className="mt-1">请在主节点 .env 中补齐：{data?.missing?.join('、') || '远程连接参数'}，然后重启 fusionweb-api。</div>
+              <div className="font-semibold">当前还不能直接添加远程节点</div>
+              <div className="mt-1">请先按下方建议修改主节点 .env，并使用 remote-access 覆盖层重启主节点；修改完成后重新打开本弹窗即可得到可用命令。</div>
             </div>
           )}
+
+          {data?.needsRemoteAccess ? (
+            <div className="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm leading-6 text-warning-foreground">
+              当前命令使用的是主节点自带 PostgreSQL / Redis / MinIO。远程 Worker 接入前，主节点通常需要叠加 <code>docker-compose.remote-access.yaml</code> 暴露基础设施端口。
+            </div>
+          ) : null}
+
+          {data?.missing?.length ? (
+            <div className="rounded-card border border-danger/30 bg-danger/5 p-3">
+              <div className="text-sm font-semibold text-danger">待补齐项</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {data.missing.map((item) => <Badge key={item} tone="danger">{item}</Badge>)}
+              </div>
+            </div>
+          ) : null}
+
           {data?.warnings?.map((warning) => (
             <div key={warning} className="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm leading-6 text-warning-foreground">{warning}</div>
           ))}
+
           <Tabs defaultValue="linux">
             <TabsList>
               <TabsTrigger value="linux">Linux</TabsTrigger>
               <TabsTrigger value="windows">Windows PowerShell</TabsTrigger>
               <TabsTrigger value="compose">Docker Compose</TabsTrigger>
+              <TabsTrigger value="env">.env 建议</TabsTrigger>
             </TabsList>
-            <TabsContent value="linux"><CommandPanel value={data?.linux || ''} label="Linux 一键部署命令" enabled={data?.ready} /></TabsContent>
-            <TabsContent value="windows"><CommandPanel value={data?.windows || ''} label="Windows 一键部署命令" enabled={data?.ready} /></TabsContent>
-            <TabsContent value="compose"><CommandPanel value={data?.compose || ''} label="Docker Compose 配置" enabled={data?.ready} /></TabsContent>
+            <TabsContent value="linux"><CommandPanel value={data?.linux || ''} label="Linux 一键部署命令" /></TabsContent>
+            <TabsContent value="windows"><CommandPanel value={data?.windows || ''} label="Windows 一键部署命令" /></TabsContent>
+            <TabsContent value="compose"><CommandPanel value={data?.compose || ''} label="Docker Compose 配置" /></TabsContent>
+            <TabsContent value="env"><CommandPanel value={data?.suggestedEnv || ''} label="主节点 .env 建议片段" /></TabsContent>
           </Tabs>
         </div>
       )}
@@ -148,7 +174,7 @@ export function WorkersView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">节点管理</h1>
-          <p className="mt-1 text-sm text-muted">查看默认和远程 Worker 状态，生成 Windows/Linux 一键部署代码。</p>
+          <p className="mt-1 text-sm text-muted">查看默认和远程 Worker 状态，生成 Windows / Linux 一键部署代码，并检查远程节点依赖的数据库、Redis、对象存储连接信息。</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => workersQuery.refetch()} disabled={workersQuery.isFetching}>

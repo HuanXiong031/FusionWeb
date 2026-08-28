@@ -223,6 +223,7 @@ func createTables() error {
 			enable_screenshot INTEGER DEFAULT 0,
 			web_link INTEGER DEFAULT 0,
 			selected_dicts TEXT DEFAULT '[]',
+			assigned_worker TEXT DEFAULT '',
 			scan_all_pocs_when_no_fingerprint INTEGER DEFAULT 0,
 			full_poc_scan INTEGER DEFAULT 0,
 			enable_active_fingerprint INTEGER DEFAULT 0,
@@ -829,6 +830,7 @@ func ensureTaskConfigColumns() error {
 		{"selected_dicts", "selected_dicts TEXT DEFAULT '[]'"},
 		{"web_timeout", "web_timeout INTEGER DEFAULT 20"},
 		{"enable_screenshot", "enable_screenshot INTEGER DEFAULT 0"},
+		{"assigned_worker", "assigned_worker TEXT DEFAULT ''"},
 	}
 
 	for _, item := range columns {

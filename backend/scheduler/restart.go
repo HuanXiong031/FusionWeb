@@ -36,7 +36,7 @@ func (s *TaskScheduler) RestartTask(oldTaskID string) (string, error) {
                http_proxy, skip_host_discovery, no_icmp_ping, tcp_ping, 
                ports_threshold, syn_scan_rate, web_link,
                scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, enable_screenshot,
-               selected_dicts, ding_talk_token, ding_talk_secret, ding_talk_key_id, status, user_id
+               selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, status, user_id
         FROM task_config
         WHERE task_id = ?
     `
@@ -49,7 +49,7 @@ func (s *TaskScheduler) RestartTask(oldTaskID string) (string, error) {
 		&skipHostDiscovery, &noICMPPing, &tcpPing,
 		&cfg.PortsThreshold, &cfg.SYNScanRate, &webLink,
 		&scanAllPOCsWhenNoFingerprint, &fullPocScan, &enableActiveFingerprint,
-		&enableScreenshot, &cfg.SelectedDicts, &cfg.DingTalkToken, &cfg.DingTalkSecret, &cfg.DingTalkKeyID, &cfg.Status, &userID,
+		&enableScreenshot, &cfg.SelectedDicts, &cfg.AssignedWorker, &cfg.DingTalkToken, &cfg.DingTalkSecret, &cfg.DingTalkKeyID, &cfg.Status, &userID,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -108,6 +108,7 @@ func (s *TaskScheduler) RestartTask(oldTaskID string) (string, error) {
 		EnableActiveFingerprint:      cfg.EnableActiveFingerprint,
 		EnableScreenshot:             cfg.EnableScreenshot,
 		SelectedDicts:                cfg.SelectedDicts,
+		AssignedWorker:               cfg.AssignedWorker,
 		DingTalkToken:                cfg.DingTalkToken,
 		DingTalkSecret:               cfg.DingTalkSecret,
 		DingTalkKeyID:                cfg.DingTalkKeyID,

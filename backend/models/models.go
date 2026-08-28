@@ -41,6 +41,7 @@ type TaskConfig struct {
 	FullPocScan                  bool      `json:"full_poc_scan"`                     // 全量POC扫描（扫描所有POC目录，忽略指纹）
 	EnableActiveFingerprint      bool      `json:"enable_active_fingerprint"`         // 启用主动指纹探测（目录字典扫描）
 	SelectedDicts                string    `json:"selected_dicts"`                    // JSON 格式的字典/路径列表
+	AssignedWorker               string    `json:"assigned_worker"`                   // 指定执行节点；为空时由调度器自动分配
 	DingTalkToken                string    `json:"ding_talk_token"`                   // 钉钉机器人Token
 	DingTalkSecret               string    `json:"ding_talk_secret"`                  // 钉钉机器人Secret
 	DingTalkKeyID                int       `json:"ding_talk_key_id"`                  // 系统设置中选择的钉钉Key

@@ -93,6 +93,9 @@ func main() {
 	if err := scheduler.EnsureTaskStream(context.Background()); err != nil {
 		panic(err)
 	}
+	if err := scheduler.EnsureWorkerTaskStream(context.Background(), cfg.Name); err != nil {
+		panic(err)
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -107,7 +110,16 @@ func main() {
 			defer wg.Done()
 			err := scheduler.ConsumeStream(ctx, name, wr.streamHandler(ex))
 			if err != nil && ctx.Err() == nil {
-				logger.Error("Worker 消费者 %s 退出: %v", name, err)
+				logger.Error("Worker 公共队列消费者 %s 退出: %v", name, err)
+			}
+		}(executor, consumer)
+		wg.Add(1)
+		go func(ex *scheduler.TaskExecutor, name string) {
+			defer wg.Done()
+			targetedName := name + "-targeted"
+			err := scheduler.ConsumeWorkerStream(ctx, cfg.Name, targetedName, wr.streamHandler(ex))
+			if err != nil && ctx.Err() == nil {
+				logger.Error("Worker 定向队列消费者 %s 退出: %v", targetedName, err)
 			}
 		}(executor, consumer)
 	}
@@ -204,7 +216,10 @@ func (w *workerRuntime) reclaimLoop(ctx context.Context) {
 		}
 		consumer := w.cfg.Name + "-reclaimer"
 		if err := scheduler.ReclaimPendingTasks(ctx, consumer, 2*time.Minute, w.streamHandler(w.reclaimExecutor)); err != nil && ctx.Err() == nil {
-			logger.Warn("Worker Pending 任务认领失败: %v", err)
+			logger.Warn("Worker 公共队列 Pending 任务认领失败: %v", err)
+		}
+		if err := scheduler.ReclaimWorkerPendingTasks(ctx, w.cfg.Name, consumer+"-targeted", 2*time.Minute, w.streamHandler(w.reclaimExecutor)); err != nil && ctx.Err() == nil {
+			logger.Warn("Worker 定向队列 Pending 任务认领失败: %v", err)
 		}
 	}
 	// 启动后立即检查一次，避免 Worker 重启后额外等待一个周期。

@@ -383,6 +383,9 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
     return []
   }, [taskType, subdomainResultsQuery.data, weakPasswordResultsQuery.data, directoryResultsQuery.data, jsResultsQuery.data])
   const moduleResultCount = getModuleResultCount(detail) || moduleRows.length
+  const assignedWorker = String(detail?.assignedWorker || detail?.assigned_worker || '').trim()
+  const actualWorker = String(detail?.workerID || detail?.workerId || detail?.worker_id || '').trim()
+  const actualWorkerLabel = actualWorker || (detail?.status === 'pending' ? (assignedWorker ? `等待 ${assignedWorker} 消费` : '待自动分配') : '-')
   const targetInputText = React.useMemo(() => getTaskTargetInput(detail), [detail])
   const targetRecords = React.useMemo(() => buildTaskTargetRecords(targetInputText), [targetInputText])
   const filteredTargetRecords = React.useMemo(() => {
@@ -658,6 +661,19 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
         <Metric label={moduleTask ? '结果' : '漏洞'} value={moduleTask ? moduleResultCount : detail?.vulnCount || vulns.length || 0} icon={moduleTask ? ListChecks : Bug} tone={moduleTask ? 'success' : 'danger'} badgeLabel={moduleTask ? '结果' : '漏洞'} />
         <Metric label="目标" value={targetCount} icon={Globe2} tone="accent" badgeLabel="目标" />
       </div>
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>调度信息</CardTitle>
+            <CardDescription>展示任务指定节点与实际消费节点，便于多节点排查调度链路。</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <PreviewLine label="指定节点" value={assignedWorker || '自动分配'} />
+          <PreviewLine label="实际执行节点" value={actualWorkerLabel} />
+          <PreviewLine label="创建时间" value={formatTime(detail?.createTime || detail?.createdAt)} />
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <div>

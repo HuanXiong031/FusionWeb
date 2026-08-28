@@ -463,8 +463,8 @@ func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
         (task_id, task_name, task_type, parent_task_id, target_input, port_range, 
         no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, skip_host_discovery, no_icmp_ping, 
         tcp_ping, ports_threshold, syn_scan_rate, web_link, enable_screenshot,
-        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	logger.Debug("SubmitTask TaskType: %s", config.TaskType)
 	_, err := database.DB.Exec(query,
@@ -472,7 +472,7 @@ func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
 		config.PortRange, config.NoPortString, config.ScanMode, config.ScanTool, config.ScanOptions,
 		config.ThreadCount, config.PortScanTimeout, config.WebTimeout, config.HTTPProxy, database.BoolInt(config.SkipHostDiscovery), database.BoolInt(config.NoICMPPing),
 		database.BoolInt(config.TCPPing), config.PortsThreshold, config.SYNScanRate, database.BoolInt(config.WebLink), database.BoolInt(config.EnableScreenshot),
-		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status)
+		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status)
 
 	if err != nil {
 		logger.Debug("save task error: %v", err)
@@ -520,8 +520,8 @@ func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uin
         (task_id, task_name, task_type, parent_task_id, target_input, port_range, 
         no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, skip_host_discovery, no_icmp_ping, 
         tcp_ping, ports_threshold, syn_scan_rate, web_link, enable_screenshot,
-        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status, user_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status, user_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	logger.Debug("SubmitTaskWithUser TaskType=%s, UserID=%d", config.TaskType, userID)
 	_, err := database.DB.Exec(query,
@@ -529,7 +529,7 @@ func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uin
 		config.PortRange, config.NoPortString, config.ScanMode, config.ScanTool, config.ScanOptions,
 		config.ThreadCount, config.PortScanTimeout, config.WebTimeout, config.HTTPProxy, database.BoolInt(config.SkipHostDiscovery), database.BoolInt(config.NoICMPPing),
 		database.BoolInt(config.TCPPing), config.PortsThreshold, config.SYNScanRate, database.BoolInt(config.WebLink), database.BoolInt(config.EnableScreenshot),
-		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status, userID)
+		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status, userID)
 
 	if err != nil {
 		logger.Debug("save task error: %v", err)
@@ -763,7 +763,7 @@ func (s *TaskScheduler) ResumeTask(taskID string) error {
                port_range, no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, 
                skip_host_discovery, no_icmp_ping, tcp_ping, ports_threshold, syn_scan_rate,
                web_link, scan_all_pocs_when_no_fingerprint, full_poc_scan, 
-               enable_active_fingerprint, enable_screenshot, selected_dicts, ding_talk_token, ding_talk_secret, ding_talk_key_id, status
+               enable_active_fingerprint, enable_screenshot, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, status
         FROM task_config 
         WHERE task_id = ? AND status = 'paused'
     `
@@ -774,7 +774,7 @@ func (s *TaskScheduler) ResumeTask(taskID string) error {
 		&config.ThreadCount, &config.PortScanTimeout, &config.WebTimeout, &config.HTTPProxy, &skipHostDiscovery, &noICMPPing,
 		&tcpPing, &config.PortsThreshold, &config.SYNScanRate, &webLink,
 		&scanAllPOCsWhenNoFingerprint, &fullPocScan, &enableActiveFingerprint,
-		&enableScreenshot, &config.SelectedDicts, &config.DingTalkToken, &config.DingTalkSecret, &config.DingTalkKeyID, &config.Status,
+		&enableScreenshot, &config.SelectedDicts, &config.AssignedWorker, &config.DingTalkToken, &config.DingTalkSecret, &config.DingTalkKeyID, &config.Status,
 	)
 
 	if err != nil {
@@ -812,11 +812,16 @@ func (s *TaskScheduler) ResumeTask(taskID string) error {
 
 func (s *TaskScheduler) publishOrQueue(task *models.TaskConfig) error {
 	if database.RedisEnabled() {
-		if err := PublishTask(task.TaskID, task.TaskType); err == nil {
-			return nil
+		var err error
+		if strings.TrimSpace(task.AssignedWorker) != "" {
+			err = PublishTaskToWorker(task.TaskID, task.TaskType, task.AssignedWorker)
 		} else {
-			logger.Warn("Redis Stream 发布失败，降级本地: %v", err)
+			err = PublishTask(task.TaskID, task.TaskType)
 		}
+		if err == nil {
+			return nil
+		}
+		logger.Warn("Redis Stream 发布失败，降级本地: %v", err)
 	}
 	select {
 	case s.taskQueue <- task:

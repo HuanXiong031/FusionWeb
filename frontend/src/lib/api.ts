@@ -48,6 +48,11 @@ export interface WorkerInstallCommand {
   compose: string
   linux: string
   windows: string
+  pgDsn: string
+  redisAddr: string
+  minioEndpoint: string
+  needsRemoteAccess: boolean
+  suggestedEnv: string
 }
 
 export interface TaskConfig {
@@ -72,6 +77,7 @@ export interface TaskConfig {
   selected_dicts?: string
   full_poc_scan?: boolean
   enable_active_fingerprint?: boolean
+  assigned_worker?: string
   ding_talk_token?: string
   ding_talk_secret?: string
   ding_talk_key_id?: number
@@ -102,6 +108,11 @@ export interface TaskRow {
   targetInput?: string
   target_input?: string
   status?: string
+  assignedWorker?: string
+  assigned_worker?: string
+  workerID?: string
+  workerId?: string
+  worker_id?: string
   percentage?: number
   progress?: number
   portCount?: number

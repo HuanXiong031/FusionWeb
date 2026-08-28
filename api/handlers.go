@@ -8,6 +8,7 @@ import (
 	"FusionWeb/backend/storage"
 	"FusionWeb/backend/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -73,6 +74,10 @@ func HandleCreateTask() gin.HandlerFunc {
 		// 传递用户ID到任务创建
 		taskID, err := app.StartScanTaskWithUser(config, userID.(uint))
 		if err != nil {
+			if errors.Is(err, ErrInvalidAssignedWorker) {
+				BadRequestResponse(c, err.Error(), err)
+				return
+			}
 			InternalServerErrorResponse(c, err.Error(), err)
 			return
 		}

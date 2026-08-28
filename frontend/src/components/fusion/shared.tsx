@@ -721,6 +721,22 @@ export function getTaskColumns(onOpenTask: (taskId: string) => void, onAction?: 
       cell: ({ row }) => <Badge tone={getStatusTone(row.original.status) as any}>{getStatusLabel(row.original.status)}</Badge>,
     },
     {
+      header: '执行节点',
+      accessorKey: 'assignedWorker',
+      meta: { className: 'w-[180px]' },
+      cell: ({ row }) => {
+        const assignedWorker = row.original.assignedWorker || row.original.assigned_worker || ''
+        const workerID = row.original.workerID || row.original.workerId || row.original.worker_id || ''
+        const workerText = workerID || (row.original.status === 'pending' ? '待分配' : '-')
+        return (
+          <div className="text-xs">
+            <div className="font-medium text-foreground">{assignedWorker || '自动分配'}</div>
+            <div className="mt-1 text-muted">实际 {workerText}</div>
+          </div>
+        )
+      },
+    },
+    {
       header: '进度',
       cell: ({ row }) => {
         const value = Math.round(row.original.percentage || row.original.progress || 0)

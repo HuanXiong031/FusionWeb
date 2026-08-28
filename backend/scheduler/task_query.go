@@ -27,7 +27,7 @@ func (s *TaskScheduler) GetTaskList(userID uint, createdByFilter *int) ([]map[st
 	s.repairStaleTaskStatuses()
 	// 构建查询
 	query := `SELECT task_id, task_name, task_type, target_input, status, 
-              CAST(created_at AS TEXT), CAST(updated_at AS TEXT), CAST(completed_at AS TEXT), current_stage, user_id
+              CAST(created_at AS TEXT), CAST(updated_at AS TEXT), CAST(completed_at AS TEXT), current_stage, user_id, COALESCE(assigned_worker, '')
               FROM task_config WHERE 1=1`
 
 	var args []interface{}
@@ -50,9 +50,10 @@ func (s *TaskScheduler) GetTaskList(userID uint, createdByFilter *int) ([]map[st
 		var taskID, taskName, taskType, targetInput, status string
 		var createdAt, updatedAt, completedAt, currentStage sql.NullString
 		var uid int
+		var assignedWorker string
 
 		if err := rows.Scan(&taskID, &taskName, &taskType, &targetInput, &status,
-			&createdAt, &updatedAt, &completedAt, &currentStage, &uid); err != nil {
+			&createdAt, &updatedAt, &completedAt, &currentStage, &uid, &assignedWorker); err != nil {
 			logger.Warn("扫描任务行失败: %v", err)
 			continue
 		}
@@ -68,19 +69,20 @@ func (s *TaskScheduler) GetTaskList(userID uint, createdByFilter *int) ([]map[st
 		moduleResultCount := s.getModuleResultCount(taskID, taskType)
 
 		task := map[string]interface{}{
-			"taskID":           taskID,
-			"taskName":         taskName,
-			"taskType":         taskType,
-			"targetInput":      targetInput,
-			"status":           status,
-			"createTime":       utils.FormatNullTimeStringForDisplay(createdAt),
-			"updateTime":       utils.FormatNullTimeStringForDisplay(updatedAt),
-			"portCount":        portCount,
-			"urlCount":         urlCount,
-			"fingerprintCount": fingerprintCount,
-			"vulnCount":        vulnCount,
+			"taskID":            taskID,
+			"taskName":          taskName,
+			"taskType":          taskType,
+			"targetInput":       targetInput,
+			"status":            status,
+			"createTime":        utils.FormatNullTimeStringForDisplay(createdAt),
+			"updateTime":        utils.FormatNullTimeStringForDisplay(updatedAt),
+			"portCount":         portCount,
+			"urlCount":          urlCount,
+			"fingerprintCount":  fingerprintCount,
+			"vulnCount":         vulnCount,
 			"moduleResultCount": moduleResultCount,
-			"userID":           uid,
+			"userID":            uid,
+			"assignedWorker":    assignedWorker,
 		}
 
 		if completedAt.Valid {
@@ -95,6 +97,9 @@ func (s *TaskScheduler) GetTaskList(userID uint, createdByFilter *int) ([]map[st
 		if runtimeStatus, progress, ok := s.runtimeTaskStatus(taskID); ok {
 			status = runtimeStatus
 			task["status"] = runtimeStatus
+			if runtimeState, exists := service.NewTaskRuntimeService().GetTaskState(taskID); exists && runtimeState.WorkerID != "" {
+				task["workerID"] = runtimeState.WorkerID
+			}
 			if progress != nil {
 				task["percentage"] = progress.Percentage
 				task["stage"] = progress.Stage
@@ -143,14 +148,15 @@ func (s *TaskScheduler) GetTaskDetail(taskID string) (map[string]interface{}, er
 	var portRange, scanMode, scanTool, scanOptions, noPortString, httpProxy, selectedDicts string
 	var threadCount, portScanTimeout, webTimeout int
 	var enableScreenshot int
+	var assignedWorker string
 
 	query := `SELECT task_name, task_type, target_input, status, CAST(created_at AS TEXT), CAST(updated_at AS TEXT), CAST(completed_at AS TEXT), current_stage, user_id,
-              port_range, scan_mode, scan_tool, scan_options, no_port_string, thread_count, port_scan_timeout, web_timeout, http_proxy, enable_screenshot, selected_dicts
+              port_range, scan_mode, scan_tool, scan_options, no_port_string, thread_count, port_scan_timeout, web_timeout, http_proxy, enable_screenshot, selected_dicts, COALESCE(assigned_worker, '')
               FROM task_config WHERE task_id = ?`
 
 	err := database.DB.QueryRow(query, taskID).Scan(
 		&taskName, &taskType, &targetInput, &status, &createdAt, &updatedAt, &completedAt, &currentStage, &userID,
-		&portRange, &scanMode, &scanTool, &scanOptions, &noPortString, &threadCount, &portScanTimeout, &webTimeout, &httpProxy, &enableScreenshot, &selectedDicts,
+		&portRange, &scanMode, &scanTool, &scanOptions, &noPortString, &threadCount, &portScanTimeout, &webTimeout, &httpProxy, &enableScreenshot, &selectedDicts, &assignedWorker,
 	)
 
 	if err != nil {
@@ -169,29 +175,30 @@ func (s *TaskScheduler) GetTaskDetail(taskID string) (map[string]interface{}, er
 	moduleResultCount := s.getModuleResultCount(taskID, taskType)
 
 	result := map[string]interface{}{
-		"taskID":           taskID,
-		"taskName":         taskName,
-		"taskType":         taskType,
-		"targetInput":      targetInput,
-		"status":           status,
-		"createTime":       utils.FormatNullTimeStringForDisplay(createdAt),
-		"updateTime":       utils.FormatNullTimeStringForDisplay(updatedAt),
-		"userID":           userID,
-		"portRange":        portRange,
-		"scanMode":         scanMode,
-		"scanTool":         scanTool,
-		"scanOptions":      scanOptions,
-		"noPortString":     noPortString,
-		"threadCount":      threadCount,
-		"portScanTimeout":  portScanTimeout,
-		"webTimeout":       webTimeout,
-		"enableScreenshot": database.IntBool(enableScreenshot),
-		"httpProxy":        httpProxy,
-		"selectedDicts":    selectedDicts,
-		"portCount":        portCount,
-		"urlCount":         urlCount,
-		"fingerprintCount": fingerprintCount,
-		"vulnCount":        vulnCount,
+		"taskID":            taskID,
+		"taskName":          taskName,
+		"taskType":          taskType,
+		"targetInput":       targetInput,
+		"status":            status,
+		"createTime":        utils.FormatNullTimeStringForDisplay(createdAt),
+		"updateTime":        utils.FormatNullTimeStringForDisplay(updatedAt),
+		"userID":            userID,
+		"portRange":         portRange,
+		"scanMode":          scanMode,
+		"scanTool":          scanTool,
+		"scanOptions":       scanOptions,
+		"noPortString":      noPortString,
+		"threadCount":       threadCount,
+		"portScanTimeout":   portScanTimeout,
+		"webTimeout":        webTimeout,
+		"enableScreenshot":  database.IntBool(enableScreenshot),
+		"httpProxy":         httpProxy,
+		"selectedDicts":     selectedDicts,
+		"assignedWorker":    assignedWorker,
+		"portCount":         portCount,
+		"urlCount":          urlCount,
+		"fingerprintCount":  fingerprintCount,
+		"vulnCount":         vulnCount,
 		"moduleResultCount": moduleResultCount,
 	}
 
@@ -207,6 +214,9 @@ func (s *TaskScheduler) GetTaskDetail(taskID string) (map[string]interface{}, er
 	if runtimeStatus, progress, ok := s.runtimeTaskStatus(taskID); ok {
 		status = runtimeStatus
 		result["status"] = runtimeStatus
+		if runtimeState, exists := service.NewTaskRuntimeService().GetTaskState(taskID); exists && runtimeState.WorkerID != "" {
+			result["workerID"] = runtimeState.WorkerID
+		}
 		if progress != nil {
 			result["percentage"] = progress.Percentage
 			result["stage"] = progress.Stage
