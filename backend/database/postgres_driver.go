@@ -167,31 +167,35 @@ func postgresQuestionPlaceholders(query string) string {
 }
 
 func copySingleQuoted(b *strings.Builder, query string, start int) int {
-	for i := start; i < len(query); i++ {
+	b.WriteByte(query[start])
+	for i := start + 1; i < len(query); i++ {
 		b.WriteByte(query[i])
-		if query[i] == '\'' {
-			if i+1 < len(query) && query[i+1] == '\'' {
-				i++
-				b.WriteByte(query[i])
-				continue
-			}
-			return i + 1
+		if query[i] != '\'' {
+			continue
 		}
+		if i+1 < len(query) && query[i+1] == '\'' {
+			i++
+			b.WriteByte(query[i])
+			continue
+		}
+		return i + 1
 	}
 	return len(query)
 }
 
 func copyDoubleQuoted(b *strings.Builder, query string, start int) int {
-	for i := start; i < len(query); i++ {
+	b.WriteByte(query[start])
+	for i := start + 1; i < len(query); i++ {
 		b.WriteByte(query[i])
-		if query[i] == '"' {
-			if i+1 < len(query) && query[i+1] == '"' {
-				i++
-				b.WriteByte(query[i])
-				continue
-			}
-			return i + 1
+		if query[i] != '"' {
+			continue
 		}
+		if i+1 < len(query) && query[i+1] == '"' {
+			i++
+			b.WriteByte(query[i])
+			continue
+		}
+		return i + 1
 	}
 	return len(query)
 }
