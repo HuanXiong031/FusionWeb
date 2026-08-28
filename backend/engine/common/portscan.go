@@ -175,7 +175,7 @@ func scanPortTaskStream(total int, options PortServiceScanOptions, enqueue func(
 		options.PortsThreshold = structs.GlobalConfig.PortsThreshold
 	}
 	if options.PortsThreshold <= 0 {
-		options.PortsThreshold = 65536
+		options.PortsThreshold = 65535
 	}
 
 	gologger.AuditTimeLogger("开始端口服务扫描，目标数: %d，并发: %d", total, options.Threads)

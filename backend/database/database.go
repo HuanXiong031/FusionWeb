@@ -216,7 +216,7 @@ func createTables() error {
 			skip_host_discovery INTEGER DEFAULT 0,
 			no_icmp_ping INTEGER DEFAULT 0,
 			tcp_ping INTEGER DEFAULT 0,
-			ports_threshold INTEGER DEFAULT 65536,
+			ports_threshold INTEGER DEFAULT 65535,
 			syn_scan_rate INTEGER DEFAULT 10000,
 			port_scan_timeout INTEGER DEFAULT 3,
 			web_timeout INTEGER DEFAULT 20,

@@ -345,7 +345,7 @@ export function AdvancedScanView({
     hostDiscovery: true,
     icmpPing: true,
     tcpPing: false,
-    portsThreshold: 65536,
+    portsThreshold: 65535,
     synScanRate: 10000,
     portIdentifyService: true,
     portExcludeTargets: '',
@@ -496,7 +496,7 @@ export function AdvancedScanView({
         skip_host_discovery: !draft.hostDiscovery,
         no_icmp_ping: draft.hostDiscovery ? !draft.icmpPing : true,
         tcp_ping: draft.hostDiscovery ? draft.tcpPing : false,
-        ports_threshold: Number(draft.portsThreshold) || 65536,
+        ports_threshold: Math.min(65535, Math.max(1, Number(draft.portsThreshold) || 65535)),
         syn_scan_rate: Number(draft.synScanRate) || 10000,
         web_link: draft.webLink,
         selected_dicts: JSON.stringify(selectedDicts),
@@ -633,7 +633,7 @@ export function AdvancedScanView({
                   <ToggleField label="Web 联动" checked={draft.webLink} onChange={(value) => setDraft({ ...draft, webLink: value })} />
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Field label="端口数量阈值"><Input type="number" value={draft.portsThreshold} onChange={(event) => setDraft({ ...draft, portsThreshold: Number(event.target.value) })} /></Field>
+                  <Field label="端口数量阈值"><Input type="number" min={1} max={65535} value={draft.portsThreshold} onChange={(event) => setDraft({ ...draft, portsThreshold: Number(event.target.value) })} /></Field>
                   <Field label="线程数"><Input type="number" value={draft.threadCount} onChange={(event) => setDraft({ ...draft, threadCount: Number(event.target.value) })} /></Field>
                   <Field label="端口超时(秒)"><Input type="number" value={draft.portScanTimeout} onChange={(event) => setDraft({ ...draft, portScanTimeout: Number(event.target.value) })} /></Field>
                 </div>

@@ -11,7 +11,17 @@ import (
 	"time"
 )
 
+func normalizeTaskConfig(config *models.TaskConfig) {
+	if config == nil {
+		return
+	}
+	if config.PortsThreshold <= 0 || config.PortsThreshold > 65535 {
+		config.PortsThreshold = 65535
+	}
+}
+
 func (a *App) StartScanTask(config models.TaskConfig) (string, error) {
+	normalizeTaskConfig(&config)
 	return a.scheduler.SubmitTask(&config)
 }
 
@@ -21,6 +31,7 @@ func (a *App) StopTaskWithUser(taskID string, userID uint) error {
 }
 
 func (a *App) StartScanTaskWithUser(config models.TaskConfig, userID uint) (string, error) {
+	normalizeTaskConfig(&config)
 	return a.scheduler.SubmitTaskWithUser(&config, userID)
 }
 
