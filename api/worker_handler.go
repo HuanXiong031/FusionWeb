@@ -14,8 +14,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type workerReport struct {
@@ -52,6 +54,7 @@ func RegisterWorkerRoutes(r *gin.Engine, v1 *gin.RouterGroup) {
 	internal.POST("/heartbeat", handleWorkerHeartbeat)
 	internal.POST("/deregister", handleWorkerDeregister)
 	v1.GET("/workers", handleWorkerList)
+	v1.PUT("/workers/:name", handleWorkerRename)
 	v1.DELETE("/workers/:name", handleWorkerDelete)
 	v1.GET("/workers/install-command", handleWorkerInstallCommand)
 	r.GET("/static/fusionweb-worker/install.sh", handlePublicWorkerInstallShellScript)
@@ -69,7 +72,7 @@ func handleWorkerRegister(c *gin.Context) {
 	if report.Concurrency <= 0 {
 		report.Concurrency = 5
 	}
-	if err := saveWorker(c.Request.Context(), report, true); err != nil {
+	if err := saveWorker(c.Request.Context(), report, c.ClientIP(), true); err != nil {
 		InternalServerErrorResponse(c, "保存 Worker 注册信息失败", err)
 		return
 	}
@@ -91,7 +94,7 @@ func handleWorkerHeartbeat(c *gin.Context) {
 		BadRequestResponse(c, "Worker 心跳参数无效", err)
 		return
 	}
-	if err := saveWorker(c.Request.Context(), r, false); err != nil {
+	if err := saveWorker(c.Request.Context(), r, c.ClientIP(), false); err != nil {
 		InternalServerErrorResponse(c, "保存 Worker 心跳失败", err)
 		return
 	}
@@ -117,7 +120,7 @@ func handleWorkerDeregister(c *gin.Context) {
 	SuccessResponse(c, gin.H{"ok": true})
 }
 
-func saveWorker(ctx context.Context, r workerReport, register bool) error {
+func saveWorker(ctx context.Context, r workerReport, ipAddress string, register bool) error {
 	client := database.GetRedis()
 	if client == nil {
 		return fmt.Errorf("Redis 不可用")
@@ -125,6 +128,9 @@ func saveWorker(ctx context.Context, r workerReport, register bool) error {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	key := database.RedisKey("worker", r.Name)
 	values := map[string]interface{}{"name": r.Name, "status": "online", "os": r.OS, "arch": r.Arch, "concurrency": r.Concurrency, "active_tasks": r.ActiveTasks, "completed_tasks": r.CompletedTasks, "cpu_percent": fmt.Sprintf("%.2f", r.CPUPercent), "memory_percent": fmt.Sprintf("%.2f", r.MemoryPercent), "version": r.Version, "last_heartbeat": now}
+	if normalizedIP := normalizeWorkerIPAddress(ipAddress); normalizedIP != "" {
+		values["ip_address"] = normalizedIP
+	}
 	if register {
 		values["registered_at"] = now
 	}
@@ -133,6 +139,8 @@ func saveWorker(ctx context.Context, r workerReport, register bool) error {
 
 type workerView struct {
 	Name           string  `json:"name"`
+	DisplayName    string  `json:"displayName,omitempty"`
+	IPAddress      string  `json:"ipAddress,omitempty"`
 	Status         string  `json:"status"`
 	OS             string  `json:"os"`
 	Arch           string  `json:"arch"`
@@ -144,6 +152,10 @@ type workerView struct {
 	Version        string  `json:"version"`
 	RegisteredAt   string  `json:"registeredAt"`
 	LastHeartbeat  string  `json:"lastHeartbeat"`
+}
+
+type workerRenameRequest struct {
+	DisplayName string `json:"displayName"`
 }
 
 func handleWorkerList(c *gin.Context) {
@@ -174,11 +186,12 @@ func handleWorkerList(c *gin.Context) {
 			break
 		}
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
+	sort.Slice(result, func(i, j int) bool { return workerSortKey(result[i]) < workerSortKey(result[j]) })
 	SuccessResponse(c, result)
 }
+
 func mapWorker(m map[string]string) workerView {
-	w := workerView{Name: m["name"], Status: m["status"], OS: m["os"], Arch: m["arch"], Version: m["version"], RegisteredAt: m["registered_at"], LastHeartbeat: m["last_heartbeat"]}
+	w := workerView{Name: m["name"], DisplayName: resolveWorkerDisplayName(m), IPAddress: normalizeWorkerIPAddress(m["ip_address"]), Status: m["status"], OS: m["os"], Arch: m["arch"], Version: m["version"], RegisteredAt: m["registered_at"], LastHeartbeat: m["last_heartbeat"]}
 	w.Concurrency, _ = strconv.Atoi(m["concurrency"])
 	w.ActiveTasks, _ = strconv.ParseInt(m["active_tasks"], 10, 64)
 	w.CompletedTasks, _ = strconv.ParseInt(m["completed_tasks"], 10, 64)
@@ -189,6 +202,66 @@ func mapWorker(m map[string]string) workerView {
 	}
 	return w
 }
+
+func handleWorkerRename(c *gin.Context) {
+	name := strings.TrimSpace(c.Param("name"))
+	if name == "" {
+		BadRequestResponse(c, "Worker 名称不能为空", nil)
+		return
+	}
+	var req workerRenameRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequestResponse(c, "Worker 名称参数无效", err)
+		return
+	}
+	client := database.GetRedis()
+	if client == nil {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"code": 1, "message": "Redis 不可用"})
+		return
+	}
+	key := database.RedisKey("worker", name)
+	exists, err := client.Exists(c, key).Result()
+	if err != nil {
+		InternalServerErrorResponse(c, "读取 Worker 失败", err)
+		return
+	}
+	if exists == 0 {
+		ErrorResponse(c, http.StatusNotFound, "Worker 不存在", nil)
+		return
+	}
+	displayName := normalizeWorkerDisplayName(name, req.DisplayName)
+	if utf8.RuneCountInString(displayName) > 64 {
+		BadRequestResponse(c, "节点名称长度不能超过 64 个字符", nil)
+		return
+	}
+	if displayName != "" {
+		conflict, err := workerDisplayNameExists(c, client, name, displayName)
+		if err != nil {
+			InternalServerErrorResponse(c, "校验 Worker 名称失败", err)
+			return
+		}
+		if conflict {
+			BadRequestResponse(c, "节点名称已存在，请更换后重试", nil)
+			return
+		}
+		if err := client.HSet(c, key, "display_name", displayName).Err(); err != nil {
+			InternalServerErrorResponse(c, "更新 Worker 名称失败", err)
+			return
+		}
+	} else {
+		if err := client.HDel(c, key, "display_name").Err(); err != nil {
+			InternalServerErrorResponse(c, "恢复默认 Worker 名称失败", err)
+			return
+		}
+	}
+	m, err := client.HGetAll(c, key).Result()
+	if err != nil {
+		InternalServerErrorResponse(c, "读取 Worker 失败", err)
+		return
+	}
+	SuccessResponse(c, mapWorker(m))
+}
+
 func handleWorkerDelete(c *gin.Context) {
 	name := strings.TrimSpace(c.Param("name"))
 	if name == "" {
@@ -205,6 +278,60 @@ func handleWorkerDelete(c *gin.Context) {
 		return
 	}
 	SuccessResponse(c, gin.H{"removed": name})
+}
+
+func resolveWorkerDisplayName(m map[string]string) string {
+	return normalizeWorkerDisplayName(strings.TrimSpace(m["name"]), m["display_name"])
+}
+
+func normalizeWorkerDisplayName(name string, displayName string) string {
+	base := strings.TrimSpace(name)
+	alias := strings.TrimSpace(displayName)
+	if alias == "" || strings.EqualFold(alias, base) {
+		return ""
+	}
+	return alias
+}
+
+func normalizeWorkerIPAddress(ipAddress string) string {
+	return strings.TrimSpace(ipAddress)
+}
+
+func workerSortKey(w workerView) string {
+	if strings.TrimSpace(w.DisplayName) != "" {
+		return strings.ToLower(strings.TrimSpace(w.DisplayName))
+	}
+	return strings.ToLower(strings.TrimSpace(w.Name))
+}
+
+func workerDisplayNameExists(ctx context.Context, client *redis.Client, currentName string, displayName string) (bool, error) {
+	pattern := database.RedisKey("worker", "*")
+	target := strings.TrimSpace(displayName)
+	var cursor uint64
+	for {
+		keys, next, err := client.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return false, err
+		}
+		for _, key := range keys {
+			m, err := client.HGetAll(ctx, key).Result()
+			if err != nil || len(m) == 0 {
+				continue
+			}
+			otherName := strings.TrimSpace(m["name"])
+			if otherName == "" || otherName == currentName {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(m["display_name"]), target) || strings.EqualFold(otherName, target) {
+				return true, nil
+			}
+		}
+		cursor = next
+		if cursor == 0 {
+			break
+		}
+	}
+	return false, nil
 }
 
 type workerInstallSteps struct {

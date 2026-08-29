@@ -314,6 +314,12 @@ function splitNumberList(value: string) {
     .filter((item) => Number.isFinite(item) && item > 0)
 }
 
+function getWorkerDisplayLabel(worker: WorkerNode) {
+  const displayName = String(worker.displayName || '').trim()
+  const name = String(worker.name || '').trim()
+  return displayName || name
+}
+
 export function AdvancedScanView({
   demoMode,
   onCreated,
@@ -597,7 +603,7 @@ export function AdvancedScanView({
                     <option value="">自动分配</option>
                     {onlineWorkers.map((worker) => (
                       <option key={worker.name} value={worker.name}>
-                        {worker.name}（{worker.os || 'unknown'}/{worker.arch || 'unknown'}，并发 {worker.concurrency || 0}）
+                        {getWorkerDisplayLabel(worker)}（{worker.os || 'unknown'}/{worker.arch || 'unknown'}，并发 {worker.concurrency || 0}）
                       </option>
                     ))}
                   </Select>

@@ -2,11 +2,11 @@
 
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, CheckCircle2, Clipboard, KeyRound, Plus, RefreshCw, Server, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Clipboard, KeyRound, Pencil, Plus, RefreshCw, Server, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteWorker, getWorkerInstallCommand, getWorkers, type WorkerInstallCommand, type WorkerInstallSteps, type WorkerNode } from '@/lib/api'
+import { deleteWorker, getWorkerInstallCommand, getWorkers, updateWorker, type WorkerInstallCommand, type WorkerInstallSteps, type WorkerNode } from '@/lib/api'
 import { asList, formatTime, unwrap } from '@/lib/utils'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Modal, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Input, Modal, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
 async function copyText(value: string, label: string) {
   try {
@@ -23,6 +23,15 @@ async function copyText(value: string, label: string) {
     textarea.remove()
     toast.success(`已复制${label}`)
   }
+}
+
+function getWorkerLabel(worker: WorkerNode) {
+  const displayName = String(worker.displayName || '').trim()
+  return displayName || worker.name
+}
+
+function hasCustomWorkerLabel(worker: WorkerNode) {
+  return String(worker.displayName || '').trim() !== '' && String(worker.displayName || '').trim() !== worker.name
 }
 
 function Metric({ label, value }: { label: string; value: React.ReactNode }) {
@@ -267,10 +276,23 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
 export function WorkersView() {
   const queryClient = useQueryClient()
   const [installOpen, setInstallOpen] = React.useState(false)
+  const [renameTarget, setRenameTarget] = React.useState<WorkerNode | null>(null)
+  const [renameValue, setRenameValue] = React.useState('')
   const workersQuery = useQuery({
     queryKey: ['workers'],
     queryFn: async () => asList<WorkerNode>(await getWorkers()),
     refetchInterval: 15_000,
+  })
+  const renameMutation = useMutation({
+    mutationFn: ({ name, displayName }: { name: string; displayName: string }) => updateWorker(name, { displayName }),
+    onSuccess: (_, variables) => {
+      const normalized = variables.displayName.trim()
+      toast.success(normalized ? '节点名称已更新' : '已恢复默认节点名称')
+      queryClient.invalidateQueries({ queryKey: ['workers'] })
+      setRenameTarget(null)
+      setRenameValue('')
+    },
+    onError: (error: any) => toast.error(error?.message || '更新节点名称失败'),
   })
   const removeMutation = useMutation({
     mutationFn: deleteWorker,
@@ -285,8 +307,18 @@ export function WorkersView() {
   const totalConcurrency = workers.filter((worker) => worker.status === 'online').reduce((sum, worker) => sum + (worker.concurrency || 0), 0)
   const activeTasks = workers.reduce((sum, worker) => sum + (worker.activeTasks || 0), 0)
 
+  const openRenameModal = (worker: WorkerNode) => {
+    setRenameTarget(worker)
+    setRenameValue(String(worker.displayName || '').trim())
+  }
+
+  const submitRename = () => {
+    if (!renameTarget || renameMutation.isPending) return
+    renameMutation.mutate({ name: renameTarget.name, displayName: renameValue })
+  }
+
   const removeWorker = (worker: WorkerNode) => {
-    if (!window.confirm(`确定删除 Worker“${worker.name}”吗？该节点仍在运行时会在下一次心跳重新注册。`)) return
+    if (!window.confirm(`确定删除 Worker“${getWorkerLabel(worker)}”吗？该节点仍在运行时会在下一次心跳重新注册。`)) return
     removeMutation.mutate(worker.name)
   }
 
@@ -332,23 +364,24 @@ export function WorkersView() {
             <div className="p-5"><EmptyState title="暂无 Worker 节点" description="请确认默认 Worker 容器已经启动，或点击“添加节点”部署远程 Worker。" /></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px] text-left text-sm">
+              <table className="w-full min-w-[1280px] text-left text-sm">
                 <thead className="border-b border-border bg-raised/50 text-xs text-muted">
                   <tr>
-                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
+                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">IP 地址</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {workers.map((worker) => (
                     <tr key={worker.name} className="hover:bg-raised/35">
-                      <td className="px-4 py-3"><div className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-md border border-border bg-background"><Server className="size-4" /></span><div><div className="font-medium text-foreground">{worker.name}</div><div className="mt-0.5 text-xs text-muted">{worker.version || 'version unknown'}</div></div></div></td>
+                      <td className="px-4 py-3"><div className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-md border border-border bg-background"><Server className="size-4" /></span><div><div className="font-medium text-foreground">{getWorkerLabel(worker)}</div>{hasCustomWorkerLabel(worker) ? <div className="mt-0.5 text-xs text-muted">标识 {worker.name}</div> : null}<div className="mt-0.5 text-xs text-muted">{worker.version || 'version unknown'}</div></div></div></td>
+                      <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.ipAddress || '-'}</div><div className="mt-1 text-xs text-muted">回连地址</div></td>
                       <td className="px-4 py-3"><Badge tone={worker.status === 'online' ? 'success' : 'danger'}>{worker.status === 'online' ? <Check className="mr-1 size-3" /> : null}{worker.status === 'online' ? '在线' : '离线'}</Badge></td>
                       <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.os || '-'} / {worker.arch || '-'}</div><div className="mt-1 text-xs text-muted">并发 {worker.concurrency || 0}</div></td>
                       <td className="px-4 py-3"><div className="text-foreground">活跃 {worker.activeTasks || 0}</div><div className="mt-1 text-xs text-muted">完成 {worker.completedTasks || 0}</div></td>
                       <td className="px-4 py-3"><UsageBar value={worker.cpuPercent} /></td>
                       <td className="px-4 py-3"><UsageBar value={worker.memoryPercent} /></td>
                       <td className="px-4 py-3"><div className="whitespace-nowrap text-xs text-foreground">{formatTime(worker.lastHeartbeat)}</div><div className="mt-1 whitespace-nowrap text-xs text-muted">注册 {formatTime(worker.registeredAt)}</div></td>
-                      <td className="px-4 py-3 text-right"><Button size="icon" variant="danger" title="删除节点" disabled={removeMutation.isPending} onClick={() => removeWorker(worker)}><Trash2 className="size-4" /></Button></td>
+                      <td className="px-4 py-3 text-right"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" title="修改节点名称" onClick={() => openRenameModal(worker)}><Pencil className="size-4" />改名</Button><Button size="icon" variant="danger" title="删除节点" disabled={removeMutation.isPending} onClick={() => removeWorker(worker)}><Trash2 className="size-4" /></Button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -358,6 +391,48 @@ export function WorkersView() {
         </CardContent>
       </Card>
       <InstallModal open={installOpen} onOpenChange={setInstallOpen} />
+      <Modal
+        open={!!renameTarget}
+        onOpenChange={(open) => {
+          if (!open && !renameMutation.isPending) {
+            setRenameTarget(null)
+            setRenameValue('')
+          }
+        }}
+        title="修改节点名称"
+        description="修改后的名称会显示在节点列表和节点选择器中；留空可恢复为默认节点标识。"
+        footer={(
+          <>
+            <Button variant="outline" onClick={() => { setRenameTarget(null); setRenameValue('') }} disabled={renameMutation.isPending}>取消</Button>
+            <Button variant="default" onClick={submitRename} disabled={renameMutation.isPending}>
+              {renameMutation.isPending ? '保存中...' : '保存'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="grid gap-4">
+          <div className="rounded-card border border-border bg-background px-4 py-3 text-sm text-muted">
+            当前节点标识：<span className="font-mono text-foreground">{renameTarget?.name || '-'}</span>
+          </div>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-foreground">节点显示名称</span>
+            <Input
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              placeholder={renameTarget?.name || '请输入节点名称'}
+              maxLength={64}
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  submitRename()
+                }
+              }}
+            />
+            <span className="text-xs leading-5 text-muted">支持 64 个字符以内，留空后保存会恢复默认节点标识。</span>
+          </label>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -26,6 +26,8 @@ export interface PublicAppConfig {
 
 export interface WorkerNode {
   name: string
+  displayName?: string
+  ipAddress?: string
   status: 'online' | 'offline' | string
   os: string
   arch: string
@@ -333,6 +335,10 @@ export function getPublicAppConfig() {
 
 export function getWorkers() {
   return request.get<{ code: number; data: WorkerNode[]; message?: string }>('/api/v1/workers')
+}
+
+export function updateWorker(name: string, data: { displayName: string }) {
+  return request.put<{ code: number; data: WorkerNode; message?: string }>(`/api/v1/workers/${encodeURIComponent(name)}`, data)
 }
 
 export function deleteWorker(name: string) {
