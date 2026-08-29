@@ -188,7 +188,7 @@ export function Modal({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
         <DialogPrimitive.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 grid max-h-[88vh] w-[calc(100vw-32px)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-card border border-border bg-card text-foreground shadow-2xl outline-none',
+            'fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[calc(100vw-32px)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-card border border-border bg-card text-foreground shadow-2xl outline-none',
             className
           )}
         >
@@ -203,7 +203,7 @@ export function Modal({
               </Button>
             </DialogPrimitive.Close>
           </div>
-          <div className="min-h-0 overflow-auto p-5">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-5 [scrollbar-gutter:stable]">{children}</div>
           {footer ? <div className="flex justify-end gap-2 border-t border-border px-5 py-4">{footer}</div> : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

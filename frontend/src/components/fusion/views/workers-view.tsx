@@ -163,7 +163,6 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
       open={open}
       onOpenChange={onOpenChange}
       title="安装 Worker 探针"
-      description="参考 cscan 的安装方式，保留必需连接信息，把部署步骤收敛成“下载脚本 / 启动 Worker / 一键执行”三段命令。"
       className="max-w-6xl"
     >
       {query.isLoading ? (
@@ -173,7 +172,7 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
       ) : (
         <div className="grid gap-5">
           <div className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm leading-6 text-success-foreground">
-            使用 Docker 一键部署 Worker 探针，无需手工安装扫描工具；远程节点只需要执行下面的脚本命令即可。
+            保留连接信息，复制下面任一平台的三段命令即可完成 Worker 部署。
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
