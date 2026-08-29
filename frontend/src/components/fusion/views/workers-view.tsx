@@ -502,7 +502,7 @@ export function WorkersView() {
           </label>
         </div>
       </Drawer>
-      <Modal
+      <Drawer
         open={!!concurrencyTarget}
         onOpenChange={(open) => {
           if (!open && !concurrencyMutation.isPending) {
@@ -512,6 +512,7 @@ export function WorkersView() {
         }}
         title="修改并发数量"
         description="设置该 Worker 节点同时可执行的任务数量；保存后会在下一次心跳中同步到节点。"
+        className="max-w-none md:w-[520px]"
         footer={(
           <>
             <Button variant="outline" onClick={() => { setConcurrencyTarget(null); setConcurrencyValue('') }} disabled={concurrencyMutation.isPending}>取消</Button>
@@ -546,7 +547,7 @@ export function WorkersView() {
             <span className="text-xs leading-5 text-muted">支持 1 到 64；保存后节点会自动调整实际可同时运行的任务数。</span>
           </label>
         </div>
-      </Modal>
+      </Drawer>
     </div>
   )
 }
