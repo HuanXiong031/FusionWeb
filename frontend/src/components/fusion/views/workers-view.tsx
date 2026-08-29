@@ -30,6 +30,10 @@ function getWorkerLabel(worker: WorkerNode) {
   return displayName || worker.name
 }
 
+function getWorkerPublicIP(worker: WorkerNode) {
+  return String(worker.publicIpAddress || worker.ipAddress || '').trim()
+}
+
 function hasCustomWorkerLabel(worker: WorkerNode) {
   return String(worker.displayName || '').trim() !== '' && String(worker.displayName || '').trim() !== worker.name
 }
@@ -367,21 +371,41 @@ export function WorkersView() {
               <table className="w-full min-w-[1280px] text-left text-sm">
                 <thead className="border-b border-border bg-raised/50 text-xs text-muted">
                   <tr>
-                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">IP 地址</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
+                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">公网 IP</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {workers.map((worker) => (
                     <tr key={worker.name} className="hover:bg-raised/35">
-                      <td className="px-4 py-3"><div className="flex items-center gap-3"><span className="flex size-8 items-center justify-center rounded-md border border-border bg-background"><Server className="size-4" /></span><div><div className="font-medium text-foreground">{getWorkerLabel(worker)}</div>{hasCustomWorkerLabel(worker) ? <div className="mt-0.5 text-xs text-muted">标识 {worker.name}</div> : null}<div className="mt-0.5 text-xs text-muted">{worker.version || 'version unknown'}</div></div></div></td>
-                      <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.ipAddress || '-'}</div><div className="mt-1 text-xs text-muted">回连地址</div></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="flex size-8 items-center justify-center rounded-md border border-border bg-background"><Server className="size-4" /></span>
+                          <div className="group min-w-0">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <div className="truncate font-medium text-foreground">{getWorkerLabel(worker)}</div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                title="修改节点名称"
+                                className="size-6 shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                                onClick={() => openRenameModal(worker)}
+                              >
+                                <Pencil className="size-3.5 text-primary" />
+                              </Button>
+                            </div>
+                            {hasCustomWorkerLabel(worker) ? <div className="mt-0.5 text-xs text-muted">标识 {worker.name}</div> : null}
+                            <div className="mt-0.5 text-xs text-muted">{worker.version || 'version unknown'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{getWorkerPublicIP(worker) || '-'}</div><div className="mt-1 text-xs text-muted">公网地址</div></td>
                       <td className="px-4 py-3"><Badge tone={worker.status === 'online' ? 'success' : 'danger'}>{worker.status === 'online' ? <Check className="mr-1 size-3" /> : null}{worker.status === 'online' ? '在线' : '离线'}</Badge></td>
                       <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.os || '-'} / {worker.arch || '-'}</div><div className="mt-1 text-xs text-muted">并发 {worker.concurrency || 0}</div></td>
                       <td className="px-4 py-3"><div className="text-foreground">活跃 {worker.activeTasks || 0}</div><div className="mt-1 text-xs text-muted">完成 {worker.completedTasks || 0}</div></td>
                       <td className="px-4 py-3"><UsageBar value={worker.cpuPercent} /></td>
                       <td className="px-4 py-3"><UsageBar value={worker.memoryPercent} /></td>
                       <td className="px-4 py-3"><div className="whitespace-nowrap text-xs text-foreground">{formatTime(worker.lastHeartbeat)}</div><div className="mt-1 whitespace-nowrap text-xs text-muted">注册 {formatTime(worker.registeredAt)}</div></td>
-                      <td className="px-4 py-3 text-right"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" title="修改节点名称" onClick={() => openRenameModal(worker)}><Pencil className="size-4" />改名</Button><Button size="icon" variant="danger" title="删除节点" disabled={removeMutation.isPending} onClick={() => removeWorker(worker)}><Trash2 className="size-4" /></Button></div></td>
+                      <td className="px-4 py-3 text-right"><div className="flex justify-end gap-2"><Button size="icon" variant="danger" title="删除节点" disabled={removeMutation.isPending} onClick={() => removeWorker(worker)}><Trash2 className="size-4" /></Button></div></td>
                     </tr>
                   ))}
                 </tbody>

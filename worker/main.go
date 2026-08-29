@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -40,6 +41,7 @@ type report struct {
 	CompletedTasks int64   `json:"completedTasks"`
 	CPUPercent     float64 `json:"cpuPercent"`
 	MemoryPercent  float64 `json:"memoryPercent"`
+	PublicIP       string  `json:"publicIp"`
 	Version        string  `json:"version"`
 }
 type registerResponse struct {
@@ -65,6 +67,7 @@ type workerRuntime struct {
 	client          *http.Client
 	active          atomic.Int64
 	completed       atomic.Int64
+	publicIP        string
 	executors       []*scheduler.TaskExecutor
 	reclaimExecutor *scheduler.TaskExecutor
 	slots           chan struct{}
@@ -81,6 +84,7 @@ func main() {
 	}
 	client := newHTTPClient(cfg.InsecureTLS)
 	wr := &workerRuntime{cfg: cfg, client: client, slots: make(chan struct{}, cfg.Concurrency)}
+	wr.publicIP = detectPublicIP()
 	reg, err := wr.register(context.Background())
 	if err != nil {
 		panic(err)
@@ -234,7 +238,7 @@ func (w *workerRuntime) reclaimLoop(ctx context.Context) {
 	}
 }
 func (w *workerRuntime) currentReport() report {
-	r := report{Name: w.cfg.Name, OS: runtime.GOOS, Arch: runtime.GOARCH, Concurrency: w.cfg.Concurrency, ActiveTasks: w.active.Load(), CompletedTasks: w.completed.Load(), Version: workerVersion}
+	r := report{Name: w.cfg.Name, OS: runtime.GOOS, Arch: runtime.GOARCH, Concurrency: w.cfg.Concurrency, ActiveTasks: w.active.Load(), CompletedTasks: w.completed.Load(), PublicIP: w.publicIP, Version: workerVersion}
 	if p, err := cpu.Percent(0, false); err == nil && len(p) > 0 {
 		r.CPUPercent = p[0]
 	}
@@ -243,6 +247,34 @@ func (w *workerRuntime) currentReport() report {
 	}
 	return r
 }
+func detectPublicIP() string {
+	if v := strings.TrimSpace(os.Getenv("FUSIONWEB_PUBLIC_IP")); v != "" {
+		return v
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	providers := []string{"https://api.ipify.org", "https://ifconfig.me/ip"}
+	for _, provider := range providers {
+		req, err := http.NewRequest(http.MethodGet, provider, nil)
+		if err != nil {
+			continue
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil || resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			continue
+		}
+		ip := strings.TrimSpace(string(body))
+		if ip != "" {
+			return ip
+		}
+	}
+	return ""
+}
+
 func (w *workerRuntime) post(ctx context.Context, path string, body interface{}, out interface{}) error {
 	data, err := json.Marshal(body)
 	if err != nil {

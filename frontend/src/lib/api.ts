@@ -28,6 +28,7 @@ export interface WorkerNode {
   name: string
   displayName?: string
   ipAddress?: string
+  publicIpAddress?: string
   status: 'online' | 'offline' | string
   os: string
   arch: string

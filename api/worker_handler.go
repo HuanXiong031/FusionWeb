@@ -29,6 +29,7 @@ type workerReport struct {
 	CompletedTasks int64   `json:"completedTasks"`
 	CPUPercent     float64 `json:"cpuPercent"`
 	MemoryPercent  float64 `json:"memoryPercent"`
+	PublicIP       string  `json:"publicIp"`
 	Version        string  `json:"version"`
 }
 
@@ -128,6 +129,9 @@ func saveWorker(ctx context.Context, r workerReport, ipAddress string, register 
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	key := database.RedisKey("worker", r.Name)
 	values := map[string]interface{}{"name": r.Name, "status": "online", "os": r.OS, "arch": r.Arch, "concurrency": r.Concurrency, "active_tasks": r.ActiveTasks, "completed_tasks": r.CompletedTasks, "cpu_percent": fmt.Sprintf("%.2f", r.CPUPercent), "memory_percent": fmt.Sprintf("%.2f", r.MemoryPercent), "version": r.Version, "last_heartbeat": now}
+	if normalizedPublicIP := normalizeWorkerIPAddress(r.PublicIP); normalizedPublicIP != "" {
+		values["public_ip"] = normalizedPublicIP
+	}
 	if normalizedIP := normalizeWorkerIPAddress(ipAddress); normalizedIP != "" {
 		values["ip_address"] = normalizedIP
 	}
@@ -138,20 +142,21 @@ func saveWorker(ctx context.Context, r workerReport, ipAddress string, register 
 }
 
 type workerView struct {
-	Name           string  `json:"name"`
-	DisplayName    string  `json:"displayName,omitempty"`
-	IPAddress      string  `json:"ipAddress,omitempty"`
-	Status         string  `json:"status"`
-	OS             string  `json:"os"`
-	Arch           string  `json:"arch"`
-	Concurrency    int     `json:"concurrency"`
-	ActiveTasks    int64   `json:"activeTasks"`
-	CompletedTasks int64   `json:"completedTasks"`
-	CPUPercent     float64 `json:"cpuPercent"`
-	MemoryPercent  float64 `json:"memoryPercent"`
-	Version        string  `json:"version"`
-	RegisteredAt   string  `json:"registeredAt"`
-	LastHeartbeat  string  `json:"lastHeartbeat"`
+	Name            string  `json:"name"`
+	DisplayName     string  `json:"displayName,omitempty"`
+	IPAddress       string  `json:"ipAddress,omitempty"`
+	PublicIPAddress string  `json:"publicIpAddress,omitempty"`
+	Status          string  `json:"status"`
+	OS              string  `json:"os"`
+	Arch            string  `json:"arch"`
+	Concurrency     int     `json:"concurrency"`
+	ActiveTasks     int64   `json:"activeTasks"`
+	CompletedTasks  int64   `json:"completedTasks"`
+	CPUPercent      float64 `json:"cpuPercent"`
+	MemoryPercent   float64 `json:"memoryPercent"`
+	Version         string  `json:"version"`
+	RegisteredAt    string  `json:"registeredAt"`
+	LastHeartbeat   string  `json:"lastHeartbeat"`
 }
 
 type workerRenameRequest struct {
@@ -191,7 +196,7 @@ func handleWorkerList(c *gin.Context) {
 }
 
 func mapWorker(m map[string]string) workerView {
-	w := workerView{Name: m["name"], DisplayName: resolveWorkerDisplayName(m), IPAddress: normalizeWorkerIPAddress(m["ip_address"]), Status: m["status"], OS: m["os"], Arch: m["arch"], Version: m["version"], RegisteredAt: m["registered_at"], LastHeartbeat: m["last_heartbeat"]}
+	w := workerView{Name: m["name"], DisplayName: resolveWorkerDisplayName(m), IPAddress: normalizeWorkerIPAddress(m["ip_address"]), PublicIPAddress: normalizeWorkerIPAddress(m["public_ip"]), Status: m["status"], OS: m["os"], Arch: m["arch"], Version: m["version"], RegisteredAt: m["registered_at"], LastHeartbeat: m["last_heartbeat"]}
 	w.Concurrency, _ = strconv.Atoi(m["concurrency"])
 	w.ActiveTasks, _ = strconv.ParseInt(m["active_tasks"], 10, 64)
 	w.CompletedTasks, _ = strconv.ParseInt(m["completed_tasks"], 10, 64)
