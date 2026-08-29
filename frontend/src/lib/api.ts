@@ -39,15 +39,27 @@ export interface WorkerNode {
   lastHeartbeat: string
 }
 
+export interface WorkerInstallSteps {
+  download: string
+  run: string
+  oneLiner: string
+  logs: string
+  stop: string
+  restart: string
+  upgrade: string
+}
+
 export interface WorkerInstallCommand {
   ready: boolean
   missing: string[]
   warnings: string[]
   server: string
+  workerKey: string
   image: string
   compose: string
-  linux: string
-  windows: string
+  linux: WorkerInstallSteps
+  windowsPowerShell: WorkerInstallSteps
+  windowsCmd: WorkerInstallSteps
   pgDsn: string
   redisAddr: string
   minioEndpoint: string

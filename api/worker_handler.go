@@ -5,7 +5,6 @@ import (
 	"FusionWeb/backend/database"
 	"context"
 	"crypto/subtle"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -55,6 +54,10 @@ func RegisterWorkerRoutes(r *gin.Engine, v1 *gin.RouterGroup) {
 	v1.GET("/workers", handleWorkerList)
 	v1.DELETE("/workers/:name", handleWorkerDelete)
 	v1.GET("/workers/install-command", handleWorkerInstallCommand)
+	r.GET("/static/fusionweb-worker/install.sh", handlePublicWorkerInstallShellScript)
+	r.GET("/static/fusionweb-worker/install.ps1", handlePublicWorkerInstallPowerShell)
+	r.GET("/static/fusionweb-worker/compose.yaml", handlePublicWorkerComposeTemplate)
+	r.GET("/static/fusionweb-worker/bootstrap.env", handlePublicWorkerBootstrapEnv)
 }
 
 func handleWorkerRegister(c *gin.Context) {
@@ -204,7 +207,94 @@ func handleWorkerDelete(c *gin.Context) {
 	SuccessResponse(c, gin.H{"removed": name})
 }
 
+type workerInstallSteps struct {
+	Download string `json:"download"`
+	Run      string `json:"run"`
+	OneLiner string `json:"oneLiner"`
+	Logs     string `json:"logs"`
+	Stop     string `json:"stop"`
+	Restart  string `json:"restart"`
+	Upgrade  string `json:"upgrade"`
+}
+
+type workerInstallState struct {
+	Ready             bool
+	Missing           []string
+	Warnings          []string
+	Server            string
+	WorkerKey         string
+	Image             string
+	PGDSN             string
+	RedisAddr         string
+	RedisPassword     string
+	RedisDB           int
+	RedisPrefix       string
+	MinIOEndpoint     string
+	MinIOAccessKey    string
+	MinIOSecretKey    string
+	MinIOBucket       string
+	MinIORegion       string
+	MinIOUseSSL       bool
+	NeedsRemoteAccess bool
+	SuggestedEnv      string
+}
+
+type workerInstallResponse struct {
+	Ready             bool               `json:"ready"`
+	Missing           []string           `json:"missing"`
+	Warnings          []string           `json:"warnings"`
+	Server            string             `json:"server"`
+	WorkerKey         string             `json:"workerKey"`
+	Image             string             `json:"image"`
+	Compose           string             `json:"compose"`
+	PGDSN             string             `json:"pgDsn"`
+	RedisAddr         string             `json:"redisAddr"`
+	MinIOEndpoint     string             `json:"minioEndpoint"`
+	NeedsRemoteAccess bool               `json:"needsRemoteAccess"`
+	SuggestedEnv      string             `json:"suggestedEnv"`
+	Linux             workerInstallSteps `json:"linux"`
+	WindowsPowerShell workerInstallSteps `json:"windowsPowerShell"`
+	WindowsCMD        workerInstallSteps `json:"windowsCmd"`
+}
+
 func handleWorkerInstallCommand(c *gin.Context) {
+	state := resolveWorkerInstallState(c)
+	SuccessResponse(c, buildWorkerInstallResponse(state))
+}
+
+func handlePublicWorkerInstallShellScript(c *gin.Context) {
+	c.Header("Content-Type", "text/x-shellscript; charset=utf-8")
+	c.Header("Cache-Control", "no-store")
+	c.String(http.StatusOK, workerInstallShellScript())
+}
+
+func handlePublicWorkerInstallPowerShell(c *gin.Context) {
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.Header("Cache-Control", "no-store")
+	c.String(http.StatusOK, workerInstallPowerShellScript())
+}
+
+func handlePublicWorkerComposeTemplate(c *gin.Context) {
+	c.Header("Content-Type", "application/yaml; charset=utf-8")
+	c.Header("Cache-Control", "no-store")
+	c.String(http.StatusOK, workerComposeTemplate())
+}
+
+func handlePublicWorkerBootstrapEnv(c *gin.Context) {
+	state := resolveWorkerInstallState(c)
+	if !validateWorkerInstallKey(c, state.WorkerKey) {
+		return
+	}
+	if !state.Ready {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"code": 1, "message": "主节点尚未准备好远程 Worker 接入", "missing": state.Missing, "warnings": state.Warnings})
+		return
+	}
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.Header("Cache-Control", "no-store")
+	c.String(http.StatusOK, buildWorkerBootstrapEnv(state))
+}
+
+func resolveWorkerInstallState(c *gin.Context) workerInstallState {
 	cfg := config.Get()
 	requestScheme := detectRequestScheme(c)
 	requestHost := detectRequestHost(c)
@@ -290,7 +380,7 @@ func handleWorkerInstallCommand(c *gin.Context) {
 			warnings = append(warnings, "当前 FUSIONWEB_INFRA_BIND=127.0.0.1，PostgreSQL/Redis/MinIO 只监听本机。远程 Worker 部署前必须叠加 docker-compose.remote-access.yaml，并把 FUSIONWEB_INFRA_BIND 改成主机内网 IP 或 0.0.0.0。")
 			ready = false
 		} else {
-			warnings = append(warnings, "当前安装命令使用主节点自身的 PostgreSQL/Redis/MinIO 端口；请确认主节点是通过 docker-compose.remote-access.yaml 启动的，并且防火墙已放行这些内网端口。")
+			warnings = append(warnings, "当前安装命令使用的是主节点自带 PostgreSQL / Redis / MinIO。请确认主节点已经通过 docker-compose.remote-access.yaml 暴露这些端口，并已放行内网防火墙。")
 		}
 	}
 	if !strings.Contains(image, "/") {
@@ -300,52 +390,269 @@ func handleWorkerInstallCommand(c *gin.Context) {
 	missing = uniqueStrings(missing)
 	warnings = uniqueStrings(warnings)
 	suggestedEnv := buildSuggestedWorkerEnv(derivedHost, infraBind, pgPort, redisPort, minioPort, pgDSN, redisAddr, minioEndpoint)
+	return workerInstallState{
+		Ready:             ready,
+		Missing:           missing,
+		Warnings:          warnings,
+		Server:            server,
+		WorkerKey:         cfg.WorkerKey,
+		Image:             image,
+		PGDSN:             pgDSN,
+		RedisAddr:         redisAddr,
+		RedisPassword:     cfg.RedisPassword,
+		RedisDB:           cfg.RedisDB,
+		RedisPrefix:       cfg.RedisPrefix,
+		MinIOEndpoint:     minioEndpoint,
+		MinIOAccessKey:    cfg.MinIOAccessKey,
+		MinIOSecretKey:    cfg.MinIOSecretKey,
+		MinIOBucket:       cfg.MinIOBucket,
+		MinIORegion:       cfg.MinIORegion,
+		MinIOUseSSL:       cfg.MinIOUseSSL,
+		NeedsRemoteAccess: needsRemoteAccess,
+		SuggestedEnv:      suggestedEnv,
+	}
+}
 
-	compose := fmt.Sprintf(`services:
+func buildWorkerInstallResponse(state workerInstallState) workerInstallResponse {
+	return workerInstallResponse{
+		Ready:             state.Ready,
+		Missing:           state.Missing,
+		Warnings:          state.Warnings,
+		Server:            state.Server,
+		WorkerKey:         state.WorkerKey,
+		Image:             state.Image,
+		Compose:           workerComposeTemplate(),
+		PGDSN:             state.PGDSN,
+		RedisAddr:         state.RedisAddr,
+		MinIOEndpoint:     state.MinIOEndpoint,
+		NeedsRemoteAccess: state.NeedsRemoteAccess,
+		SuggestedEnv:      state.SuggestedEnv,
+		Linux:             buildLinuxWorkerInstallSteps(state),
+		WindowsPowerShell: buildPowerShellWorkerInstallSteps(state),
+		WindowsCMD:        buildCMDWorkerInstallSteps(state),
+	}
+}
+
+func validateWorkerInstallKey(c *gin.Context, expected string) bool {
+	if strings.TrimSpace(expected) == "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": 1, "message": "远程 Worker 接入未启用"})
+		return false
+	}
+	provided := firstNonEmpty(c.GetHeader("X-Worker-Key"), c.Query("key"))
+	if subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) != 1 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 1, "message": "Worker Key 无效"})
+		return false
+	}
+	return true
+}
+
+func buildLinuxWorkerInstallSteps(state workerInstallState) workerInstallSteps {
+	scriptURL := workerStaticURL(state.Server, "install.sh")
+	download := fmt.Sprintf("curl %s %s -o fusionweb-worker.sh", curlFlagsForServer(state.Server), shellQuote(scriptURL))
+	run := fmt.Sprintf("FUSIONWEB_SERVER=%s FUSIONWEB_WORKER_KEY=%s bash fusionweb-worker.sh", shellQuote(state.Server), shellQuote(state.WorkerKey))
+	logs := "cd fusionweb-worker && docker compose logs -f"
+	stop := "cd fusionweb-worker && docker compose down"
+	restart := "cd fusionweb-worker && docker compose restart"
+	upgrade := download + " && " + run
+	return workerInstallSteps{Download: download, Run: run, OneLiner: download + " && " + run, Logs: logs, Stop: stop, Restart: restart, Upgrade: upgrade}
+}
+
+func buildPowerShellWorkerInstallSteps(state workerInstallState) workerInstallSteps {
+	scriptURL := workerStaticURL(state.Server, "install.ps1")
+	download := fmt.Sprintf("$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}; Invoke-WebRequest -UseBasicParsing %s -OutFile 'fusionweb-worker.ps1'", powerShellQuote(scriptURL))
+	run := fmt.Sprintf("$env:FUSIONWEB_SERVER=%s; $env:FUSIONWEB_WORKER_KEY=%s; powershell -NoProfile -ExecutionPolicy Bypass -File .\fusionweb-worker.ps1", powerShellQuote(state.Server), powerShellQuote(state.WorkerKey))
+	logs := "Set-Location fusionweb-worker; docker compose logs -f"
+	stop := "Set-Location fusionweb-worker; docker compose down"
+	restart := "Set-Location fusionweb-worker; docker compose restart"
+	upgrade := download + "; " + run
+	return workerInstallSteps{Download: download, Run: run, OneLiner: download + "; " + run, Logs: logs, Stop: stop, Restart: restart, Upgrade: upgrade}
+}
+
+func buildCMDWorkerInstallSteps(state workerInstallState) workerInstallSteps {
+	scriptURL := workerStaticURL(state.Server, "install.ps1")
+	download := fmt.Sprintf(`powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::ServerCertificateValidationCallback={$true}; Invoke-WebRequest -UseBasicParsing '%s' -OutFile 'fusionweb-worker.ps1'"`, scriptURL)
+	run := fmt.Sprintf(`set "FUSIONWEB_SERVER=%s" && set "FUSIONWEB_WORKER_KEY=%s" && powershell -NoProfile -ExecutionPolicy Bypass -File .\fusionweb-worker.ps1`, escapeCMDEnvValue(state.Server), escapeCMDEnvValue(state.WorkerKey))
+	logs := `cd /d fusionweb-worker && docker compose logs -f`
+	stop := `cd /d fusionweb-worker && docker compose down`
+	restart := `cd /d fusionweb-worker && docker compose restart`
+	upgrade := download + " && " + run
+	return workerInstallSteps{Download: download, Run: run, OneLiner: download + " && " + run, Logs: logs, Stop: stop, Restart: restart, Upgrade: upgrade}
+}
+
+func buildWorkerBootstrapEnv(state workerInstallState) string {
+	lines := []string{
+		"# Generated by FusionWeb remote worker installer",
+		fmt.Sprintf("FUSIONWEB_IMAGE=%s", state.Image),
+		fmt.Sprintf("FUSIONWEB_SERVER=%s", state.Server),
+		fmt.Sprintf("FUSIONWEB_KEY=%s", state.WorkerKey),
+		fmt.Sprintf("FUSIONWEB_PG_DSN=%s", state.PGDSN),
+		fmt.Sprintf("FUSIONWEB_REDIS_ADDR=%s", state.RedisAddr),
+		fmt.Sprintf("FUSIONWEB_REDIS_PASSWORD=%s", state.RedisPassword),
+		fmt.Sprintf("FUSIONWEB_REDIS_DB=%d", state.RedisDB),
+		fmt.Sprintf("FUSIONWEB_REDIS_PREFIX=%s", state.RedisPrefix),
+		fmt.Sprintf("FUSIONWEB_MINIO_ENDPOINT=%s", state.MinIOEndpoint),
+		fmt.Sprintf("FUSIONWEB_MINIO_ACCESS_KEY=%s", state.MinIOAccessKey),
+		fmt.Sprintf("FUSIONWEB_MINIO_SECRET_KEY=%s", state.MinIOSecretKey),
+		fmt.Sprintf("FUSIONWEB_MINIO_BUCKET=%s", state.MinIOBucket),
+		fmt.Sprintf("FUSIONWEB_MINIO_REGION=%s", state.MinIORegion),
+		fmt.Sprintf("FUSIONWEB_MINIO_USE_SSL=%t", state.MinIOUseSSL),
+		"FUSIONWEB_CONCURRENCY=5",
+		"FUSIONWEB_INSECURE_TLS=true",
+		"FUSIONWEB_DATA_DIR=/app/data",
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
+func workerComposeTemplate() string {
+	return `name: fusionweb-remote-worker
+services:
   fusionweb-worker:
-    image: %s
+    image: ${FUSIONWEB_IMAGE}
     restart: unless-stopped
-    environment:
-      FUSIONWEB_SERVER: %s
-      FUSIONWEB_KEY: %s
-      FUSIONWEB_NAME: ${FUSIONWEB_NAME:-remote-worker}
-      FUSIONWEB_CONCURRENCY: ${FUSIONWEB_CONCURRENCY:-5}
-      FUSIONWEB_INSECURE_TLS: ${FUSIONWEB_INSECURE_TLS:-true}
-      FUSIONWEB_PG_DSN: %s
-      FUSIONWEB_REDIS_ADDR: %s
-      FUSIONWEB_REDIS_PASSWORD: %s
-      FUSIONWEB_REDIS_DB: %d
-      FUSIONWEB_REDIS_PREFIX: %s
-      FUSIONWEB_MINIO_ENDPOINT: %s
-      FUSIONWEB_MINIO_ACCESS_KEY: %s
-      FUSIONWEB_MINIO_SECRET_KEY: %s
-      FUSIONWEB_MINIO_BUCKET: %s
-      FUSIONWEB_MINIO_REGION: %s
-      FUSIONWEB_MINIO_USE_SSL: %t
-      FUSIONWEB_DATA_DIR: /app/data
+    env_file:
+      - .env
     volumes:
       - fusionweb_worker_data:/app/data
 volumes:
   fusionweb_worker_data:
-`, image, composeQuoted(server), composeQuoted(cfg.WorkerKey), composeQuoted(pgDSN), composeQuoted(redisAddr), composeQuoted(cfg.RedisPassword), cfg.RedisDB, composeQuoted(cfg.RedisPrefix), composeQuoted(minioEndpoint), composeQuoted(cfg.MinIOAccessKey), composeQuoted(cfg.MinIOSecretKey), composeQuoted(cfg.MinIOBucket), composeQuoted(cfg.MinIORegion), cfg.MinIOUseSSL)
-	encoded := base64.StdEncoding.EncodeToString([]byte(compose))
-	linux := fmt.Sprintf("mkdir -p fusionweb-worker && echo '%s' | base64 -d > fusionweb-worker/docker-compose.yaml && cd fusionweb-worker && docker compose pull && docker compose up -d --wait --wait-timeout 600", encoded)
-	windows := fmt.Sprintf(`New-Item -ItemType Directory -Force fusionweb-worker | Out-Null; [IO.File]::WriteAllBytes('fusionweb-worker\docker-compose.yaml',[Convert]::FromBase64String('%s')); Set-Location fusionweb-worker; docker compose pull; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; docker compose up -d --wait --wait-timeout 600`, encoded)
-	SuccessResponse(c, gin.H{
-		"ready":             ready,
-		"missing":           missing,
-		"warnings":          warnings,
-		"server":            server,
-		"image":             image,
-		"compose":           compose,
-		"linux":             linux,
-		"windows":           windows,
-		"pgDsn":             pgDSN,
-		"redisAddr":         redisAddr,
-		"minioEndpoint":     minioEndpoint,
-		"needsRemoteAccess": needsRemoteAccess,
-		"suggestedEnv":      suggestedEnv,
-	})
+`
+}
+
+func workerInstallShellScript() string {
+	return `#!/usr/bin/env bash
+set -euo pipefail
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "[FusionWeb] 缺少命令: $1" >&2
+    exit 1
+  }
+}
+
+append_override() {
+  local key="$1"
+  local value="$2"
+  if [[ -n "$value" ]]; then
+    printf '%s=%s\n' "$key" "$value" >> "$WORKDIR/.env"
+  fi
+}
+
+need_cmd curl
+need_cmd docker
+
+SERVER="${FUSIONWEB_SERVER:-}"
+WORKER_KEY="${FUSIONWEB_WORKER_KEY:-${FUSIONWEB_KEY:-}}"
+WORKDIR="${FUSIONWEB_WORKDIR:-fusionweb-worker}"
+INSECURE_TLS="${FUSIONWEB_INSECURE_TLS:-true}"
+
+if [[ -z "$SERVER" ]]; then
+  echo "[FusionWeb] FUSIONWEB_SERVER 不能为空" >&2
+  exit 1
+fi
+if [[ -z "$WORKER_KEY" ]]; then
+  echo "[FusionWeb] FUSIONWEB_WORKER_KEY 不能为空" >&2
+  exit 1
+fi
+
+SERVER="${SERVER%/}"
+COMPOSE_URL="${FUSIONWEB_COMPOSE_URL:-${SERVER}/static/fusionweb-worker/compose.yaml}"
+BOOTSTRAP_URL="${FUSIONWEB_BOOTSTRAP_URL:-${SERVER}/static/fusionweb-worker/bootstrap.env}"
+CURL_ARGS=(-fsSL)
+if [[ "$INSECURE_TLS" == "true" ]]; then
+  CURL_ARGS+=(-k)
+fi
+
+mkdir -p "$WORKDIR"
+curl "${CURL_ARGS[@]}" "$COMPOSE_URL" -o "$WORKDIR/docker-compose.yaml"
+curl "${CURL_ARGS[@]}" -H "X-Worker-Key: $WORKER_KEY" "$BOOTSTRAP_URL" -o "$WORKDIR/.env"
+append_override FUSIONWEB_NAME "${FUSIONWEB_NAME:-}"
+append_override FUSIONWEB_CONCURRENCY "${FUSIONWEB_CONCURRENCY:-}"
+append_override FUSIONWEB_INSECURE_TLS "$INSECURE_TLS"
+append_override FUSIONWEB_IMAGE "${FUSIONWEB_IMAGE:-}"
+
+cd "$WORKDIR"
+docker compose pull
+docker compose up -d --wait --wait-timeout 600
+
+echo "[FusionWeb] Worker 已启动"
+echo "[FusionWeb] 查看日志: cd $WORKDIR && docker compose logs -f"
+`
+}
+
+func workerInstallPowerShellScript() string {
+	return `$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+function Require-Command {
+    param([string]$Name)
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "[FusionWeb] 缺少命令: $Name"
+    }
+}
+
+function Add-Override {
+    param([string]$Key, [string]$Value)
+    if (-not [string]::IsNullOrWhiteSpace($Value)) {
+        Add-Content -Path (Join-Path $script:Workdir '.env') -Value ("{0}={1}" -f $Key, $Value)
+    }
+}
+
+Require-Command 'docker'
+$server = if ([string]::IsNullOrWhiteSpace($env:FUSIONWEB_SERVER)) { '' } else { $env:FUSIONWEB_SERVER.TrimEnd('/') }
+$workerKey = $env:FUSIONWEB_WORKER_KEY
+if ([string]::IsNullOrWhiteSpace($workerKey)) {
+    $workerKey = $env:FUSIONWEB_KEY
+}
+$script:Workdir = if ([string]::IsNullOrWhiteSpace($env:FUSIONWEB_WORKDIR)) { 'fusionweb-worker' } else { $env:FUSIONWEB_WORKDIR }
+$insecureTls = if ([string]::IsNullOrWhiteSpace($env:FUSIONWEB_INSECURE_TLS)) { 'true' } else { $env:FUSIONWEB_INSECURE_TLS }
+if ([string]::IsNullOrWhiteSpace($server)) { throw '[FusionWeb] FUSIONWEB_SERVER 不能为空' }
+if ([string]::IsNullOrWhiteSpace($workerKey)) { throw '[FusionWeb] FUSIONWEB_WORKER_KEY 不能为空' }
+
+if ($insecureTls -eq 'true') {
+    [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+}
+
+$composeUrl = if ([string]::IsNullOrWhiteSpace($env:FUSIONWEB_COMPOSE_URL)) { "$server/static/fusionweb-worker/compose.yaml" } else { $env:FUSIONWEB_COMPOSE_URL }
+$bootstrapUrl = if ([string]::IsNullOrWhiteSpace($env:FUSIONWEB_BOOTSTRAP_URL)) { "$server/static/fusionweb-worker/bootstrap.env" } else { $env:FUSIONWEB_BOOTSTRAP_URL }
+New-Item -ItemType Directory -Force -Path $script:Workdir | Out-Null
+Invoke-WebRequest -UseBasicParsing $composeUrl -OutFile (Join-Path $script:Workdir 'docker-compose.yaml')
+Invoke-WebRequest -UseBasicParsing $bootstrapUrl -Headers @{ 'X-Worker-Key' = $workerKey } -OutFile (Join-Path $script:Workdir '.env')
+Add-Override 'FUSIONWEB_NAME' $env:FUSIONWEB_NAME
+Add-Override 'FUSIONWEB_CONCURRENCY' $env:FUSIONWEB_CONCURRENCY
+Add-Override 'FUSIONWEB_INSECURE_TLS' $insecureTls
+Add-Override 'FUSIONWEB_IMAGE' $env:FUSIONWEB_IMAGE
+
+Set-Location $script:Workdir
+docker compose pull
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+docker compose up -d --wait --wait-timeout 600
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Write-Host '[FusionWeb] Worker 已启动'
+Write-Host '[FusionWeb] 查看日志: Set-Location fusionweb-worker; docker compose logs -f'
+`
+}
+
+func workerStaticURL(server, fileName string) string {
+	return strings.TrimRight(strings.TrimSpace(server), "/") + "/static/fusionweb-worker/" + strings.TrimLeft(strings.TrimSpace(fileName), "/")
+}
+
+func curlFlagsForServer(server string) string {
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(server)), "https://") {
+		return "-fsSLk"
+	}
+	return "-fsSL"
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
+}
+
+func powerShellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
+}
+
+func escapeCMDEnvValue(value string) string {
+	return strings.ReplaceAll(value, `"`, `""`)
 }
 
 func detectRequestScheme(c *gin.Context) string {

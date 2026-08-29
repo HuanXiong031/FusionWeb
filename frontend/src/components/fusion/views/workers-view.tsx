@@ -2,9 +2,9 @@
 
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Clipboard, Plus, RefreshCw, Server, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Clipboard, KeyRound, Plus, RefreshCw, Server, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteWorker, getWorkerInstallCommand, getWorkers, type WorkerInstallCommand, type WorkerNode } from '@/lib/api'
+import { deleteWorker, getWorkerInstallCommand, getWorkers, type WorkerInstallCommand, type WorkerInstallSteps, type WorkerNode } from '@/lib/api'
 import { asList, formatTime, unwrap } from '@/lib/utils'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Modal, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
@@ -61,6 +61,86 @@ function CommandPanel({ value, label }: { value: string; label: string }) {
   )
 }
 
+function InstallField({
+  label,
+  value,
+  hint,
+  copyLabel,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  hint?: string
+  copyLabel?: string
+  tone?: 'default' | 'accent'
+}) {
+  const valueClassName = tone === 'accent'
+    ? 'border-warning/30 bg-warning/10 text-warning-foreground'
+    : 'border-border bg-background text-foreground'
+
+  return (
+    <div className="grid gap-2 md:grid-cols-[92px_minmax(0,1fr)] md:items-start">
+      <div className="pt-2 text-sm font-medium text-foreground">{label}</div>
+      <div className="grid gap-1.5">
+        <div className={`flex min-h-11 items-center justify-between gap-3 rounded-card border px-3 py-2 ${valueClassName}`}>
+          <div className="min-w-0 break-all font-mono text-sm">{value || '-'}</div>
+          {copyLabel ? (
+            <Button size="sm" variant="outline" onClick={() => copyText(value, copyLabel)} disabled={!value}>
+              <Clipboard className="size-4" />
+              复制
+            </Button>
+          ) : null}
+        </div>
+        {hint ? <div className="text-xs leading-5 text-muted">{hint}</div> : null}
+      </div>
+    </div>
+  )
+}
+
+function CommandStep({ index, title, value, label }: { index: number; title: string; value: string; label: string }) {
+  return (
+    <div className="grid gap-2 rounded-card border border-border bg-background p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-medium text-foreground">{index}. {title}</div>
+        <Button size="sm" variant="outline" onClick={() => copyText(value, label)} disabled={!value}>
+          <Clipboard className="size-4" />
+          复制
+        </Button>
+      </div>
+      <pre className="overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-card px-3 py-3 font-mono text-xs leading-6 text-foreground">{value || '暂无内容'}</pre>
+    </div>
+  )
+}
+
+function CommonOperationCard({ title, value, label }: { title: string; value: string; label: string }) {
+  return (
+    <div className="grid gap-2 rounded-card border border-border bg-background p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        <Button size="sm" variant="outline" onClick={() => copyText(value, label)} disabled={!value}>
+          <Clipboard className="size-4" />
+          复制
+        </Button>
+      </div>
+      <pre className="overflow-auto whitespace-pre-wrap break-all rounded-md border border-border bg-card px-3 py-3 font-mono text-xs leading-6 text-foreground">{value || '暂无内容'}</pre>
+    </div>
+  )
+}
+
+function CommandSteps({ title, commands }: { title: string; commands?: WorkerInstallSteps }) {
+  if (!commands) return null
+  return (
+    <div className="grid gap-4">
+      <div className="text-sm text-muted">{title}。默认会自动生成 <code>fusionweb-worker</code> 目录；如需自定义节点名，可在执行前额外设置 <code>FUSIONWEB_NAME</code>。</div>
+      <div className="grid gap-3">
+        <CommandStep index={1} title="下载部署脚本" value={commands.download} label={`${title} - 下载部署脚本`} />
+        <CommandStep index={2} title="启动 Worker" value={commands.run} label={`${title} - 启动 Worker`} />
+        <CommandStep index={3} title="一键执行" value={commands.oneLiner} label={`${title} - 一键执行`} />
+      </div>
+    </div>
+  )
+}
+
 function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const query = useQuery({
     queryKey: ['worker-install-command'],
@@ -68,17 +148,23 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     enabled: open,
     staleTime: 30_000,
   })
+  const [platform, setPlatform] = React.useState<'linux' | 'windowsPowerShell' | 'windowsCmd'>('linux')
+  React.useEffect(() => {
+    if (open) setPlatform('linux')
+  }, [open])
+
   const data = query.data
   const statusTone = data?.ready ? 'success' : 'danger'
-  const statusLabel = data?.ready ? '可直接部署' : '需先补齐远程访问'
+  const statusLabel = data?.ready ? '可直接部署' : '需先补齐主节点远程访问'
+  const activeCommands = platform === 'linux' ? data?.linux : platform === 'windowsPowerShell' ? data?.windowsPowerShell : data?.windowsCmd
 
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="添加远程 Worker"
-      description="在目标机器执行对应命令即可生成 Compose 文件并启动 Worker 容器。下方会同时展示主节点 API、PostgreSQL、Redis、MinIO 的远程连接信息。"
-      className="max-w-5xl"
+      title="安装 Worker 探针"
+      description="参考 cscan 的安装方式，保留必需连接信息，把部署步骤收敛成“下载脚本 / 启动 Worker / 一键执行”三段命令。"
+      className="max-w-6xl"
     >
       {query.isLoading ? (
         <div className="flex min-h-52 items-center justify-center text-sm text-muted"><RefreshCw className="mr-2 size-4 animate-spin" />正在生成部署代码...</div>
@@ -86,57 +172,93 @@ function InstallModal({ open, onOpenChange }: { open: boolean; onOpenChange: (op
         <EmptyState title="部署代码生成失败" description={(query.error as any)?.message || '请检查 API 和 Worker 配置'} />
       ) : (
         <div className="grid gap-5">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <Metric label="部署状态" value={<Badge tone={statusTone as any}>{statusLabel}</Badge>} />
-            <Metric label="主节点 API" value={data?.server || '-'} />
-            <Metric label="Worker 镜像" value={data?.image || '-'} />
-            <Metric label="PostgreSQL" value={data?.pgDsn || '-'} />
-            <Metric label="Redis" value={data?.redisAddr || '-'} />
-            <Metric label="MinIO" value={data?.minioEndpoint || '-'} />
+          <div className="rounded-card border border-success/30 bg-success/10 px-4 py-3 text-sm leading-6 text-success-foreground">
+            使用 Docker 一键部署 Worker 探针，无需手工安装扫描工具；远程节点只需要执行下面的脚本命令即可。
           </div>
 
-          {data?.ready ? (
-            <div className="rounded-card border border-success/30 bg-success/10 p-3 text-sm leading-6 text-success-foreground">
-              部署代码已生成。远程 Worker 需要同时访问主节点 API、PostgreSQL、Redis 和 MinIO；建议只在内网/VPN 环境使用这些命令。
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <Metric label="部署状态" value={<Badge tone={statusTone as any}>{statusLabel}</Badge>} />
+            <Metric label="Worker 镜像" value={data?.image || '-'} />
+            <Metric label="主节点连接" value={data?.server || '-'} />
+          </div>
+
+          <Card>
+            <CardContent className="grid gap-4 p-5">
+              <InstallField label="安装密钥" value={data?.workerKey || '-'} copyLabel="安装密钥" tone="accent" />
+              <InstallField label="服务地址" value={data?.server || '-'} hint="Worker 回连主节点 API 的地址" copyLabel="服务地址" />
+              <InstallField label="PostgreSQL 地址" value={data?.pgDsn || '-'} hint="Worker 直连任务数据库地址" copyLabel="PostgreSQL 地址" />
+              <InstallField label="Redis 地址" value={data?.redisAddr || '-'} hint="Worker 直连调度层地址" copyLabel="Redis 地址" />
+              <InstallField label="MinIO 地址" value={data?.minioEndpoint || '-'} hint="Worker 直连对象存储地址" copyLabel="MinIO 地址" />
+            </CardContent>
+          </Card>
+
+          {!data?.ready ? (
+            <div className="grid gap-4">
+              <div className="rounded-card border border-danger/30 bg-danger/10 p-4 text-sm leading-6 text-danger">
+                <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="size-4" />当前还不能直接安装远程 Worker</div>
+                <div className="mt-1">先把主节点对远程 Worker 所需的 API、PostgreSQL、Redis、MinIO 访问准备好，再重新打开本弹窗即可得到可直接执行的命令。</div>
+              </div>
+
+              {data?.missing?.length ? (
+                <div className="rounded-card border border-danger/30 bg-danger/5 p-4">
+                  <div className="text-sm font-semibold text-danger">待补齐项</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {data.missing.map((item) => <Badge key={item} tone="danger">{item}</Badge>)}
+                  </div>
+                </div>
+              ) : null}
+
+              {data?.warnings?.map((warning) => (
+                <div key={warning} className="rounded-card border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-warning-foreground">{warning}</div>
+              ))}
+
+              <CommandPanel value={data?.suggestedEnv || ''} label="主节点 .env 建议片段" />
             </div>
           ) : (
-            <div className="rounded-card border border-danger/30 bg-danger/10 p-3 text-sm leading-6 text-danger">
-              <div className="font-semibold">当前还不能直接添加远程节点</div>
-              <div className="mt-1">请先按下方建议修改主节点 .env，并使用 remote-access 覆盖层重启主节点；修改完成后重新打开本弹窗即可得到可用命令。</div>
-            </div>
-          )}
+            <>
+              {data?.needsRemoteAccess ? (
+                <div className="rounded-card border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-warning-foreground">
+                  当前远程 Worker 使用的是主节点自带 PostgreSQL / Redis / MinIO。请确认主节点已经叠加 <code>docker-compose.remote-access.yaml</code> 并放行内网端口。
+                </div>
+              ) : null}
 
-          {data?.needsRemoteAccess ? (
-            <div className="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm leading-6 text-warning-foreground">
-              当前命令使用的是主节点自带 PostgreSQL / Redis / MinIO。远程 Worker 接入前，主节点通常需要叠加 <code>docker-compose.remote-access.yaml</code> 暴露基础设施端口。
-            </div>
-          ) : null}
+              {data?.warnings?.map((warning) => (
+                <div key={warning} className="rounded-card border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-warning-foreground">{warning}</div>
+              ))}
 
-          {data?.missing?.length ? (
-            <div className="rounded-card border border-danger/30 bg-danger/5 p-3">
-              <div className="text-sm font-semibold text-danger">待补齐项</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {data.missing.map((item) => <Badge key={item} tone="danger">{item}</Badge>)}
+              <div className="rounded-card border border-border bg-card p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><KeyRound className="size-4" />Docker 部署命令</div>
+                <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'linux' | 'windowsPowerShell' | 'windowsCmd')}>
+                  <TabsList>
+                    <TabsTrigger value="linux">Linux / macOS</TabsTrigger>
+                    <TabsTrigger value="windowsPowerShell">Windows PowerShell</TabsTrigger>
+                    <TabsTrigger value="windowsCmd">Windows CMD</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="linux" className="mt-4"><CommandSteps title="Linux / macOS" commands={data?.linux} /></TabsContent>
+                  <TabsContent value="windowsPowerShell" className="mt-4"><CommandSteps title="Windows PowerShell" commands={data?.windowsPowerShell} /></TabsContent>
+                  <TabsContent value="windowsCmd" className="mt-4"><CommandSteps title="Windows CMD" commands={data?.windowsCmd} /></TabsContent>
+                </Tabs>
               </div>
-            </div>
-          ) : null}
 
-          {data?.warnings?.map((warning) => (
-            <div key={warning} className="rounded-card border border-warning/30 bg-warning/10 p-3 text-sm leading-6 text-warning-foreground">{warning}</div>
-          ))}
+              <div className="grid gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground"><CheckCircle2 className="size-4" />常用操作</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <CommonOperationCard title="查看日志" value={activeCommands?.logs || ''} label={`${platform} - 查看日志`} />
+                  <CommonOperationCard title="停止 Worker" value={activeCommands?.stop || ''} label={`${platform} - 停止 Worker`} />
+                  <CommonOperationCard title="重启 Worker" value={activeCommands?.restart || ''} label={`${platform} - 重启 Worker`} />
+                  <CommonOperationCard title="更新 Worker" value={activeCommands?.upgrade || ''} label={`${platform} - 更新 Worker`} />
+                </div>
+              </div>
 
-          <Tabs defaultValue="linux">
-            <TabsList>
-              <TabsTrigger value="linux">Linux</TabsTrigger>
-              <TabsTrigger value="windows">Windows PowerShell</TabsTrigger>
-              <TabsTrigger value="compose">Docker Compose</TabsTrigger>
-              <TabsTrigger value="env">.env 建议</TabsTrigger>
-            </TabsList>
-            <TabsContent value="linux"><CommandPanel value={data?.linux || ''} label="Linux 一键部署命令" /></TabsContent>
-            <TabsContent value="windows"><CommandPanel value={data?.windows || ''} label="Windows 一键部署命令" /></TabsContent>
-            <TabsContent value="compose"><CommandPanel value={data?.compose || ''} label="Docker Compose 配置" /></TabsContent>
-            <TabsContent value="env"><CommandPanel value={data?.suggestedEnv || ''} label="主节点 .env 建议片段" /></TabsContent>
-          </Tabs>
+              <details className="rounded-card border border-border bg-background p-4">
+                <summary className="cursor-pointer list-none text-sm font-medium text-foreground">高级方式：查看 docker-compose 模板</summary>
+                <div className="mt-4 grid gap-3">
+                  <div className="text-sm leading-6 text-muted">脚本会自动下载下面这份模板并写入远程机器的 <code>fusionweb-worker/docker-compose.yaml</code>，通常无需手工编辑。</div>
+                  <CommandPanel value={data?.compose || ''} label="docker-compose.yaml 模板" />
+                </div>
+              </details>
+            </>
+          )}
         </div>
       )}
     </Modal>
@@ -174,7 +296,7 @@ export function WorkersView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">节点管理</h1>
-          <p className="mt-1 text-sm text-muted">查看默认和远程 Worker 状态，生成 Windows / Linux 一键部署代码，并检查远程节点依赖的数据库、Redis、对象存储连接信息。</p>
+          <p className="mt-1 text-sm text-muted">查看默认和远程 Worker 状态，生成更简洁的 Windows / Linux 一键部署命令，并检查远程节点依赖的数据库、Redis、对象存储连接信息。</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => workersQuery.refetch()} disabled={workersQuery.isFetching}>

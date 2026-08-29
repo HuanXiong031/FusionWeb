@@ -14,7 +14,7 @@ func BasicAuthMiddleware() gin.HandlerFunc {
 	cfg := config.Get()
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if !cfg.BasicAuth || c.Request.Method == http.MethodOptions || strings.HasPrefix(path, "/api/") || path == "/ws" {
+		if !cfg.BasicAuth || c.Request.Method == http.MethodOptions || strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/static/") || path == "/ws" {
 			c.Next()
 			return
 		}
