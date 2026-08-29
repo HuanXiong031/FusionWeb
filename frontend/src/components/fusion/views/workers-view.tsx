@@ -2,11 +2,11 @@
 
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, CheckCircle2, Clipboard, KeyRound, Pencil, Plus, RefreshCw, Server, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Clipboard, KeyRound, Pencil, Plus, RefreshCw, Server, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteWorker, getWorkerInstallCommand, getWorkers, updateWorker, type WorkerInstallCommand, type WorkerInstallSteps, type WorkerNode } from '@/lib/api'
 import { asList, formatTime, unwrap } from '@/lib/utils'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, Input, Modal, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, EmptyState, Input, Modal, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 
 async function copyText(value: string, label: string) {
   try {
@@ -282,6 +282,8 @@ export function WorkersView() {
   const [installOpen, setInstallOpen] = React.useState(false)
   const [renameTarget, setRenameTarget] = React.useState<WorkerNode | null>(null)
   const [renameValue, setRenameValue] = React.useState('')
+  const [concurrencyTarget, setConcurrencyTarget] = React.useState<WorkerNode | null>(null)
+  const [concurrencyValue, setConcurrencyValue] = React.useState('')
   const workersQuery = useQuery({
     queryKey: ['workers'],
     queryFn: async () => asList<WorkerNode>(await getWorkers()),
@@ -297,6 +299,16 @@ export function WorkersView() {
       setRenameValue('')
     },
     onError: (error: any) => toast.error(error?.message || '更新节点名称失败'),
+  })
+  const concurrencyMutation = useMutation({
+    mutationFn: ({ name, concurrency }: { name: string; concurrency: number }) => updateWorker(name, { concurrency }),
+    onSuccess: (_, variables) => {
+      toast.success(`节点并发已更新为 ${variables.concurrency}`)
+      queryClient.invalidateQueries({ queryKey: ['workers'] })
+      setConcurrencyTarget(null)
+      setConcurrencyValue('')
+    },
+    onError: (error: any) => toast.error(error?.message || '更新节点并发失败'),
   })
   const removeMutation = useMutation({
     mutationFn: deleteWorker,
@@ -316,9 +328,24 @@ export function WorkersView() {
     setRenameValue(String(worker.displayName || '').trim())
   }
 
+  const openConcurrencyModal = (worker: WorkerNode) => {
+    setConcurrencyTarget(worker)
+    setConcurrencyValue(String(worker.concurrency || 5))
+  }
+
   const submitRename = () => {
     if (!renameTarget || renameMutation.isPending) return
     renameMutation.mutate({ name: renameTarget.name, displayName: renameValue })
+  }
+
+  const submitConcurrency = () => {
+    if (!concurrencyTarget || concurrencyMutation.isPending) return
+    const parsed = Number.parseInt(concurrencyValue.trim(), 10)
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 64) {
+      toast.error('并发数量必须在 1 到 64 之间')
+      return
+    }
+    concurrencyMutation.mutate({ name: concurrencyTarget.name, concurrency: parsed })
   }
 
   const removeWorker = (worker: WorkerNode) => {
@@ -355,7 +382,7 @@ export function WorkersView() {
         <CardHeader>
           <div>
             <CardTitle>Worker 节点</CardTitle>
-            <CardDescription>每 15 秒自动刷新；超过 120 秒未上报心跳的节点标记为离线。</CardDescription>
+            <CardDescription>每 15 秒自动刷新；鼠标悬停节点名称或并发数量即可直接编辑。</CardDescription>
           </div>
           {workersQuery.isSuccess ? <Badge tone={onlineCount === workers.length && workers.length > 0 ? 'success' : 'warning'}>{onlineCount} 在线</Badge> : null}
         </CardHeader>
@@ -368,10 +395,10 @@ export function WorkersView() {
             <div className="p-5"><EmptyState title="暂无 Worker 节点" description="请确认默认 Worker 容器已经启动，或点击“添加节点”部署远程 Worker。" /></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1280px] text-left text-sm">
+              <table className="w-full min-w-[1360px] text-left text-sm">
                 <thead className="border-b border-border bg-raised/50 text-xs text-muted">
                   <tr>
-                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">公网 IP</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
+                    <th className="px-4 py-3 font-medium">节点</th><th className="px-4 py-3 font-medium">公网 IP</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">平台</th><th className="px-4 py-3 font-medium">并发数量</th><th className="px-4 py-3 font-medium">任务</th><th className="px-4 py-3 font-medium">CPU</th><th className="px-4 py-3 font-medium">内存</th><th className="px-4 py-3 font-medium">最近心跳</th><th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -400,7 +427,24 @@ export function WorkersView() {
                       </td>
                       <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{getWorkerPublicIP(worker) || '-'}</div><div className="mt-1 text-xs text-muted">公网地址</div></td>
                       <td className="px-4 py-3"><Badge tone={worker.status === 'online' ? 'success' : 'danger'}>{worker.status === 'online' ? <Check className="mr-1 size-3" /> : null}{worker.status === 'online' ? '在线' : '离线'}</Badge></td>
-                      <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.os || '-'} / {worker.arch || '-'}</div><div className="mt-1 text-xs text-muted">并发 {worker.concurrency || 0}</div></td>
+                      <td className="px-4 py-3"><div className="font-mono text-xs text-foreground">{worker.os || '-'} / {worker.arch || '-'}</div><div className="mt-1 text-xs text-muted">运行平台</div></td>
+                      <td className="px-4 py-3">
+                        <div className="group flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-mono text-xs text-foreground">{worker.concurrency || 0}</div>
+                            <div className="mt-1 text-xs text-muted">单节点并发</div>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="修改并发数量"
+                            className="size-6 shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                            onClick={() => openConcurrencyModal(worker)}
+                          >
+                            <SlidersHorizontal className="size-3.5 text-primary" />
+                          </Button>
+                        </div>
+                      </td>
                       <td className="px-4 py-3"><div className="text-foreground">活跃 {worker.activeTasks || 0}</div><div className="mt-1 text-xs text-muted">完成 {worker.completedTasks || 0}</div></td>
                       <td className="px-4 py-3"><UsageBar value={worker.cpuPercent} /></td>
                       <td className="px-4 py-3"><UsageBar value={worker.memoryPercent} /></td>
@@ -415,7 +459,7 @@ export function WorkersView() {
         </CardContent>
       </Card>
       <InstallModal open={installOpen} onOpenChange={setInstallOpen} />
-      <Modal
+      <Drawer
         open={!!renameTarget}
         onOpenChange={(open) => {
           if (!open && !renameMutation.isPending) {
@@ -423,8 +467,9 @@ export function WorkersView() {
             setRenameValue('')
           }
         }}
-        title="修改节点名称"
+        title="编辑节点名称"
         description="修改后的名称会显示在节点列表和节点选择器中；留空可恢复为默认节点标识。"
+        className="max-w-none md:w-[520px]"
         footer={(
           <>
             <Button variant="outline" onClick={() => { setRenameTarget(null); setRenameValue('') }} disabled={renameMutation.isPending}>取消</Button>
@@ -454,6 +499,51 @@ export function WorkersView() {
               }}
             />
             <span className="text-xs leading-5 text-muted">支持 64 个字符以内，留空后保存会恢复默认节点标识。</span>
+          </label>
+        </div>
+      </Drawer>
+      <Modal
+        open={!!concurrencyTarget}
+        onOpenChange={(open) => {
+          if (!open && !concurrencyMutation.isPending) {
+            setConcurrencyTarget(null)
+            setConcurrencyValue('')
+          }
+        }}
+        title="修改并发数量"
+        description="设置该 Worker 节点同时可执行的任务数量；保存后会在下一次心跳中同步到节点。"
+        footer={(
+          <>
+            <Button variant="outline" onClick={() => { setConcurrencyTarget(null); setConcurrencyValue('') }} disabled={concurrencyMutation.isPending}>取消</Button>
+            <Button variant="default" onClick={submitConcurrency} disabled={concurrencyMutation.isPending}>
+              {concurrencyMutation.isPending ? '保存中...' : '保存'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="grid gap-4">
+          <div className="rounded-card border border-border bg-background px-4 py-3 text-sm text-muted">
+            当前节点：<span className="font-mono text-foreground">{concurrencyTarget?.displayName?.trim() || concurrencyTarget?.name || '-'}</span>
+          </div>
+          <label className="grid gap-2">
+            <span className="text-sm font-medium text-foreground">并发数量</span>
+            <Input
+              type="number"
+              value={concurrencyValue}
+              onChange={(event) => setConcurrencyValue(event.target.value)}
+              placeholder="请输入并发数量"
+              min={1}
+              max={64}
+              step={1}
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  submitConcurrency()
+                }
+              }}
+            />
+            <span className="text-xs leading-5 text-muted">支持 1 到 64；保存后节点会自动调整实际可同时运行的任务数。</span>
           </label>
         </div>
       </Modal>

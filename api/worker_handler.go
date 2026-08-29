@@ -33,6 +33,8 @@ type workerReport struct {
 	Version        string  `json:"version"`
 }
 
+const maxWorkerConcurrency = 64
+
 func workerAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		expected := config.Get().WorkerKey
@@ -73,7 +75,8 @@ func handleWorkerRegister(c *gin.Context) {
 	if report.Concurrency <= 0 {
 		report.Concurrency = 5
 	}
-	if err := saveWorker(c.Request.Context(), report, c.ClientIP(), true); err != nil {
+	concurrency, err := saveWorker(c.Request.Context(), report, c.ClientIP(), true)
+	if err != nil {
 		InternalServerErrorResponse(c, "保存 Worker 注册信息失败", err)
 		return
 	}
@@ -84,7 +87,7 @@ func handleWorkerRegister(c *gin.Context) {
 	redisAddr := firstNonEmpty(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR"), cfg.RedisAddr)
 	minioEndpoint := firstNonEmpty(os.Getenv("FUSIONWEB_WORKER_EXTERNAL_MINIO_ENDPOINT"), cfg.MinIOEndpoint)
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
-		"registered": true, "stream": database.RedisKey("task", "queue"), "group": "fusionweb-workers",
+		"registered": true, "concurrency": concurrency, "stream": database.RedisKey("task", "queue"), "group": "fusionweb-workers",
 		"pgDsn": pgDSN, "redisAddr": redisAddr, "redisPassword": cfg.RedisPassword, "redisDb": cfg.RedisDB, "redisPrefix": cfg.RedisPrefix,
 		"minioEndpoint": minioEndpoint, "minioAccessKey": cfg.MinIOAccessKey, "minioSecretKey": cfg.MinIOSecretKey, "minioBucket": cfg.MinIOBucket, "minioRegion": cfg.MinIORegion, "minioUseSSL": cfg.MinIOUseSSL,
 	}})
@@ -95,11 +98,12 @@ func handleWorkerHeartbeat(c *gin.Context) {
 		BadRequestResponse(c, "Worker 心跳参数无效", err)
 		return
 	}
-	if err := saveWorker(c.Request.Context(), r, c.ClientIP(), false); err != nil {
+	concurrency, err := saveWorker(c.Request.Context(), r, c.ClientIP(), false)
+	if err != nil {
 		InternalServerErrorResponse(c, "保存 Worker 心跳失败", err)
 		return
 	}
-	SuccessResponse(c, gin.H{"ok": true})
+	SuccessResponse(c, gin.H{"ok": true, "concurrency": concurrency})
 }
 func handleWorkerDeregister(c *gin.Context) {
 	var r workerReport
@@ -121,14 +125,24 @@ func handleWorkerDeregister(c *gin.Context) {
 	SuccessResponse(c, gin.H{"ok": true})
 }
 
-func saveWorker(ctx context.Context, r workerReport, ipAddress string, register bool) error {
+func saveWorker(ctx context.Context, r workerReport, ipAddress string, register bool) (int, error) {
 	client := database.GetRedis()
 	if client == nil {
-		return fmt.Errorf("Redis 不可用")
+		return 0, fmt.Errorf("Redis 不可用")
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	key := database.RedisKey("worker", r.Name)
-	values := map[string]interface{}{"name": r.Name, "status": "online", "os": r.OS, "arch": r.Arch, "concurrency": r.Concurrency, "active_tasks": r.ActiveTasks, "completed_tasks": r.CompletedTasks, "cpu_percent": fmt.Sprintf("%.2f", r.CPUPercent), "memory_percent": fmt.Sprintf("%.2f", r.MemoryPercent), "version": r.Version, "last_heartbeat": now}
+	reportedConcurrency := r.Concurrency
+	if reportedConcurrency <= 0 {
+		reportedConcurrency = 5
+	}
+	effectiveConcurrency := reportedConcurrency
+	if override, err := client.HGet(ctx, key, "concurrency_override").Result(); err == nil {
+		if v, err := strconv.Atoi(strings.TrimSpace(override)); err == nil && v >= 1 && v <= maxWorkerConcurrency {
+			effectiveConcurrency = v
+		}
+	}
+	values := map[string]interface{}{"name": r.Name, "status": "online", "os": r.OS, "arch": r.Arch, "reported_concurrency": reportedConcurrency, "concurrency": effectiveConcurrency, "active_tasks": r.ActiveTasks, "completed_tasks": r.CompletedTasks, "cpu_percent": fmt.Sprintf("%.2f", r.CPUPercent), "memory_percent": fmt.Sprintf("%.2f", r.MemoryPercent), "version": r.Version, "last_heartbeat": now}
 	if normalizedPublicIP := normalizeWorkerIPAddress(r.PublicIP); normalizedPublicIP != "" {
 		values["public_ip"] = normalizedPublicIP
 	}
@@ -138,7 +152,7 @@ func saveWorker(ctx context.Context, r workerReport, ipAddress string, register 
 	if register {
 		values["registered_at"] = now
 	}
-	return client.HSet(ctx, key, values).Err()
+	return effectiveConcurrency, client.HSet(ctx, key, values).Err()
 }
 
 type workerView struct {
@@ -159,8 +173,9 @@ type workerView struct {
 	LastHeartbeat   string  `json:"lastHeartbeat"`
 }
 
-type workerRenameRequest struct {
-	DisplayName string `json:"displayName"`
+type workerUpdateRequest struct {
+	DisplayName *string `json:"displayName"`
+	Concurrency *int    `json:"concurrency"`
 }
 
 func handleWorkerList(c *gin.Context) {
@@ -197,7 +212,7 @@ func handleWorkerList(c *gin.Context) {
 
 func mapWorker(m map[string]string) workerView {
 	w := workerView{Name: m["name"], DisplayName: resolveWorkerDisplayName(m), IPAddress: normalizeWorkerIPAddress(m["ip_address"]), PublicIPAddress: normalizeWorkerIPAddress(m["public_ip"]), Status: m["status"], OS: m["os"], Arch: m["arch"], Version: m["version"], RegisteredAt: m["registered_at"], LastHeartbeat: m["last_heartbeat"]}
-	w.Concurrency, _ = strconv.Atoi(m["concurrency"])
+	w.Concurrency = workerConcurrencyValue(m)
 	w.ActiveTasks, _ = strconv.ParseInt(m["active_tasks"], 10, 64)
 	w.CompletedTasks, _ = strconv.ParseInt(m["completed_tasks"], 10, 64)
 	w.CPUPercent, _ = strconv.ParseFloat(m["cpu_percent"], 64)
@@ -214,9 +229,9 @@ func handleWorkerRename(c *gin.Context) {
 		BadRequestResponse(c, "Worker 名称不能为空", nil)
 		return
 	}
-	var req workerRenameRequest
+	var req workerUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		BadRequestResponse(c, "Worker 名称参数无效", err)
+		BadRequestResponse(c, "Worker 参数无效", err)
 		return
 	}
 	client := database.GetRedis()
@@ -234,30 +249,55 @@ func handleWorkerRename(c *gin.Context) {
 		ErrorResponse(c, http.StatusNotFound, "Worker 不存在", nil)
 		return
 	}
-	displayName := normalizeWorkerDisplayName(name, req.DisplayName)
-	if utf8.RuneCountInString(displayName) > 64 {
-		BadRequestResponse(c, "节点名称长度不能超过 64 个字符", nil)
-		return
+	updated := false
+	if req.DisplayName != nil {
+		displayName := normalizeWorkerDisplayName(name, *req.DisplayName)
+		if utf8.RuneCountInString(displayName) > 64 {
+			BadRequestResponse(c, "节点名称长度不能超过 64 个字符", nil)
+			return
+		}
+		if displayName != "" {
+			conflict, err := workerDisplayNameExists(c, client, name, displayName)
+			if err != nil {
+				InternalServerErrorResponse(c, "校验 Worker 名称失败", err)
+				return
+			}
+			if conflict {
+				BadRequestResponse(c, "节点名称已存在，请更换后重试", nil)
+				return
+			}
+			if err := client.HSet(c, key, "display_name", displayName).Err(); err != nil {
+				InternalServerErrorResponse(c, "更新 Worker 名称失败", err)
+				return
+			}
+		} else {
+			if err := client.HDel(c, key, "display_name").Err(); err != nil {
+				InternalServerErrorResponse(c, "恢复默认 Worker 名称失败", err)
+				return
+			}
+		}
+		updated = true
 	}
-	if displayName != "" {
-		conflict, err := workerDisplayNameExists(c, client, name, displayName)
+	if req.Concurrency != nil {
+		concurrency, err := normalizeWorkerConcurrency(*req.Concurrency)
 		if err != nil {
-			InternalServerErrorResponse(c, "校验 Worker 名称失败", err)
+			BadRequestResponse(c, err.Error(), nil)
 			return
 		}
-		if conflict {
-			BadRequestResponse(c, "节点名称已存在，请更换后重试", nil)
+		if err := client.HSet(c, key, "concurrency_override", concurrency, "concurrency", concurrency).Err(); err != nil {
+			InternalServerErrorResponse(c, "更新 Worker 并发失败", err)
 			return
 		}
-		if err := client.HSet(c, key, "display_name", displayName).Err(); err != nil {
-			InternalServerErrorResponse(c, "更新 Worker 名称失败", err)
+		updated = true
+	}
+	if !updated {
+		m, err := client.HGetAll(c, key).Result()
+		if err != nil {
+			InternalServerErrorResponse(c, "读取 Worker 失败", err)
 			return
 		}
-	} else {
-		if err := client.HDel(c, key, "display_name").Err(); err != nil {
-			InternalServerErrorResponse(c, "恢复默认 Worker 名称失败", err)
-			return
-		}
+		SuccessResponse(c, mapWorker(m))
+		return
 	}
 	m, err := client.HGetAll(c, key).Result()
 	if err != nil {
@@ -300,6 +340,23 @@ func normalizeWorkerDisplayName(name string, displayName string) string {
 
 func normalizeWorkerIPAddress(ipAddress string) string {
 	return strings.TrimSpace(ipAddress)
+}
+
+func normalizeWorkerConcurrency(value int) (int, error) {
+	if value < 1 || value > maxWorkerConcurrency {
+		return 0, fmt.Errorf("节点并发必须在 1 到 %d 之间", maxWorkerConcurrency)
+	}
+	return value, nil
+}
+
+func workerConcurrencyValue(m map[string]string) int {
+	if v, err := strconv.Atoi(strings.TrimSpace(m["concurrency"])); err == nil && v >= 1 && v <= maxWorkerConcurrency {
+		return v
+	}
+	if v, err := strconv.Atoi(strings.TrimSpace(m["reported_concurrency"])); err == nil && v >= 1 && v <= maxWorkerConcurrency {
+		return v
+	}
+	return 5
 }
 
 func workerSortKey(w workerView) string {

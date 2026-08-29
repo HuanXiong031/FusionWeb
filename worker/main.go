@@ -27,6 +27,8 @@ import (
 
 const workerVersion = "1.0.0"
 
+const maxWorkerConcurrency = 64
+
 type settings struct {
 	Server, Key, Name string
 	Concurrency       int
@@ -48,6 +50,7 @@ type registerResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
+		Concurrency    int    `json:"concurrency"`
 		PGDSN          string `json:"pgDsn"`
 		RedisAddr      string `json:"redisAddr"`
 		RedisPassword  string `json:"redisPassword"`
@@ -62,15 +65,79 @@ type registerResponse struct {
 	} `json:"data"`
 }
 
+type workerLimiter struct {
+	mu      sync.Mutex
+	limit   int
+	running int
+}
+
+func newWorkerLimiter(limit int) *workerLimiter {
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > maxWorkerConcurrency {
+		limit = maxWorkerConcurrency
+	}
+	return &workerLimiter{limit: limit}
+}
+
+func (l *workerLimiter) Limit() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.limit
+}
+
+func (l *workerLimiter) SetLimit(limit int) {
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > maxWorkerConcurrency {
+		limit = maxWorkerConcurrency
+	}
+	l.mu.Lock()
+	l.limit = limit
+	l.mu.Unlock()
+}
+
+func (l *workerLimiter) Acquire(ctx context.Context) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		l.mu.Lock()
+		if l.running < l.limit {
+			l.running++
+			l.mu.Unlock()
+			return nil
+		}
+		l.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+func (l *workerLimiter) Release() {
+	l.mu.Lock()
+	if l.running > 0 {
+		l.running--
+	}
+	l.mu.Unlock()
+}
+
 type workerRuntime struct {
 	cfg             settings
 	client          *http.Client
 	active          atomic.Int64
 	completed       atomic.Int64
 	publicIP        string
+	limiter         *workerLimiter
+	runCtx          context.Context
+	wg              *sync.WaitGroup
+	consumerMu      sync.Mutex
 	executors       []*scheduler.TaskExecutor
 	reclaimExecutor *scheduler.TaskExecutor
-	slots           chan struct{}
 }
 
 func main() {
@@ -83,13 +150,16 @@ func main() {
 		panic(err)
 	}
 	client := newHTTPClient(cfg.InsecureTLS)
-	wr := &workerRuntime{cfg: cfg, client: client, slots: make(chan struct{}, cfg.Concurrency)}
+	wr := &workerRuntime{cfg: cfg, client: client, limiter: newWorkerLimiter(cfg.Concurrency)}
 	wr.publicIP = detectPublicIP()
 	reg, err := wr.register(context.Background())
 	if err != nil {
 		panic(err)
 	}
 	applyConnectionEnvironment(reg)
+	if reg.Data.Concurrency > 0 {
+		wr.applyConcurrency(reg.Data.Concurrency)
+	}
 	if err := database.InitDatabase(); err != nil {
 		panic(fmt.Errorf("Worker 初始化运行依赖失败: %w", err))
 	}
@@ -103,35 +173,16 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
-	wr.reclaimExecutor = scheduler.NewTaskExecutor(ctx, cfg.Name)
+	wr.runCtx = ctx
 	var wg sync.WaitGroup
-	for i := 0; i < cfg.Concurrency; i++ {
-		executor := scheduler.NewTaskExecutor(ctx, cfg.Name)
-		wr.executors = append(wr.executors, executor)
-		consumer := fmt.Sprintf("%s-%d", cfg.Name, i+1)
-		wg.Add(1)
-		go func(ex *scheduler.TaskExecutor, name string) {
-			defer wg.Done()
-			err := scheduler.ConsumeStream(ctx, name, wr.streamHandler(ex))
-			if err != nil && ctx.Err() == nil {
-				logger.Error("Worker 公共队列消费者 %s 退出: %v", name, err)
-			}
-		}(executor, consumer)
-		wg.Add(1)
-		go func(ex *scheduler.TaskExecutor, name string) {
-			defer wg.Done()
-			targetedName := name + "-targeted"
-			err := scheduler.ConsumeWorkerStream(ctx, cfg.Name, targetedName, wr.streamHandler(ex))
-			if err != nil && ctx.Err() == nil {
-				logger.Error("Worker 定向队列消费者 %s 退出: %v", targetedName, err)
-			}
-		}(executor, consumer)
-	}
+	wr.wg = &wg
+	wr.reclaimExecutor = scheduler.NewTaskExecutor(ctx, cfg.Name)
+	wr.ensureConsumers(wr.currentConcurrency())
 	wg.Add(1)
 	go func() { defer wg.Done(); wr.heartbeatLoop(ctx) }()
 	wg.Add(1)
 	go func() { defer wg.Done(); wr.reclaimLoop(ctx) }()
-	logger.Info("Worker %s 已启动，OS/Arch=%s/%s，并发=%d", cfg.Name, runtime.GOOS, runtime.GOARCH, cfg.Concurrency)
+	logger.Info("Worker %s 已启动，OS/Arch=%s/%s，并发=%d", cfg.Name, runtime.GOOS, runtime.GOARCH, wr.currentConcurrency())
 	<-ctx.Done()
 	logger.Info("Worker %s 正在退出", cfg.Name)
 	for _, e := range wr.executors {
@@ -153,8 +204,8 @@ func loadSettings() (settings, error) {
 	if c < 1 {
 		c = 1
 	}
-	if c > 64 {
-		c = 64
+	if c > maxWorkerConcurrency {
+		c = maxWorkerConcurrency
 	}
 	s := settings{Server: strings.TrimRight(strings.TrimSpace(os.Getenv("FUSIONWEB_SERVER")), "/"), Key: os.Getenv("FUSIONWEB_KEY"), Name: name, Concurrency: c, InsecureTLS: envBool("FUSIONWEB_INSECURE_TLS", false)}
 	if s.Server == "" {
@@ -173,14 +224,83 @@ func (w *workerRuntime) register(ctx context.Context) (registerResponse, error) 
 	err := w.post(ctx, "/api/internal/worker/register", w.currentReport(), &out)
 	return out, err
 }
+
+func (w *workerRuntime) currentConcurrency() int {
+	if w.limiter == nil {
+		return w.cfg.Concurrency
+	}
+	return w.limiter.Limit()
+}
+
+func (w *workerRuntime) applyConcurrency(limit int) {
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > maxWorkerConcurrency {
+		limit = maxWorkerConcurrency
+	}
+	previous := w.currentConcurrency()
+	if w.limiter == nil {
+		w.limiter = newWorkerLimiter(limit)
+	} else {
+		w.limiter.SetLimit(limit)
+	}
+	w.cfg.Concurrency = limit
+	if w.runCtx != nil && w.wg != nil && limit > previous {
+		w.ensureConsumers(limit)
+	}
+}
+
+func (w *workerRuntime) ensureConsumers(target int) {
+	if w.runCtx == nil || w.wg == nil {
+		return
+	}
+	if target < 1 {
+		target = 1
+	}
+	if target > maxWorkerConcurrency {
+		target = maxWorkerConcurrency
+	}
+	w.consumerMu.Lock()
+	defer w.consumerMu.Unlock()
+	for len(w.executors) < target {
+		index := len(w.executors) + 1
+		executor := scheduler.NewTaskExecutor(w.runCtx, w.cfg.Name)
+		w.executors = append(w.executors, executor)
+		consumer := fmt.Sprintf("%s-%d", w.cfg.Name, index)
+		w.launchConsumerPair(executor, consumer)
+	}
+}
+
+func (w *workerRuntime) launchConsumerPair(ex *scheduler.TaskExecutor, name string) {
+	w.wg.Add(1)
+	go func() {
+		defer w.wg.Done()
+		err := scheduler.ConsumeStream(w.runCtx, name, w.streamHandler(ex))
+		if err != nil && w.runCtx.Err() == nil {
+			logger.Error("Worker 公共队列消费者 %s 退出: %v", name, err)
+		}
+	}()
+	w.wg.Add(1)
+	go func() {
+		defer w.wg.Done()
+		targetedName := name + "-targeted"
+		err := scheduler.ConsumeWorkerStream(w.runCtx, w.cfg.Name, targetedName, w.streamHandler(ex))
+		if err != nil && w.runCtx.Err() == nil {
+			logger.Error("Worker 定向队列消费者 %s 退出: %v", targetedName, err)
+		}
+	}()
+}
+
 func (w *workerRuntime) streamHandler(ex *scheduler.TaskExecutor) scheduler.TaskStreamHandler {
 	return func(ctx context.Context, taskID, _ string) error {
-		select {
-		case w.slots <- struct{}{}:
-			defer func() { <-w.slots }()
-		case <-ctx.Done():
-			return ctx.Err()
+		if w.limiter == nil {
+			w.applyConcurrency(w.cfg.Concurrency)
 		}
+		if err := w.limiter.Acquire(ctx); err != nil {
+			return err
+		}
+		defer w.limiter.Release()
 		task, err := scheduler.LoadTaskConfigFromDB(taskID)
 		if err != nil {
 			return err
@@ -194,6 +314,7 @@ func (w *workerRuntime) streamHandler(ex *scheduler.TaskExecutor) scheduler.Task
 		return nil
 	}
 }
+
 func (w *workerRuntime) heartbeatLoop(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -203,10 +324,15 @@ func (w *workerRuntime) heartbeatLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			hbctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			err := w.post(hbctx, "/api/internal/worker/heartbeat", w.currentReport(), nil)
+			var resp registerResponse
+			err := w.post(hbctx, "/api/internal/worker/heartbeat", w.currentReport(), &resp)
 			cancel()
 			if err != nil {
 				logger.Warn("Worker 心跳失败: %v", err)
+				continue
+			}
+			if resp.Data.Concurrency > 0 && resp.Data.Concurrency != w.currentConcurrency() {
+				w.applyConcurrency(resp.Data.Concurrency)
 			}
 		}
 	}
@@ -238,7 +364,7 @@ func (w *workerRuntime) reclaimLoop(ctx context.Context) {
 	}
 }
 func (w *workerRuntime) currentReport() report {
-	r := report{Name: w.cfg.Name, OS: runtime.GOOS, Arch: runtime.GOARCH, Concurrency: w.cfg.Concurrency, ActiveTasks: w.active.Load(), CompletedTasks: w.completed.Load(), PublicIP: w.publicIP, Version: workerVersion}
+	r := report{Name: w.cfg.Name, OS: runtime.GOOS, Arch: runtime.GOARCH, Concurrency: w.currentConcurrency(), ActiveTasks: w.active.Load(), CompletedTasks: w.completed.Load(), PublicIP: w.publicIP, Version: workerVersion}
 	if p, err := cpu.Percent(0, false); err == nil && len(p) > 0 {
 		r.CPUPercent = p[0]
 	}
