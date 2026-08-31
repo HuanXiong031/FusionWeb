@@ -56,12 +56,3 @@ frontend/   Web 前端
 worker/     Worker 执行器
 docs/       设计与部署文档
 ```
-
-## 文档
-
-- `docs/改造方案.md`
-- `报告.md`
-
-## 版本
-
-当前版本以根目录 `VERSION` 文件为准。
