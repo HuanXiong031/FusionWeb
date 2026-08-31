@@ -54,5 +54,4 @@ api/        后端 API
 backend/    核心业务与公共模块
 frontend/   Web 前端
 worker/     Worker 执行器
-docs/       设计与部署文档
 ```
