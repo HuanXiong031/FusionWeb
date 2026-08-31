@@ -10,7 +10,11 @@ import (
 const fusionWebHTMLReportCSS = `*{box-sizing:border-box}
 body{margin:0;background:#eef2f6;color:#17202a;font-family:"Microsoft YaHei",Arial,sans-serif}
 .page{max-width:1240px;margin:0 auto;padding:26px}
-.top{background:#fff;border:1px solid #d7dfe8;border-radius:8px;padding:26px;display:flex;justify-content:space-between;gap:20px;align-items:flex-end}
+.top{background:#fff;border:1px solid #d7dfe8;border-radius:8px;padding:26px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand-logo{width:56px;height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:center;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#0f766e,#2563eb);box-shadow:0 8px 22px rgba(15,23,42,.12)}
+.brand-logo svg{width:100%;height:100%;display:block}
+.brand-copy{min-width:0}
 .top h1{margin:0;font-size:32px;letter-spacing:0}
 .sub{color:#64748b;margin-top:8px}
 .stamp{border:1px solid #cbd5e1;border-radius:6px;padding:10px 14px;color:#334155;background:#f8fafc;white-space:nowrap}
@@ -188,6 +192,20 @@ func (s *ReportService) buildHTMLContent(data *ReportData) string {
 	return html.String()
 }
 
+func fusionWebReportLogoSVG() string {
+	return `<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true" focusable="false">
+	<defs>
+		<linearGradient id="fwLogoBg" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+			<stop stop-color="#0F766E"/>
+			<stop offset="1" stop-color="#2563EB"/>
+		</linearGradient>
+	</defs>
+	<rect x="2" y="2" width="52" height="52" rx="14" fill="url(#fwLogoBg)"/>
+	<path d="M18 17.5H37V22.5H24V28H35V33H24V44H18V17.5Z" fill="white"/>
+	<path d="M38 18H43L46.5 30.5L50 18H55L49 37H43L38 18Z" fill="white" opacity="0.95"/>
+</svg>`
+}
+
 func writeHTMLTop(html *strings.Builder, data *ReportData) {
 	taskName := "-"
 	taskID := "-"
@@ -196,13 +214,16 @@ func writeHTMLTop(html *strings.Builder, data *ReportData) {
 		taskID = data.TaskInfo.TaskID
 	}
 	html.WriteString(fmt.Sprintf(`<header class="top">
-	<div>
-		<h1>FusionWeb 扫描报告</h1>
-		<div class="sub">任务名称：%s</div>
+	<div class="brand">
+		<div class="brand-logo">%s</div>
+		<div class="brand-copy">
+			<h1>FusionWeb 扫描报告</h1>
+			<div class="sub">任务名称：%s</div>
+		</div>
 	</div>
 	<div class="stamp">任务ID：%s</div>
 </header>
-`, escapeHTML(taskName), escapeHTML(taskID)))
+`, fusionWebReportLogoSVG(), escapeHTML(taskName), escapeHTML(taskID)))
 }
 
 func writeHTMLStatsSection(html *strings.Builder, data *ReportData) {

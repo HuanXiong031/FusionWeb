@@ -354,6 +354,9 @@ function ExposureOverviewCard({
   })
   const ringPaths = rings.map((_, index) => {
     const y = 70 + index * 70
+    if (index === 1) {
+      return 'M 570 140 C 630 124, 700 156, 790 140'
+    }
     return `M 570 140 C 650 140, 690 ${y}, 790 ${y}`
   })
   const flowDots = [0, 0.34, 0.68]
@@ -384,7 +387,7 @@ function ExposureOverviewCard({
             </defs>
             {sources.map((source, index) => (
               <g key={`source-line-${source.key}`}>
-                <path d={sourcePaths[index]} fill="none" stroke={source.color} strokeWidth="1.25" strokeLinecap="round" strokeOpacity="0.42" vectorEffect="non-scaling-stroke" filter="url(#fusion-exposure-line-glow)" />
+                <path d={sourcePaths[index]} fill="none" stroke={source.color} strokeWidth="1.25" strokeLinecap="round" strokeOpacity="0.58" vectorEffect="non-scaling-stroke" filter="url(#fusion-exposure-line-glow)" />
                 {flowDots.map((offset, dotIndex) => (
                   <circle key={`${source.key}-${dotIndex}`} r="2" fill={source.color} opacity="0.9" style={{ color: source.color, filter: 'drop-shadow(0 0 4px currentColor)' }}>
                     <animateMotion path={sourcePaths[index]} dur={`${2.6 + index * 0.12}s`} repeatCount="indefinite" begin={`${-(offset * 2.6 + index * 0.12)}s`} />
@@ -394,7 +397,7 @@ function ExposureOverviewCard({
             ))}
             {rings.map((ring, index) => (
               <g key={`ring-line-${ring.key}`}>
-                <path d={ringPaths[index]} fill="none" stroke={ring.color} strokeWidth="1.25" strokeLinecap="round" strokeOpacity="0.42" vectorEffect="non-scaling-stroke" filter="url(#fusion-exposure-line-glow)" />
+                <path d={ringPaths[index]} fill="none" stroke={ring.color} strokeWidth="1.25" strokeLinecap="round" strokeOpacity="0.58" vectorEffect="non-scaling-stroke" filter="url(#fusion-exposure-line-glow)" />
                 {flowDots.map((offset, dotIndex) => (
                   <circle key={`${ring.key}-${dotIndex}`} r="2" fill={ring.color} opacity="0.9" style={{ color: ring.color, filter: 'drop-shadow(0 0 4px currentColor)' }}>
                     <animateMotion path={ringPaths[index]} dur={`${2.6 + index * 0.16}s`} repeatCount="indefinite" begin={`${-(offset * 2.6 + index * 0.16)}s`} />

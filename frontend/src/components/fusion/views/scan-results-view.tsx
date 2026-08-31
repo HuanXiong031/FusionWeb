@@ -3,14 +3,13 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
-import { Bug, Download, Eye, FileDown, FileText, Fingerprint, Globe2, Network, RefreshCw, ShieldAlert, Terminal } from 'lucide-react'
+import { Bug, Download, Eye, FileText, Fingerprint, Globe2, Network, RefreshCw, ShieldAlert, Terminal } from 'lucide-react'
 import { getFingerprintResults, getPocScanResults, getPocTaskList, getReconResults, getTaskLogs, getTasks, getVulnResults, type TaskRow } from '@/lib/api'
 import { asList, formatTime } from '@/lib/utils'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, Select, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { DataTable } from '@/components/data-table'
 import { ScreenshotPreviewCell } from '@/components/fusion/screenshot-preview-cell'
 import { LogConsole } from '@/components/fusion/log-console'
-import { ReportExportPanel } from '@/components/fusion/views/report-center-view'
 import {
   demoTasks,
   downloadContent,
@@ -77,7 +76,6 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
   }, [selectedTaskId, taskIds.join('|')])
 
   const selectedTask = tasks.find((task: any) => (source === 'template' ? getPocTaskId(task) : getTaskId(task)) === selectedTaskId)
-  const selectedTaskType = React.useMemo(() => source, [source])
   const isTemplateSource = source === 'template'
 
   const portsQuery = useQuery({ queryKey: ['scan-results-center', selectedTaskId, 'port'], queryFn: () => getReconResults(selectedTaskId, 'port'), enabled: !!selectedTaskId && !isTemplateSource && !demoMode, refetchInterval: 2000 })
@@ -158,7 +156,7 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
   }
 
   const getActiveRows = () => {
-    if (isTemplateSource) return activeTab === 'reports' ? [] : templateResults
+    if (isTemplateSource) return templateResults
     if (activeTab === 'ports') return ports
     if (activeTab === 'urls') return urls
     if (activeTab === 'fingerprints') return groupedFingerprints
@@ -234,7 +232,7 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
 
   return (
     <div className="grid gap-4">
-      <PageTitle title="结果中心" description="端口、URL、指纹、漏洞、运行日志和报告导出都可以直接按任务查询。" />
+      <PageTitle title="结果中心" description="端口、URL、指纹、漏洞和运行日志都可以直接按任务查询。" />
       <div className="grid gap-4 md:grid-cols-5">
         <Metric label="端口" value={ports.length} icon={Network} tone="info" badgeLabel="端口" />
         <Metric label="URL" value={urls.length} icon={Globe2} tone="success" badgeLabel="链接" />
@@ -280,15 +278,13 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
               {isTemplateSource ? null : <TabsTrigger value="fingerprints"><Fingerprint className="size-4" />指纹信息</TabsTrigger>}
               {isTemplateSource ? null : <TabsTrigger value="vulns"><Bug className="size-4" />漏洞信息</TabsTrigger>}
               {isTemplateSource ? null : <TabsTrigger value="logs"><Terminal className="size-4" />运行日志</TabsTrigger>}
-              <TabsTrigger value="reports"><FileDown className="size-4" />报告导出</TabsTrigger>
-            </TabsList>
+              </TabsList>
             <TabsContent value="template"><DataTable columns={templateColumns} data={templateResults} searchPlaceholder="搜索模板ID、漏洞名称或目标" emptyTitle={selectedTaskId ? '暂无模板结果' : '请选择任务'} paginationStorageKey="scan-results-template" /></TabsContent>
             <TabsContent value="ports"><DataTable columns={portColumns} data={ports} searchPlaceholder="搜索主机、端口或服务" emptyTitle={selectedTaskId ? '暂无端口结果' : '请选择任务'} tableClassName="table-fixed min-w-[1220px]" paginationStorageKey="scan-results-ports" /></TabsContent>
             <TabsContent value="urls"><DataTable columns={urlColumns} data={urls} searchPlaceholder="搜索 URL 或标题" emptyTitle={selectedTaskId ? '暂无 URL 结果' : '请选择任务'} tableClassName="table-fixed" paginationStorageKey="scan-results-urls" /></TabsContent>
             <TabsContent value="fingerprints"><DataTable columns={fingerprintColumns} data={groupedFingerprints} searchPlaceholder="搜索指纹或目标" emptyTitle={selectedTaskId ? '暂无指纹结果' : '请选择任务'} paginationStorageKey="scan-results-fingerprints" /></TabsContent>
             <TabsContent value="vulns"><DataTable columns={vulnColumns} data={vulns} searchPlaceholder="搜索漏洞、模板或目标" emptyTitle={selectedTaskId ? '暂无漏洞结果' : '请选择任务'} paginationStorageKey="scan-results-vulns" /></TabsContent>
             <TabsContent value="logs"><LogConsole rows={logs} emptyTitle={selectedTaskId ? '暂无运行日志' : '请选择任务'} maxHeightClass="max-h-[520px]" /></TabsContent>
-            <TabsContent value="reports" className="pt-2"><ReportExportPanel demoMode={demoMode} selectedTaskId={selectedTaskId} selectedSource={selectedTaskType} /></TabsContent>
           </Tabs>
         </CardContent>
       </Card>

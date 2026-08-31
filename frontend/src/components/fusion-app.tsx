@@ -14,6 +14,7 @@ import {
   Code2,
   Database,
   FileCode2,
+  FileDown,
   Fingerprint,
   FolderOpen,
   Globe2,
@@ -71,6 +72,7 @@ import { PocView } from '@/components/fusion/views/poc-view'
 import { PocBuilderView } from '@/components/fusion/views/poc-builder-view'
 import { PocTasksView } from '@/components/fusion/views/poc-tasks-view'
 import { PocResultsCenterView } from '@/components/fusion/views/poc-results-center-view'
+import { ReportCenterView } from '@/components/fusion/views/report-center-view'
 import { VulnVerifyView } from '@/components/fusion/views/vuln-verify-view'
 import { RTSPScanView } from '@/components/fusion/views/rtsp-scan-view'
 import { RTSPDictionaryView } from '@/components/fusion/views/rtsp-dictionary-view'
@@ -110,6 +112,7 @@ type ViewKey =
   | 'poc-builder'
   | 'poc-tasks'
   | 'poc-results'
+  | 'report-export'
   | 'vuln-verify'
   | 'rtsp-scan'
   | 'dictionary-subdomain-prefix'
@@ -170,6 +173,7 @@ const navSections: Array<{
       { key: 'tasks', label: '任务列表', icon: ListChecks },
       { key: 'task-logs', label: '运行日志', icon: History },
       { key: 'scan-results', label: '结果中心', icon: Network },
+      { key: 'report-export', label: '报告导出', icon: FileDown },
     ],
   },
   {
@@ -228,6 +232,7 @@ const viewPaths: Record<ViewKey, string> = {
   'poc-builder': '/pocs/builder',
   'poc-tasks': '/pocs/tasks',
   'poc-results': '/pocs/results',
+  'report-export': '/tasks/reports',
   'vuln-verify': '/vuln-verify',
   'rtsp-scan': '/rtsp/scan',
   'dictionary-subdomain-prefix': '/dictionaries/subdomain-prefix',
@@ -1037,6 +1042,7 @@ function AppShell({
           <KeepAliveView active={view === 'poc-builder'}><PocBuilderView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'poc-tasks'}><PocTasksView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'poc-results'}><PocResultsCenterView demoMode={demoMode} /></KeepAliveView>
+          <KeepAliveView active={view === 'report-export'}><ReportCenterView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'vuln-verify'}><VulnVerifyView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'rtsp-scan'}><RTSPScanView demoMode={demoMode} /></KeepAliveView>
           {dictionaryViews.map((item) => (
