@@ -4,6 +4,7 @@ import * as React from 'react'
 import { ImageIcon, Loader2 } from 'lucide-react'
 import { getReconScreenshot } from '@/lib/api'
 import { Modal } from '@/components/ui'
+import { cn } from '@/lib/utils'
 
 function resolveBlob(response: any): Blob | null {
   if (response instanceof Blob) return response
@@ -16,11 +17,13 @@ export function ScreenshotPreviewCell({
   resultId,
   screenshotPath,
   label,
+  size = 'compact',
 }: {
   taskId?: string
   resultId?: number | string
   screenshotPath?: string
   label?: string
+  size?: 'compact' | 'default'
 }) {
   const [imageURL, setImageURL] = React.useState('')
   const [isOpen, setIsOpen] = React.useState(false)
@@ -64,19 +67,27 @@ export function ScreenshotPreviewCell({
   }
 
   const title = label || '页面截图'
+  const compact = size === 'compact'
 
   return (
     <>
       <button
         type="button"
-        className="inline-flex h-12 w-20 items-center justify-center overflow-hidden rounded-md border border-border bg-background text-muted transition-colors hover:border-info/60 hover:bg-raised"
+        className={cn(
+          'group inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-background text-muted transition-colors hover:border-info/60 hover:bg-raised',
+          compact ? 'h-10 w-16' : 'h-12 w-20'
+        )}
         onClick={() => imageURL && setIsOpen(true)}
         title={imageURL ? '点击放大截图' : '截图加载中'}
       >
         {imageURL ? (
-          <img src={imageURL} alt={title} className="h-full w-full object-cover" />
+          <img
+            src={imageURL}
+            alt={title}
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+          />
         ) : (
-          <Loader2 className="size-4 animate-spin" />
+          <Loader2 className={cn('animate-spin text-muted', compact ? 'size-3.5' : 'size-4')} />
         )}
       </button>
       <Modal

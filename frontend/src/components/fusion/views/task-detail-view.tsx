@@ -505,7 +505,7 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
     {
       header: 'URL',
       accessorKey: 'url',
-      meta: { className: 'w-[560px]' },
+      meta: { className: 'w-[420px]' },
       cell: ({ row }) => {
         const url = row.original.displayURL || row.original.display_url || row.original.finalURL || row.original.final_url || row.original.url || row.original.target || '-'
         return <span className="block truncate font-mono text-sm" title={url}>{url}</span>
@@ -515,9 +515,9 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
       const code = row.original.statusCode || row.original.status_code || '-'
       return <Badge tone={getHttpStatusTone(code) as any}>{code}</Badge>
     } },
-    { header: '标题', accessorKey: 'title', meta: { align: 'center', className: 'w-[260px]' }, cell: ({ row }) => <span className="block truncate" title={row.original.title || '-'}>{row.original.title || '-'}</span> },
-    { header: '长度', accessorKey: 'length', meta: { align: 'center', className: 'w-[120px]' }, cell: ({ row }) => row.original.length || row.original.contentLength || row.original.content_length || 0 },
-    { header: '截图', accessorKey: 'screenshotPath', meta: { align: 'center', className: 'w-[140px]' }, cell: ({ row }) => <ScreenshotPreviewCell taskId={taskId || ''} resultId={row.original.id} screenshotPath={row.original.screenshotPath || row.original.screenshot_path} label={row.original.displayURL || row.original.display_url || row.original.url || row.original.target || '-'} /> },
+    { header: '标题', accessorKey: 'title', meta: { align: 'center', className: 'w-[220px]' }, cell: ({ row }) => <span className="block truncate" title={row.original.title || '-'}>{row.original.title || '-'}</span> },
+    { header: '长度', accessorKey: 'length', meta: { align: 'center', className: 'w-[100px]' }, cell: ({ row }) => row.original.length || row.original.contentLength || row.original.content_length || 0 },
+    { header: '截图', accessorKey: 'screenshotPath', meta: { align: 'center', className: 'w-[96px]' }, cell: ({ row }) => <ScreenshotPreviewCell size="compact" taskId={taskId || ''} resultId={row.original.id} screenshotPath={row.original.screenshotPath || row.original.screenshot_path} label={row.original.displayURL || row.original.display_url || row.original.url || row.original.target || '-'} /> },
   ]
   const getFingerprintTarget = (row: any) => row.url || row.target || row.matchedRules?.url || row.matched_rules?.url || '-'
   const getFingerprintName = (row: any) => row.name || row.fingerprint || row.fingerprintName || row.fingerprint_name || row.matchedRules?.fingerprint || row.matched_rules?.fingerprint || '-'
@@ -706,7 +706,7 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
             ) : (
               <>
                 <TabsContent value="ports"><DataTable columns={portColumns} data={ports} searchPlaceholder="搜索主机、端口或服务" tableClassName="table-fixed min-w-[1220px]" paginationStorageKey="task-detail-ports" /></TabsContent>
-                <TabsContent value="urls"><DataTable columns={urlColumns} data={urls} searchPlaceholder="搜索 URL 或标题" tableClassName="table-fixed min-w-[1380px]" paginationStorageKey="task-detail-urls" /></TabsContent>
+                <TabsContent value="urls"><DataTable columns={urlColumns} data={urls} searchPlaceholder="搜索 URL 或标题" tableClassName="table-fixed" paginationStorageKey="task-detail-urls" /></TabsContent>
                 <TabsContent value="fingerprints"><DataTable columns={fingerprintColumns} data={groupedFingerprints} searchPlaceholder="搜索指纹或目标" paginationStorageKey="task-detail-fingerprints" /></TabsContent>
                 <TabsContent value="vulns"><DataTable columns={vulnColumns} data={vulns} searchPlaceholder="搜索漏洞、模板或目标" paginationStorageKey="task-detail-vulns" /></TabsContent>
               </>
@@ -854,3 +854,4 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
     </div>
   )
 }
+

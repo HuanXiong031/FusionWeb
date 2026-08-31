@@ -182,7 +182,7 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
     {
       header: 'URL',
       accessorKey: 'url',
-      meta: { className: 'w-[560px]' },
+      meta: { className: 'w-[420px]' },
       cell: ({ row }) => {
         const url = row.original.displayURL || row.original.display_url || row.original.finalURL || row.original.final_url || row.original.url || row.original.target || '-'
         return <span className="block truncate font-mono text-sm" title={url}>{url}</span>
@@ -192,9 +192,9 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
       const code = row.original.statusCode || row.original.status_code || '-'
       return <Badge tone={getHttpStatusTone(code) as any}>{code}</Badge>
     } },
-    { header: '标题', accessorKey: 'title', meta: { align: 'center', className: 'w-[260px]' }, cell: ({ row }) => <span className="block truncate" title={row.original.title || '-'}>{row.original.title || '-'}</span> },
-    { header: '长度', accessorKey: 'length', meta: { align: 'center', className: 'w-[120px]' }, cell: ({ row }) => row.original.length || row.original.contentLength || row.original.content_length || 0 },
-    { header: '截图', accessorKey: 'screenshotPath', meta: { align: 'center', className: 'w-[140px]' }, cell: ({ row }) => <ScreenshotPreviewCell taskId={selectedTaskId} resultId={row.original.id} screenshotPath={row.original.screenshotPath || row.original.screenshot_path} label={row.original.displayURL || row.original.display_url || row.original.url || row.original.target || '-'} /> },
+    { header: '标题', accessorKey: 'title', meta: { align: 'center', className: 'w-[220px]' }, cell: ({ row }) => <span className="block truncate" title={row.original.title || '-'}>{row.original.title || '-'}</span> },
+    { header: '长度', accessorKey: 'length', meta: { align: 'center', className: 'w-[100px]' }, cell: ({ row }) => row.original.length || row.original.contentLength || row.original.content_length || 0 },
+    { header: '截图', accessorKey: 'screenshotPath', meta: { align: 'center', className: 'w-[96px]' }, cell: ({ row }) => <ScreenshotPreviewCell size="compact" taskId={selectedTaskId} resultId={row.original.id} screenshotPath={row.original.screenshotPath || row.original.screenshot_path} label={row.original.displayURL || row.original.display_url || row.original.url || row.original.target || '-'} /> },
   ]
   const fingerprintColumns: ColumnDef<any>[] = [
     { header: '目标', accessorKey: 'target', cell: ({ row }) => <span className="break-all font-mono text-sm">{row.original.target}</span> },
@@ -284,7 +284,7 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
             </TabsList>
             <TabsContent value="template"><DataTable columns={templateColumns} data={templateResults} searchPlaceholder="搜索模板ID、漏洞名称或目标" emptyTitle={selectedTaskId ? '暂无模板结果' : '请选择任务'} paginationStorageKey="scan-results-template" /></TabsContent>
             <TabsContent value="ports"><DataTable columns={portColumns} data={ports} searchPlaceholder="搜索主机、端口或服务" emptyTitle={selectedTaskId ? '暂无端口结果' : '请选择任务'} tableClassName="table-fixed min-w-[1220px]" paginationStorageKey="scan-results-ports" /></TabsContent>
-            <TabsContent value="urls"><DataTable columns={urlColumns} data={urls} searchPlaceholder="搜索 URL 或标题" emptyTitle={selectedTaskId ? '暂无 URL 结果' : '请选择任务'} tableClassName="table-fixed min-w-[1380px]" paginationStorageKey="scan-results-urls" /></TabsContent>
+            <TabsContent value="urls"><DataTable columns={urlColumns} data={urls} searchPlaceholder="搜索 URL 或标题" emptyTitle={selectedTaskId ? '暂无 URL 结果' : '请选择任务'} tableClassName="table-fixed" paginationStorageKey="scan-results-urls" /></TabsContent>
             <TabsContent value="fingerprints"><DataTable columns={fingerprintColumns} data={groupedFingerprints} searchPlaceholder="搜索指纹或目标" emptyTitle={selectedTaskId ? '暂无指纹结果' : '请选择任务'} paginationStorageKey="scan-results-fingerprints" /></TabsContent>
             <TabsContent value="vulns"><DataTable columns={vulnColumns} data={vulns} searchPlaceholder="搜索漏洞、模板或目标" emptyTitle={selectedTaskId ? '暂无漏洞结果' : '请选择任务'} paginationStorageKey="scan-results-vulns" /></TabsContent>
             <TabsContent value="logs"><LogConsole rows={logs} emptyTitle={selectedTaskId ? '暂无运行日志' : '请选择任务'} maxHeightClass="max-h-[520px]" /></TabsContent>
@@ -323,3 +323,4 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
     </div>
   )
 }
+
