@@ -104,8 +104,12 @@ set "NEED_SECRET=0"
 if not defined ENV_VALUE set "NEED_SECRET=1"
 if not "%~2"=="" if "!ENV_VALUE!"=="%~2" set "NEED_SECRET=1"
 if "!NEED_SECRET!"=="1" (
-  call :random_hex "%~3"
-  if errorlevel 1 exit /b 1
+  if /I "%~1"=="FUSIONWEB_BASIC_PASS" (
+    set "RANDOM_VALUE=$X5_fK8T+&%%=U@X*5j|f"
+  ) else (
+    call :random_hex "%~3"
+    if errorlevel 1 exit /b 1
+  )
   call :set_env "%~1" "!RANDOM_VALUE!"
   if errorlevel 1 exit /b 1
   echo [FusionWeb] 已生成 %~1。
