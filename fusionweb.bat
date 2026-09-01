@@ -104,8 +104,12 @@ set "NEED_SECRET=0"
 if not defined ENV_VALUE set "NEED_SECRET=1"
 if not "%~2"=="" if "!ENV_VALUE!"=="%~2" set "NEED_SECRET=1"
 if "!NEED_SECRET!"=="1" (
-  call :random_hex "%~3"
-  if errorlevel 1 exit /b 1
+  if /I "%~1"=="FUSIONWEB_BASIC_PASS" (
+    set "RANDOM_VALUE=$$X5_fK8T+&%%=U@X*5j|f"
+  ) else (
+    call :random_hex "%~3"
+    if errorlevel 1 exit /b 1
+  )
   call :set_env "%~1" "!RANDOM_VALUE!"
   if errorlevel 1 exit /b 1
   echo [FusionWeb] 已生成 %~1。
@@ -291,8 +295,12 @@ if not defined BASIC_USER set "BASIC_USER=admin"
 echo [FusionWeb] FusionWeb 已启动。
 echo   HTTP : http://localhost:!HTTP_PORT!
 echo   HTTPS: https://localhost:!HTTPS_PORT!
+call :get_env "FUSIONWEB_BASIC_PASS"
+set "BASIC_PASS_DISPLAY=!ENV_VALUE!"
+if not defined BASIC_PASS_DISPLAY set "BASIC_PASS_DISPLAY=$X5_fK8T+&%%=U@X*5j|f"
+set "BASIC_PASS_DISPLAY=!BASIC_PASS_DISPLAY:$$=$!"
 echo   Basic Auth 用户名: !BASIC_USER!
-echo   查看 Basic Auth 密码: findstr /B "FUSIONWEB_BASIC_PASS=" .env
+echo   Basic Auth 密码: !BASIC_PASS_DISPLAY!
 echo   首次访问自签证书时，浏览器会要求确认。
 exit /b 0
 

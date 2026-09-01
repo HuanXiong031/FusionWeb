@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 // DB 是应用级数据库连接池。
@@ -133,43 +131,10 @@ func TestMinIOConfig(c MinIOConfig) error {
 	return storage.TestMinIOConfig(storage.MinIOConfig{Endpoint: c.Endpoint, AccessKeyID: c.AccessKeyID, SecretAccessKey: c.SecretAccessKey, Bucket: c.Bucket, Region: c.Region, UseSSL: c.UseSSL, PublicURL: c.PublicURL})
 }
 
-// initDefaultAdmin 在没有管理员账号时创建初始管理员。
-// 默认账号只用于首次进入系统，前端会要求用户修改默认密码。
+// initDefaultAdmin 确保系统管理员账号与 Basic Auth 账号密码保持同步。
+// 首次启动会创建管理员；后续启动如发现用户名或密码不一致，会自动同步。
 func initDefaultAdmin() error {
-	adminUsername, adminPassword := defaultAdminCredentials()
-	var count int
-	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE role = 'admin'").Scan(&count)
-	if err != nil {
-		return fmt.Errorf("查询管理员账户失败: %w", err)
-	}
-
-	if count > 0 {
-		logger.Info("管理员账户已存在，跳过创建默认管理员")
-		logger.Info("默认管理员用户名: %s", adminUsername)
-		logger.Info("默认管理员初始密码: %s", adminPassword)
-		logger.Info("如已修改默认管理员密码，请使用修改后的密码登录")
-	} else {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("密码加密失败: %w", err)
-		}
-
-		_, err = DB.Exec(`
-			INSERT INTO users (username, password, email, real_name, role, status, must_change_password)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-		`, adminUsername, string(hashedPassword), "admin@fusionscan.com", "系统管理员", "admin", "active", 1)
-
-		if err != nil {
-			return fmt.Errorf("创建默认管理员账户失败: %w", err)
-		}
-
-		logger.Info("默认管理员账户已创建")
-		logger.Info("默认管理员用户名: %s", adminUsername)
-		logger.Info("默认管理员初始密码: %s", adminPassword)
-		logger.Info("请首次登录后修改默认管理员密码")
-	}
-
-	return nil
+	return ensureAdminCredentialsSynced()
 }
 
 func defaultAdminCredentials() (string, string) {

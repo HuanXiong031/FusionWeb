@@ -237,7 +237,6 @@ import {
   PageTitle,
   Metric,
   ToggleField,
-  PreviewLine,
   SeverityBadge
 } from '@/components/fusion/shared'
 
@@ -655,25 +654,15 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
           <Button variant="danger" onClick={() => actionMutation.mutate('stop')} disabled={!taskId || actionMutation.isPending}><Square className="size-4" />停止</Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Metric label="状态" value={getStatusLabel(detail?.status)} icon={Activity} tone={getStatusTone(detail?.status) as any} badgeLabel="状态" />
         <Metric label="进度" value={`${Math.round(detail?.percentage || detail?.progress || 0)}%`} icon={RadioTower} tone="info" badgeLabel="进度" />
+        <Metric label="指定节点" value={assignedWorker || '自动分配'} icon={Monitor} tone="accent" badgeLabel="调度" />
+        <Metric label="实际执行节点" value={actualWorkerLabel} icon={MapPin} tone="neutral" badgeLabel="调度" />
+        <Metric label="创建时间" value={formatTime(detail?.createTime || detail?.createdAt)} icon={History} tone="info" badgeLabel="调度" />
         <Metric label={moduleTask ? '结果' : '漏洞'} value={moduleTask ? moduleResultCount : detail?.vulnCount || vulns.length || 0} icon={moduleTask ? ListChecks : Bug} tone={moduleTask ? 'success' : 'danger'} badgeLabel={moduleTask ? '结果' : '漏洞'} />
         <Metric label="目标" value={targetCount} icon={Globe2} tone="accent" badgeLabel="目标" />
       </div>
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>调度信息</CardTitle>
-            <CardDescription>展示任务指定节点与实际消费节点，便于多节点排查调度链路。</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <PreviewLine label="指定节点" value={assignedWorker || '自动分配'} />
-          <PreviewLine label="实际执行节点" value={actualWorkerLabel} />
-          <PreviewLine label="创建时间" value={formatTime(detail?.createTime || detail?.createdAt)} />
-        </CardContent>
-      </Card>
       <Card>
         <CardHeader>
           <div>

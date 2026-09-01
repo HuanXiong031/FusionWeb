@@ -91,7 +91,11 @@ ensure_secret() {
   local key="$1" weak="${2:-}" bytes="${3:-32}" current generated
   current="$(get_env "${key}")"
   if [[ -z "${current}" || ( -n "${weak}" && "${current}" == "${weak}" ) ]]; then
-    generated="$(random_hex "${bytes}")"
+    if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
+      generated='$$X5_fK8T+&%=U@X*5j|f'
+    else
+      generated="$(random_hex "${bytes}")"
+    fi
     set_env "${key}" "${generated}"
     info "已生成 ${key}。"
   fi
@@ -241,15 +245,21 @@ check_containers() {
 }
 
 show_access() {
-  local http_port https_port user
+  local http_port https_port user pass
   http_port="$(get_env FUSIONWEB_HTTP_PORT)"; http_port="${http_port:-8756}"
   https_port="$(get_env FUSIONWEB_HTTPS_PORT)"; https_port="${https_port:-8988}"
   user="$(get_env FUSIONWEB_BASIC_USER)"; user="${user:-admin}"
   info "FusionWeb 已启动。"
   echo "  HTTP : http://localhost:${http_port}"
   echo "  HTTPS: https://localhost:${https_port}"
+  pass="$(get_env FUSIONWEB_BASIC_PASS)"
+  if [[ -z "${pass}" ]]; then
+    pass='$X5_fK8T+&%=U@X*5j|f'
+  else
+    pass="${pass//\$\$/\$}"
+  fi
   echo "  Basic Auth 用户名: ${user}"
-  echo "  查看 Basic Auth 密码: grep '^FUSIONWEB_BASIC_PASS=' .env"
+  echo "  Basic Auth 密码: ${pass}"
   echo "  首次访问自签证书时，浏览器会要求确认。"
 }
 
@@ -436,3 +446,4 @@ case "${1:-help}" in
   help|-h|--help) cmd_help ;;
   *) fail "未知命令：$1。运行 ./fusionweb.sh help 查看用法。" ;;
 esac
+
