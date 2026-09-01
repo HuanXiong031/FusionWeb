@@ -155,6 +155,7 @@ type ChangePasswordRequest struct {
 //  4. SM2解密新密码，验证新密码复杂度（大小写+数字+符号）
 //  5. bcrypt生成新密码哈希
 //  6. 更新数据库并清除强制修改密码标志
+//
 // 注意：即使是首次登录强制修改密码场景，也需验证旧密码确保安全。
 func HandleChangePassword(c *gin.Context) {
 	userID, exists := c.Get("userId")
@@ -178,10 +179,10 @@ func HandleChangePassword(c *gin.Context) {
 		return
 	}
 
-	// 查询用户密码和 must_change_password 标志
-	var currentPassword string
+	// 查询用户密码、用户名、角色和 must_change_password 标志
+	var username, currentPassword, role string
 	var mustChangePassword int
-	err := database.DB.QueryRow("SELECT password, must_change_password FROM users WHERE id = ?", userID).Scan(&currentPassword, &mustChangePassword)
+	err := database.DB.QueryRow("SELECT username, password, role, must_change_password FROM users WHERE id = ?", userID).Scan(&username, &currentPassword, &role, &mustChangePassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"message": "用户不存在"})
@@ -236,6 +237,21 @@ func HandleChangePassword(c *gin.Context) {
 		logger.Error("更新密码失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "更新密码失败"})
 		return
+	}
+
+	if role == "admin" {
+		if syncErr := database.SyncBasicAuthCredentials(username, decryptedNewPassword); syncErr != nil {
+			logger.Error("同步 Basic Auth 凭据失败: %v", syncErr)
+			rollbackTime := utils.GetCurrentTimeString()
+			if _, restoreErr := database.DB.Exec(`
+				UPDATE users SET password = ?, must_change_password = ?, updated_at = ?
+				WHERE id = ?
+			`, currentPassword, mustChangePassword, rollbackTime, userID); restoreErr != nil {
+				logger.Error("回滚管理员密码失败: %v", restoreErr)
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "同步登录凭据失败"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
