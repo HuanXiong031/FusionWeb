@@ -63,7 +63,7 @@ load_or_seed_secret() {
 
 load_or_create_secret FUSIONWEB_JWT_SECRET jwt_secret 48
 load_or_seed_secret FUSIONWEB_BASIC_USER basic_user 4 'admin'
-load_or_seed_secret FUSIONWEB_BASIC_PASS basic_pass 24 '$X5_fK8T+&%=U@X*5j|f'
+load_or_seed_secret FUSIONWEB_BASIC_PASS basic_pass 24
 printf 'FusionWeb Basic Auth: %s / %s\n' "$FUSIONWEB_BASIC_USER" "$FUSIONWEB_BASIC_PASS"
 
 exec "$@"

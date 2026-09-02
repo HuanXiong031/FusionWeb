@@ -98,18 +98,46 @@ if not defined RANDOM_VALUE (
 )
 exit /b 0
 
+:password_meets_policy
+set "PW_VALUE=%~1"
+set "PW_SPECIAL=0"
+if not "%PW_VALUE:~19%"=="" set "PW_LEN_OK=1" else set "PW_LEN_OK=0"
+if "%PW_LEN_OK%"=="0" exit /b 1
+
+echo(!PW_VALUE!| findstr /R "[A-Z]" >nul || exit /b 1
+echo(!PW_VALUE!| findstr /R "[a-z]" >nul || exit /b 1
+echo(!PW_VALUE!| findstr /R "[0-9]" >nul || exit /b 1
+echo(!PW_VALUE!| findstr /R "[^A-Za-z0-9]" >nul || exit /b 1
+exit /b 0
+
+:random_password
+set "RANDOM_VALUE="
+set "FW_RANDOM_BYTES=%~1"
+for /f "usebackq delims=" %%I in (`powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$len=[int]$env:FW_RANDOM_BYTES; $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); $bytes=New-Object byte[] $len; while($true){ $rng.GetBytes($bytes); $candidate=[Convert]::ToBase64String($bytes).TrimEnd('='); if($candidate.Length -ge 20 -and $candidate -match '[A-Z]' -and $candidate -match '[a-z]' -and $candidate -match '\d' -and $candidate -match '[^A-Za-z0-9]'){ Write-Output $candidate; break } }"`) do set "RANDOM_VALUE=%%I"
+if not defined RANDOM_VALUE (
+  echo [FusionWeb] 无法生成随机密码。
+  exit /b 1
+)
+exit /b 0
+
 :ensure_secret
 call :get_env "%~1"
 set "NEED_SECRET=0"
 if not defined ENV_VALUE set "NEED_SECRET=1"
+if /I "%~1"=="FUSIONWEB_BASIC_PASS" (
+  if "!NEED_SECRET!"=="1" (
+    call :random_password 24
+    if errorlevel 1 exit /b 1
+    call :set_env "%~1" "!RANDOM_VALUE!"
+    if errorlevel 1 exit /b 1
+    echo [FusionWeb] 已生成 %~1。
+  )
+  exit /b 0
+)
 if not "%~2"=="" if "!ENV_VALUE!"=="%~2" set "NEED_SECRET=1"
 if "!NEED_SECRET!"=="1" (
-  if /I "%~1"=="FUSIONWEB_BASIC_PASS" (
-    set "RANDOM_VALUE=$$X5_fK8T+&%%=U@X*5j|f"
-  ) else (
-    call :random_hex "%~3"
-    if errorlevel 1 exit /b 1
-  )
+  call :random_hex "%~3"
+  if errorlevel 1 exit /b 1
   call :set_env "%~1" "!RANDOM_VALUE!"
   if errorlevel 1 exit /b 1
   echo [FusionWeb] 已生成 %~1。
@@ -297,8 +325,10 @@ echo   HTTP : http://localhost:!HTTP_PORT!
 echo   HTTPS: https://localhost:!HTTPS_PORT!
 call :get_env "FUSIONWEB_BASIC_PASS"
 set "BASIC_PASS_DISPLAY=!ENV_VALUE!"
-if not defined BASIC_PASS_DISPLAY set "BASIC_PASS_DISPLAY=$X5_fK8T+&%%=U@X*5j|f"
-set "BASIC_PASS_DISPLAY=!BASIC_PASS_DISPLAY:$$=$!"
+if not defined BASIC_PASS_DISPLAY (
+  echo [FusionWeb] 未找到 FUSIONWEB_BASIC_PASS，请先运行 install 生成随机密码。
+  set "BASIC_PASS_DISPLAY=<未生成>"
+)
 echo   Basic Auth 用户名: !BASIC_USER!
 echo   Basic Auth 密码: !BASIC_PASS_DISPLAY!
 echo   首次访问自签证书时，浏览器会要求确认。

@@ -81,21 +81,52 @@ random_hex() {
   if command_exists openssl; then
     openssl rand -hex "${bytes}"
   elif [[ -r /dev/urandom ]] && command_exists od; then
-    od -An -N "${bytes}" -tx1 /dev/urandom | tr -d ' \n'
+    od -An -N "${bytes}" -tx1 /dev/urandom | tr -d '\r\n'
   else
     fail "无法生成安全随机密钥：需要 openssl 或 /dev/urandom + od。"
   fi
 }
 
+password_meets_policy() {
+  local password="${1:-}"
+  [[ ${#password} -ge 20 ]] || return 1
+  [[ "${password}" =~ [[:upper:]] ]] || return 1
+  [[ "${password}" =~ [[:lower:]] ]] || return 1
+  [[ "${password}" =~ [[:digit:]] ]] || return 1
+  [[ "${password}" =~ [^[:alnum:]] ]] || return 1
+}
+
+random_password() {
+  local bytes="${1:-24}" candidate
+  while :; do
+    if command_exists openssl; then
+      candidate="$(openssl rand -base64 "${bytes}" | tr -d '\r\n')"
+    elif [[ -r /dev/urandom ]] && command_exists base64; then
+      candidate="$(head -c "${bytes}" /dev/urandom | base64 | tr -d '\r\n')"
+    else
+      fail "无法生成安全随机密码：需要 openssl 或 base64。"
+    fi
+    if password_meets_policy "${candidate}"; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+}
+
 ensure_secret() {
   local key="$1" weak="${2:-}" bytes="${3:-32}" current generated
   current="$(get_env "${key}")"
-  if [[ -z "${current}" || ( -n "${weak}" && "${current}" == "${weak}" ) ]]; then
-    if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
-      generated='$$X5_fK8T+&%=U@X*5j|f'
-    else
-      generated="$(random_hex "${bytes}")"
+  if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
+    if [[ -z "${current}" ]]; then
+      generated="$(random_password 24)"
+      set_env "${key}" "${generated}"
+      info "已生成 ${key}。"
     fi
+    return 0
+  fi
+
+  if [[ -z "${current}" || ( -n "${weak}" && "${current}" == "${weak}" ) ]]; then
+    generated="$(random_hex "${bytes}")"
     set_env "${key}" "${generated}"
     info "已生成 ${key}。"
   fi
@@ -172,7 +203,7 @@ ensure_env() {
   ensure_secret FUSIONWEB_MINIO_ACCESS_KEY fusionweb 12
   ensure_secret FUSIONWEB_MINIO_SECRET_KEY change-me-minio-secret 32
   ensure_secret FUSIONWEB_JWT_SECRET "" 48
-  ensure_secret FUSIONWEB_BASIC_PASS "" 18
+  ensure_secret FUSIONWEB_BASIC_PASS
   ensure_secret FUSIONWEB_WORKER_KEY change-me-worker-key 32
   sync_remote_connection_env
 }
@@ -254,9 +285,8 @@ show_access() {
   echo "  HTTPS: https://localhost:${https_port}"
   pass="$(get_env FUSIONWEB_BASIC_PASS)"
   if [[ -z "${pass}" ]]; then
-    pass='$X5_fK8T+&%=U@X*5j|f'
-  else
-    pass="${pass//\$\$/\$}"
+    warn "未找到 FUSIONWEB_BASIC_PASS，请先运行 install 生成随机密码。"
+    pass='<未生成>'
   fi
   echo "  Basic Auth 用户名: ${user}"
   echo "  Basic Auth 密码: ${pass}"
