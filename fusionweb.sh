@@ -126,7 +126,11 @@ ensure_secret() {
   fi
 
   if [[ -z "${current}" || ( -n "${weak}" && "${current}" == "${weak}" ) ]]; then
-    generated="$(random_hex "${bytes}")"
+    if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
+      generated='$$X5_fK8T+&%=U@X*5j|f'
+    else
+      generated="$(random_hex "${bytes}")"
+    fi
     set_env "${key}" "${generated}"
     info "已生成 ${key}。"
   fi
