@@ -385,6 +385,7 @@ func (w *Worker) executeTask(task *models.TaskConfig) (execErr error) {
 	} else if workflowErr != nil {
 		err := workflowErr
 		logger.Debug("Worker %d scan workflow failed, TaskID: %s, Error: %v", w.id, task.TaskID, err)
+		task.Status = "failed"
 		if updateErr := w.updateTaskStatus(task.TaskID, "failed"); updateErr != nil {
 			logger.Debug("Worker %d update status failed: %v", w.id, updateErr)
 		}
@@ -397,9 +398,7 @@ func (w *Worker) executeTask(task *models.TaskConfig) (execErr error) {
 					logger.Error("DingTalk notification goroutine panic (failure case): %v", r)
 				}
 			}()
-			if err := service.SendDingTalkNotification(task); err != nil {
-				logger.Error("发送钉钉通知失败: %v", err)
-			}
+			service.NewDingTalkBotService().NotifyTask(task)
 		}()
 
 		taskCompleted = true // 标记为已处理（失败也算完成）
@@ -407,6 +406,7 @@ func (w *Worker) executeTask(task *models.TaskConfig) (execErr error) {
 		logger.Debug("Worker %d 扫描流程成功完成，TaskID: %s", w.id, task.TaskID)
 		// 在删除任务上下文之前，确保状态更新完成
 		// 先更新状态，再删除任务上下文，避免状态不一致
+		task.Status = "completed"
 		if updateErr := w.updateTaskStatus(task.TaskID, "completed"); updateErr != nil {
 			logger.Debug("Worker %d 更新任务状态为completed失败: %v", w.id, updateErr)
 		} else {
@@ -418,9 +418,7 @@ func (w *Worker) executeTask(task *models.TaskConfig) (execErr error) {
 						logger.Error("DingTalk notification goroutine panic (success case): %v", r)
 					}
 				}()
-				if err := service.SendDingTalkNotification(task); err != nil {
-					logger.Error("发送钉钉通知失败: %v", err)
-				}
+				service.NewDingTalkBotService().NotifyTask(task)
 			}()
 		}
 		taskCompleted = true // 标记为已完成
@@ -445,8 +443,27 @@ func (w *Worker) workerName() string {
 	return fmt.Sprintf("worker-%d", w.id)
 }
 
+// findDingTalkSourceTask makes task creation idempotent for retries of the same
+// DingTalk message. Empty source fields are intentionally ignored so web-created
+// tasks keep their existing behavior.
+func findDingTalkSourceTask(config *models.TaskConfig) (string, bool) {
+	if config == nil || config.DingTalkBotID <= 0 || strings.TrimSpace(config.DingTalkSourceMessageID) == "" || database.DB == nil {
+		return "", false
+	}
+	var taskID string
+	err := database.DB.QueryRow(`SELECT task_id FROM task_config WHERE dingtalk_bot_id=? AND dingtalk_source_message_id=? ORDER BY created_at ASC LIMIT 1`, config.DingTalkBotID, strings.TrimSpace(config.DingTalkSourceMessageID)).Scan(&taskID)
+	if err != nil || strings.TrimSpace(taskID) == "" {
+		return "", false
+	}
+	logger.Warn("检测到重复的钉钉任务创建消息，复用已有任务: bot=%d message=%s task=%s", config.DingTalkBotID, config.DingTalkSourceMessageID, taskID)
+	return taskID, true
+}
+
 // runScanWorkflow 运行扫描工作流
 func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
+	if taskID, ok := findDingTalkSourceTask(config); ok {
+		return taskID, nil
+	}
 	// 生成任务 ID
 	taskID := uuid.New().String()
 	config.TaskID = taskID
@@ -463,8 +480,8 @@ func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
         (task_id, task_name, task_type, parent_task_id, target_input, port_range, 
         no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, skip_host_discovery, no_icmp_ping, 
         tcp_ping, ports_threshold, syn_scan_rate, web_link, enable_screenshot,
-        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, dingtalk_bot_id, dingtalk_conversation_id, dingtalk_conversation_type, dingtalk_source_user_id, dingtalk_source_message_id, created_at, updated_at, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	logger.Debug("SubmitTask TaskType: %s", config.TaskType)
 	_, err := database.DB.Exec(query,
@@ -472,7 +489,7 @@ func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
 		config.PortRange, config.NoPortString, config.ScanMode, config.ScanTool, config.ScanOptions,
 		config.ThreadCount, config.PortScanTimeout, config.WebTimeout, config.HTTPProxy, database.BoolInt(config.SkipHostDiscovery), database.BoolInt(config.NoICMPPing),
 		database.BoolInt(config.TCPPing), config.PortsThreshold, config.SYNScanRate, database.BoolInt(config.WebLink), database.BoolInt(config.EnableScreenshot),
-		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status)
+		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, config.DingTalkBotID, config.DingTalkConversationID, config.DingTalkConversationType, config.DingTalkSourceUserID, config.DingTalkSourceMessageID, timeStr, timeStr, config.Status)
 
 	if err != nil {
 		logger.Debug("save task error: %v", err)
@@ -504,6 +521,9 @@ func (s *TaskScheduler) SubmitTask(config *models.TaskConfig) (string, error) {
 //   - string: 新生成的任务ID
 //   - error: 持久化失败时返回错误
 func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uint) (string, error) {
+	if taskID, ok := findDingTalkSourceTask(config); ok {
+		return taskID, nil
+	}
 	// 生成任务 ID
 	taskID := uuid.New().String()
 	config.TaskID = taskID
@@ -520,8 +540,8 @@ func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uin
         (task_id, task_name, task_type, parent_task_id, target_input, port_range, 
         no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, skip_host_discovery, no_icmp_ping, 
         tcp_ping, ports_threshold, syn_scan_rate, web_link, enable_screenshot,
-        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, created_at, updated_at, status, user_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, dingtalk_bot_id, dingtalk_conversation_id, dingtalk_conversation_type, dingtalk_source_user_id, dingtalk_source_message_id, created_at, updated_at, status, user_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	logger.Debug("SubmitTaskWithUser TaskType=%s, UserID=%d", config.TaskType, userID)
 	_, err := database.DB.Exec(query,
@@ -529,7 +549,7 @@ func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uin
 		config.PortRange, config.NoPortString, config.ScanMode, config.ScanTool, config.ScanOptions,
 		config.ThreadCount, config.PortScanTimeout, config.WebTimeout, config.HTTPProxy, database.BoolInt(config.SkipHostDiscovery), database.BoolInt(config.NoICMPPing),
 		database.BoolInt(config.TCPPing), config.PortsThreshold, config.SYNScanRate, database.BoolInt(config.WebLink), database.BoolInt(config.EnableScreenshot),
-		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, timeStr, timeStr, config.Status, userID)
+		database.BoolInt(config.ScanAllPOCsWhenNoFingerprint), database.BoolInt(config.FullPocScan), database.BoolInt(config.EnableActiveFingerprint), config.SelectedDicts, config.AssignedWorker, config.DingTalkToken, config.DingTalkSecret, config.DingTalkKeyID, config.DingTalkBotID, config.DingTalkConversationID, config.DingTalkConversationType, config.DingTalkSourceUserID, config.DingTalkSourceMessageID, timeStr, timeStr, config.Status, userID)
 
 	if err != nil {
 		logger.Debug("save task error: %v", err)
@@ -763,7 +783,7 @@ func (s *TaskScheduler) ResumeTask(taskID string) error {
                port_range, no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, 
                skip_host_discovery, no_icmp_ping, tcp_ping, ports_threshold, syn_scan_rate,
                web_link, scan_all_pocs_when_no_fingerprint, full_poc_scan, 
-               enable_active_fingerprint, enable_screenshot, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, status
+               enable_active_fingerprint, enable_screenshot, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, dingtalk_bot_id, dingtalk_conversation_id, dingtalk_conversation_type, dingtalk_source_user_id, dingtalk_source_message_id, status
         FROM task_config 
         WHERE task_id = ? AND status = 'paused'
     `
@@ -774,7 +794,7 @@ func (s *TaskScheduler) ResumeTask(taskID string) error {
 		&config.ThreadCount, &config.PortScanTimeout, &config.WebTimeout, &config.HTTPProxy, &skipHostDiscovery, &noICMPPing,
 		&tcpPing, &config.PortsThreshold, &config.SYNScanRate, &webLink,
 		&scanAllPOCsWhenNoFingerprint, &fullPocScan, &enableActiveFingerprint,
-		&enableScreenshot, &config.SelectedDicts, &config.AssignedWorker, &config.DingTalkToken, &config.DingTalkSecret, &config.DingTalkKeyID, &config.Status,
+		&enableScreenshot, &config.SelectedDicts, &config.AssignedWorker, &config.DingTalkToken, &config.DingTalkSecret, &config.DingTalkKeyID, &config.DingTalkBotID, &config.DingTalkConversationID, &config.DingTalkConversationType, &config.DingTalkSourceUserID, &config.DingTalkSourceMessageID, &config.Status,
 	)
 
 	if err != nil {

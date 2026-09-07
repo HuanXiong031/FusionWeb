@@ -9,13 +9,14 @@ import (
 )
 
 type Config struct {
-	Port      int
-	BasicAuth bool
-	BasicUser string
-	BasicPass string
-	JWTSecret string
-	WebTitle  string
-	DataDir   string
+	Port          int
+	BasicAuth     bool
+	BasicUser     string
+	BasicPass     string
+	JWTSecret     string
+	EncryptionKey string
+	WebTitle      string
+	DataDir       string
 
 	PGDSN     string
 	PGMaxOpen int
@@ -51,6 +52,7 @@ func Get() *Config {
 			BasicUser:      env("FUSIONWEB_BASIC_USER", "admin"),
 			BasicPass:      env("FUSIONWEB_BASIC_PASS", ""),
 			JWTSecret:      env("FUSIONWEB_JWT_SECRET", ""),
+			EncryptionKey:  env("FUSIONWEB_ENCRYPTION_KEY", ""),
 			WebTitle:       env("FUSIONWEB_TITLE", "FusionWeb"),
 			DataDir:        env("FUSIONWEB_DATA_DIR", ""),
 			PGDSN:          env("FUSIONWEB_PG_DSN", "postgres://fusionweb:fusionweb@localhost:5432/fusionweb?sslmode=disable"),

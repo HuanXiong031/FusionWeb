@@ -270,6 +270,12 @@ func NewRouter(app *App) *gin.Engine {
 			vulnVerifyGroup.GET("/:id/vulns", HandleGetManualVulnVerifyListByGroup())
 		}
 
+		// AI 对话
+		ai := v1.Group("/ai")
+		{
+			ai.POST("/chat", HandleAIChat())
+		}
+
 		// 工具方法
 		tools := v1.Group("/tools")
 		{
@@ -306,10 +312,26 @@ func NewRouter(app *App) *gin.Engine {
 			system.DELETE("/operation-logs", HandleClearOperationLogs)
 			system.GET("/unauthorized-access-logs", HandleGetUnauthorizedAccessLogs)
 			system.DELETE("/unauthorized-access-logs", HandleClearUnauthorizedAccessLogs)
-			system.GET("/dingtalk-keys", HandleListDingTalkKeys())
-			system.POST("/dingtalk-keys", HandleSaveDingTalkKey())
-			system.PUT("/dingtalk-keys/:id", HandleUpdateDingTalkKey())
-			system.DELETE("/dingtalk-keys/:id", HandleDeleteDingTalkKey())
+			system.GET("/dingtalk-bots", HandleListDingTalkBots())
+			system.POST("/dingtalk-bots", HandleSaveDingTalkBot())
+			system.PUT("/dingtalk-bots/:id", HandleUpdateDingTalkBot())
+			system.DELETE("/dingtalk-bots/:id", HandleDeleteDingTalkBot())
+			system.POST("/dingtalk-bots/:id/test", HandleTestDingTalkBot())
+			system.POST("/dingtalk-bots/:id/reconnect", HandleReconnectDingTalkBot())
+			system.GET("/dingtalk-bots/:id/status", HandleDingTalkBotStatus())
+			system.POST("/dingtalk-bindings/code", HandleGenerateDingTalkBindingCode())
+			system.POST("/dingtalk-bindings", HandleBindDingTalkUser())
+			system.GET("/dingtalk-bindings", HandleListDingTalkBindings())
+			system.DELETE("/dingtalk-bindings/:id", HandleDeleteDingTalkBinding())
+			system.GET("/dingtalk-allowlist", HandleListDingTalkAllowlist())
+			system.POST("/dingtalk-allowlist", HandleSaveDingTalkAllowlist())
+			system.PUT("/dingtalk-allowlist/:id", HandleUpdateDingTalkAllowlist())
+			system.DELETE("/dingtalk-allowlist/:id", HandleDeleteDingTalkAllowlist())
+			system.GET("/ai-api-keys", HandleListAIAPIKeys())
+			system.POST("/ai-api-keys", HandleSaveAIAPIKey())
+			system.PUT("/ai-api-keys/:id", HandleUpdateAIAPIKey())
+			system.DELETE("/ai-api-keys/:id", HandleDeleteAIAPIKey())
+			system.POST("/ai-api-keys/:id/test", HandleTestAIAPIKey())
 		}
 	}
 

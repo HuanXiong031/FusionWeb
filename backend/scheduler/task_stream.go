@@ -294,7 +294,7 @@ COALESCE(port_range,''), COALESCE(no_port_string,''), COALESCE(scan_mode,''), CO
 COALESCE(thread_count,10), COALESCE(port_scan_timeout,3), COALESCE(web_timeout,10), COALESCE(http_proxy,''),
 COALESCE(skip_host_discovery,0), COALESCE(no_icmp_ping,0), COALESCE(tcp_ping,0), COALESCE(ports_threshold,65536), COALESCE(syn_scan_rate,10000),
 COALESCE(web_link,0), COALESCE(scan_all_pocs_when_no_fingerprint,0), COALESCE(full_poc_scan,0), COALESCE(enable_active_fingerprint,0), COALESCE(enable_screenshot,0),
-COALESCE(selected_dicts,''), COALESCE(assigned_worker,''), COALESCE(ding_talk_token,''), COALESCE(ding_talk_secret,''), COALESCE(ding_talk_key_id,0), COALESCE(status,'pending'), COALESCE(current_stage,'')
+COALESCE(selected_dicts,''), COALESCE(assigned_worker,''), COALESCE(ding_talk_token,''), COALESCE(ding_talk_secret,''), COALESCE(ding_talk_key_id,0), COALESCE(dingtalk_bot_id,0), COALESCE(dingtalk_conversation_id,''), COALESCE(dingtalk_conversation_type,''), COALESCE(dingtalk_source_user_id,''), COALESCE(dingtalk_source_message_id,''), COALESCE(status,'pending'), COALESCE(current_stage,'')
 FROM task_config WHERE task_id=?`
 
 	var c models.TaskConfig
@@ -305,7 +305,7 @@ FROM task_config WHERE task_id=?`
 		&c.ThreadCount, &c.PortScanTimeout, &c.WebTimeout, &c.HTTPProxy,
 		&skip, &noICMP, &tcp, &c.PortsThreshold, &c.SYNScanRate,
 		&webLink, &scanAll, &full, &active, &shot,
-		&c.SelectedDicts, &c.AssignedWorker, &c.DingTalkToken, &c.DingTalkSecret, &c.DingTalkKeyID, &c.Status, &c.CurrentStage,
+		&c.SelectedDicts, &c.AssignedWorker, &c.DingTalkToken, &c.DingTalkSecret, &c.DingTalkKeyID, &c.DingTalkBotID, &c.DingTalkConversationID, &c.DingTalkConversationType, &c.DingTalkSourceUserID, &c.DingTalkSourceMessageID, &c.Status, &c.CurrentStage,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

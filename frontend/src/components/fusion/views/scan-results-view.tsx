@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
-import { Bug, Download, Eye, FileText, Fingerprint, Globe2, Network, RefreshCw, ShieldAlert, Terminal } from 'lucide-react'
+import { Bug, Download, Eye, FileText, Fingerprint, Globe2, Network, RefreshCw, ShieldAlert, Sparkles, Terminal } from 'lucide-react'
 import { getFingerprintResults, getPocScanResults, getPocTaskList, getReconResults, getTaskLogs, getTasks, getVulnResults, type TaskRow } from '@/lib/api'
 import { asList, formatTime } from '@/lib/utils'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, Select, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
@@ -52,7 +52,7 @@ function getFingerprintRule(row: any) {
   return row.source || row.matcher || (typeof rules === 'string' ? rules : '-') || '-'
 }
 
-export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; onOpenTask: (taskId: string) => void }) {
+export function ScanResultsView({ demoMode, onOpenTask, onAnalyzeWithAI }: { demoMode: boolean; onOpenTask: (taskId: string) => void; onAnalyzeWithAI: (context: string) => void }) {
   const queryClient = useQueryClient()
   const [source, setSource] = React.useState<ResultSource>('web')
   const [selectedTaskId, setSelectedTaskId] = React.useState('')
@@ -167,6 +167,16 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
 
   const activeRows = getActiveRows()
   const vulnInfo = normalizeVulnDetail(vulnDetail)
+  const selectedTaskName = selectedTask ? (isTemplateSource ? getPocTaskDisplayName(selectedTask) : getTaskDisplayName(selectedTask)) : selectedTaskId
+  const analyzeRowsWithAI = () => {
+    if (!selectedTaskId || !activeRows.length) return
+    const rows = activeRows.slice(0, 80)
+    onAnalyzeWithAI(`请分析 FusionWeb 结果中心中的${activeTab}结果，并给出风险重点、优先级和下一步验证建议。\n\n任务：${selectedTaskName}\n任务 ID：${selectedTaskId}\n结果类型：${activeTab}\n结果数量：${activeRows.length}\n\n结果数据：\n${JSON.stringify(rows, null, 2).slice(0, 18000)}`)
+  }
+  const analyzeVulnerabilityWithAI = () => {
+    if (!vulnDetail) return
+    onAnalyzeWithAI(`请分析以下 FusionWeb 漏洞结果，说明影响、验证思路、误报判断和修复建议。\n\n任务：${selectedTaskName}\n任务 ID：${selectedTaskId}\n漏洞详情：\n${JSON.stringify(vulnDetail, null, 2).slice(0, 18000)}`)
+  }
 
   const portColumns: ColumnDef<any>[] = [
     { header: '主机', accessorKey: 'host', meta: { className: 'w-[220px]' }, cell: ({ row }) => <span className="block truncate font-mono" title={row.original.host || row.original.ip || '-'}>{row.original.host || row.original.ip || '-'}</span> },
@@ -258,6 +268,7 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" disabled={!selectedTaskId} onClick={refreshResults}><RefreshCw className="size-4" />刷新</Button>
             <Button variant="outline" disabled={!activeRows.length} onClick={() => downloadContent(toCsv(activeRows), `scan-results-${selectedTaskId || 'task'}-${activeTab}.csv`, 'text/csv')}><Download className="size-4" />导出当前</Button>
+            <Button variant="outline" disabled={!activeRows.length} onClick={analyzeRowsWithAI}><Sparkles className="size-4" />用 AI 分析</Button>
             {isTemplateSource ? null : <Button variant="default" disabled={!selectedTaskId} onClick={() => onOpenTask(selectedTaskId)}><Eye className="size-4" />任务详情</Button>}
           </div>
         </CardContent>
@@ -292,6 +303,9 @@ export function ScanResultsView({ demoMode, onOpenTask }: { demoMode: boolean; o
         {vulnDetail ? (
           <div className="grid gap-5">
             <section className="rounded-card border border-border bg-background">
+              <div className="flex justify-end border-b border-border p-3">
+                <Button size="sm" variant="outline" onClick={analyzeVulnerabilityWithAI}><Sparkles className="size-4" />用 AI 分析此结果</Button>
+              </div>
               <VulnDetailRow label="目标信息" value={vulnInfo.target} mono />
               <VulnDetailRow label="漏洞名称" value={vulnInfo.name} />
               <VulnDetailRow label="模板 ID" value={vulnInfo.templateID} mono />

@@ -195,6 +195,11 @@ func createTables() error {
 			ding_talk_token TEXT DEFAULT '',
 			ding_talk_secret TEXT DEFAULT '',
 			ding_talk_key_id INTEGER DEFAULT 0,
+			dingtalk_bot_id INTEGER DEFAULT 0,
+			dingtalk_conversation_id TEXT DEFAULT '',
+			dingtalk_conversation_type TEXT DEFAULT '',
+			dingtalk_source_user_id TEXT DEFAULT '',
+			dingtalk_source_message_id TEXT DEFAULT '',
 			completed_at TIMESTAMP
 		)`,
 
@@ -585,6 +590,100 @@ func createTables() error {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// 统一钉钉机器人配置：同时管理 Stream 入站、Webhook 出站和通知规则。
+		`CREATE TABLE IF NOT EXISTS dingtalk_bots (
+            id BIGSERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            client_id_cipher TEXT DEFAULT '',
+            client_secret_cipher TEXT DEFAULT '',
+            tenant_id TEXT DEFAULT '',
+            webhook_token_cipher TEXT DEFAULT '',
+            webhook_secret_cipher TEXT DEFAULT '',
+            default_target_type TEXT DEFAULT '',
+            default_target_value TEXT DEFAULT '',
+            notify_task_completed INTEGER DEFAULT 1,
+            notify_task_failed INTEGER DEFAULT 1,
+            notify_task_cancelled INTEGER DEFAULT 1,
+            notify_blacklist_add INTEGER DEFAULT 0,
+            notify_blacklist_remove INTEGER DEFAULT 0,
+            notify_web_scan_complete INTEGER DEFAULT 0,
+            notify_port_scan_complete INTEGER DEFAULT 0,
+            allow_task_creation INTEGER DEFAULT 0,
+            allow_ai_chat INTEGER DEFAULT 0,
+            notification_only INTEGER DEFAULT 0,
+            migrated_from_key_id INTEGER DEFAULT 0,
+            stream_status TEXT DEFAULT 'disconnected',
+            stream_last_error TEXT DEFAULT '',
+            stream_connected_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_bindings (
+            id BIGSERIAL PRIMARY KEY,
+            bot_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            ding_user_id TEXT NOT NULL,
+            ding_user_name TEXT DEFAULT '',
+            conversation_id TEXT DEFAULT '',
+            enabled INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_id, ding_user_id),
+            UNIQUE(bot_id, user_id)
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_binding_codes (
+            id BIGSERIAL PRIMARY KEY,
+            bot_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            code_hash TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_allowlist (
+            id BIGSERIAL PRIMARY KEY,
+            bot_id INTEGER NOT NULL,
+            entry_type TEXT NOT NULL,
+            entry_value TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            description TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_id, entry_type, entry_value)
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_messages (
+            id BIGSERIAL PRIMARY KEY,
+            bot_id INTEGER NOT NULL,
+            message_id TEXT NOT NULL,
+            conversation_id TEXT DEFAULT '',
+            conversation_type TEXT DEFAULT '',
+            sender_id TEXT DEFAULT '',
+            sender_staff_id TEXT DEFAULT '',
+            content TEXT DEFAULT '',
+            task_id TEXT DEFAULT '',
+            processed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_id, message_id)
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_ai_sessions (
+            id BIGSERIAL PRIMARY KEY,
+            bot_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            conversation_id TEXT NOT NULL,
+            title TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bot_id, user_id, conversation_id)
+        )`,
+		`CREATE TABLE IF NOT EXISTS dingtalk_ai_messages (
+            id BIGSERIAL PRIMARY KEY,
+            session_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
 		// 扫描配置：保存工具级配置，内容以 JSON 字符串存储。
 		`CREATE TABLE IF NOT EXISTS scan_config (
 			id BIGSERIAL PRIMARY KEY,
@@ -636,6 +735,25 @@ func createTables() error {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(dict_type, value)
+		)`,
+
+		// AI API Key：保存 GPT、DeepSeek、Claude/Claude Code 和 OpenAI 兼容模型配置。
+		`CREATE TABLE IF NOT EXISTS ai_api_keys (
+			id BIGSERIAL PRIMARY KEY,
+			provider TEXT NOT NULL,
+			name TEXT NOT NULL,
+			api_key TEXT NOT NULL,
+			base_url TEXT DEFAULT '',
+			model TEXT DEFAULT '',
+			enabled INTEGER DEFAULT 1,
+			is_default INTEGER DEFAULT 0,
+			description TEXT DEFAULT '',
+			last_test_status TEXT DEFAULT '',
+			last_test_message TEXT DEFAULT '',
+			last_test_at TIMESTAMP,
+			created_by INTEGER DEFAULT 0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 空间测绘 API Key：保存 FOFA、Hunter、Quake 等在线资产引擎配置。
@@ -751,6 +869,10 @@ func createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_type ON scan_dictionaries(dict_type)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_enabled ON scan_dictionaries(enabled)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_builtin ON scan_dictionaries(is_builtin)",
+		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_provider ON ai_api_keys(provider)",
+		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_user ON ai_api_keys(created_by)",
+		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_enabled ON ai_api_keys(enabled)",
+		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_default ON ai_api_keys(is_default)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_provider ON space_engine_keys(provider)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_user ON space_engine_keys(created_by)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_enabled ON space_engine_keys(enabled)",
@@ -776,6 +898,16 @@ func createTables() error {
 		return err
 	}
 
+	if err := ensureDingTalkMessageColumns(); err != nil {
+		return err
+	}
+
+	// 早期统一钉钉机器人草稿曾给 migrated_from_key_id 添加 UNIQUE 约束，
+	// 其默认值 0 会阻止创建第二个普通机器人。迁移幂等由服务层显式保证。
+	if _, err := DB.Exec(`ALTER TABLE dingtalk_bots DROP CONSTRAINT IF EXISTS dingtalk_bots_migrated_from_key_id_key`); err != nil {
+		return fmt.Errorf("清理钉钉机器人旧唯一约束失败: %w", err)
+	}
+
 	for _, index := range indexes {
 		if _, err := DB.Exec(index); err != nil {
 			logger.Warn("创建索引失败: %v, SQL: %s", err, previewSQL(index))
@@ -796,6 +928,11 @@ func ensureTaskConfigColumns() error {
 		{"web_timeout", "web_timeout INTEGER DEFAULT 20"},
 		{"enable_screenshot", "enable_screenshot INTEGER DEFAULT 0"},
 		{"assigned_worker", "assigned_worker TEXT DEFAULT ''"},
+		{"dingtalk_bot_id", "dingtalk_bot_id INTEGER DEFAULT 0"},
+		{"dingtalk_conversation_id", "dingtalk_conversation_id TEXT DEFAULT ''"},
+		{"dingtalk_conversation_type", "dingtalk_conversation_type TEXT DEFAULT ''"},
+		{"dingtalk_source_user_id", "dingtalk_source_user_id TEXT DEFAULT ''"},
+		{"dingtalk_source_message_id", "dingtalk_source_message_id TEXT DEFAULT ''"},
 	}
 
 	for _, item := range columns {
@@ -808,6 +945,30 @@ func ensureTaskConfigColumns() error {
 		}
 		if _, err := DB.Exec(fmt.Sprintf("ALTER TABLE task_config ADD COLUMN %s", item.definition)); err != nil {
 			return fmt.Errorf("添加字段失败 task_config.%s: %w", item.column, err)
+		}
+	}
+	return nil
+}
+
+func ensureDingTalkMessageColumns() error {
+	columns := []struct {
+		column     string
+		definition string
+	}{
+		{"conversation_type", "conversation_type TEXT DEFAULT ''"},
+		{"sender_staff_id", "sender_staff_id TEXT DEFAULT ''"},
+	}
+
+	for _, item := range columns {
+		exists, err := tableColumnExists("dingtalk_messages", item.column)
+		if err != nil {
+			return fmt.Errorf("检查字段失败 dingtalk_messages.%s: %w", item.column, err)
+		}
+		if exists {
+			continue
+		}
+		if _, err := DB.Exec(fmt.Sprintf("ALTER TABLE dingtalk_messages ADD COLUMN %s", item.definition)); err != nil {
+			return fmt.Errorf("添加字段失败 dingtalk_messages.%s: %w", item.column, err)
 		}
 	}
 	return nil

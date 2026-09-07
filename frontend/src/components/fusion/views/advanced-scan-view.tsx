@@ -112,7 +112,7 @@ import {
   exportUsers,
   getBlacklistByCategory,
   getDashboardStats,
-  getDingTalkKeys,
+  getDingTalkBots,
   getFingerprintCategories,
   getFingerprintResults,
   getFingerprintStatistics,
@@ -169,7 +169,7 @@ import {
   type DashboardStats,
   type FingerprintRow,
   type PocFileRow,
-  type DingTalkKey,
+  type DingTalkBot,
   type TaskConfig,
   type TaskRow,
   type UserProfile,
@@ -389,7 +389,7 @@ export function AdvancedScanView({
     jsMaxJSSizeMB: 5,
     jsMaxJSPerTarget: 200,
     enableDingTalk: false,
-    dingTalkKeyId: '',
+    dingTalkBotId: '',
     assignedWorker: '',
   })
   React.useEffect(() => {
@@ -399,17 +399,17 @@ export function AdvancedScanView({
       return { ...current, taskType: fixedTaskType, scanMode: scanModeForTaskType(fixedTaskType) }
     })
   }, [fixedTaskType])
-  const dingTalkKeysQuery = useQuery({ queryKey: ['dingtalk-keys'], queryFn: getDingTalkKeys, enabled: !demoMode })
+  const dingTalkBotsQuery = useQuery({ queryKey: ['dingtalk-bots'], queryFn: getDingTalkBots, enabled: !demoMode })
   const workersQuery = useQuery({
     queryKey: ['workers'],
     queryFn: async () => unwrap<WorkerNode[]>(await getWorkers()),
     enabled: !demoMode,
     staleTime: 15000,
   })
-  const dingTalkKeys = demoMode
+  const dingTalkBots = demoMode
     ? [{ id: 1, name: '默认钉钉机器人', notifyWebScanComplete: true, notifyPortScanComplete: true, enabled: true }]
-    : unwrap<DingTalkKey[]>(dingTalkKeysQuery.data) || []
-  const availableDingTalkKeys = dingTalkKeys.filter((item) => item.enabled !== false)
+    : unwrap<DingTalkBot[]>(dingTalkBotsQuery.data) || []
+  const availableDingTalkBots = dingTalkBots.filter((item) => item.enabled !== false)
   const workers = demoMode ? [] : (workersQuery.data || [])
   const onlineWorkers = React.useMemo(() => workers.filter((item) => item.status === 'online'), [workers])
   const targetCount = parseTargets(draft.targetInput).length
@@ -494,7 +494,7 @@ export function AdvancedScanView({
     mutationFn: async () => {
       if (!draft.targetInput.trim()) throw new Error('请输入扫描目标')
       if (draft.taskType === 'port' && !currentPortRange.trim()) throw new Error('请输入端口范围')
-      if (draft.enableDingTalk && !draft.dingTalkKeyId) throw new Error('请选择钉钉 Key')
+      if (draft.enableDingTalk && !draft.dingTalkBotId) throw new Error('请选择钉钉机器人')
       if (demoMode) return { data: { taskId: 'demo-advanced-scan' } }
       const selectedDicts = draft.taskType === 'directory' ? splitOptionList(draft.directoryPaths) : splitOptionList(draft.selectedDicts)
       const payload: TaskConfig = {
@@ -522,7 +522,7 @@ export function AdvancedScanView({
         enable_active_fingerprint: draft.enableActiveFingerprint,
         enable_screenshot: draft.enableScreenshot,
         assigned_worker: draft.assignedWorker || '',
-        ding_talk_key_id: draft.enableDingTalk ? Number(draft.dingTalkKeyId) || 0 : 0,
+        dingtalk_bot_id: draft.enableDingTalk ? Number(draft.dingTalkBotId) || 0 : 0,
       }
       return createTask(payload)
     },
@@ -825,10 +825,10 @@ export function AdvancedScanView({
                 </Field>
                 <ToggleField label="钉钉通知" checked={draft.enableDingTalk} onChange={(value) => setDraft({ ...draft, enableDingTalk: value })} />
                 {draft.enableDingTalk ? (
-                  <Field label="钉钉 Key" hint="Key 在系统设置中维护；任务结束时会按 Key 的提醒范围发送。">
-                    <Select value={draft.dingTalkKeyId} onChange={(event) => setDraft({ ...draft, dingTalkKeyId: event.target.value })}>
-                      <option value="">请选择钉钉 Key</option>
-                      {availableDingTalkKeys.map((item) => (
+                  <Field label="钉钉机器人" hint="Key 在系统设置中维护；任务结束时会按 Key 的提醒范围发送。">
+                    <Select value={draft.dingTalkBotId} onChange={(event) => setDraft({ ...draft, dingTalkBotId: event.target.value })}>
+                      <option value="">请选择钉钉机器人</option>
+                      {availableDingTalkBots.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name}
                         </option>
@@ -873,3 +873,5 @@ export function AdvancedScanView({
     </div>
   )
 }
+
+

@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { toast, Toaster } from 'sonner'
 import {
   Bell,
+  Bot,
   Check,
   ChevronDown,
   ChevronRight,
@@ -85,6 +86,8 @@ import { UsersView } from '@/components/fusion/views/users-view'
 import { SystemLogsView } from '@/components/fusion/views/system-logs-view'
 import { SettingsView } from '@/components/fusion/views/settings-view'
 import { WorkersView } from '@/components/fusion/views/workers-view'
+import { AIChatView } from '@/components/fusion/views/ai-chat-view'
+import { AIAPIKeysView } from '@/components/fusion/views/ai-api-keys-view'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +100,7 @@ const queryClient = new QueryClient({
 
 type ViewKey =
   | 'dashboard'
+  | 'ai-chat'
   | 'web-scan'
   | 'port-scan'
   | 'subdomain-scan'
@@ -128,6 +132,7 @@ type ViewKey =
   | 'space-api-keys'
   | 'policies'
   | 'settings'
+  | 'ai-api-keys'
   | 'users'
   | 'system-logs'
   | 'workers'
@@ -159,6 +164,10 @@ const navSections: Array<{
       { key: 'js-scan', label: 'JS扫描', icon: Code2 },
       { key: 'rtsp-scan', label: 'RTSP扫描', icon: RadioTower },
     ],
+  },
+  {
+    title: 'AI 助手',
+    items: [{ key: 'ai-chat', label: 'AI 对话', icon: Bot }],
   },
   {
     title: '空间测绘',
@@ -206,6 +215,7 @@ const navSections: Array<{
     items: [
       { key: 'policies', label: '策略管理', icon: Database },
       { key: 'settings', label: '系统设置', icon: KeyRound },
+      { key: 'ai-api-keys', label: 'AI Key', icon: Bot },
       { key: 'users', label: '用户管理', icon: Users },
       { key: 'system-logs', label: '日志审计', icon: Terminal },
       { key: 'workers', label: '节点管理', icon: Server },
@@ -217,6 +227,7 @@ const viewLabels = Object.fromEntries(navSections.flatMap((section) => section.i
 
 const viewPaths: Record<ViewKey, string> = {
   dashboard: '/dashboard',
+  'ai-chat': '/ai/chat',
   'web-scan': '/scans/web',
   'port-scan': '/scans/port',
   'subdomain-scan': '/scans/subdomain',
@@ -248,6 +259,7 @@ const viewPaths: Record<ViewKey, string> = {
   'space-api-keys': '/space/api-keys',
   policies: '/system/policies',
   settings: '/system/settings',
+  'ai-api-keys': '/system/ai-api-keys',
   users: '/system/users',
   'system-logs': '/system/logs',
   workers: '/system/workers',
@@ -701,6 +713,7 @@ function AppShell({
 }) {
   const [view, setView] = React.useState<ViewKey>('dashboard')
   const [activeTaskId, setActiveTaskId] = React.useState('')
+  const [aiContext, setAIContext] = React.useState('')
   const [collapsed, setCollapsed] = React.useState(false)
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({})
   const queryClient = useQueryClient()
@@ -908,6 +921,11 @@ function AppShell({
     navigateToView('task-detail', '任务详情')
   }, [navigateToView])
 
+  const analyzeTaskWithAI = React.useCallback((context: string) => {
+    setAIContext(context)
+    navigateToView('ai-chat', 'AI 对话')
+  }, [navigateToView])
+
   return (
     <main className="flex h-screen bg-background text-foreground">
       <aside className={cn('hidden shrink-0 border-r border-border bg-sidebar p-2 transition-[width] md:flex md:flex-col', collapsed ? 'w-16' : 'w-52')}>
@@ -1028,15 +1046,16 @@ function AppShell({
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-gutter:stable] md:p-6">
           <KeepAliveView active={view === 'dashboard'}><DashboardView demoMode={demoMode} onOpenTask={openTask} /></KeepAliveView>
+          <KeepAliveView active={view === 'ai-chat'}><AIChatView initialContext={aiContext} /></KeepAliveView>
           {splitScanViews.map((item) => (
             <KeepAliveView key={item.key} active={view === item.key}>
               <AdvancedScanView demoMode={demoMode} fixedTaskType={item.type} onCreated={() => { setActiveTaskId(''); navigateToView('tasks') }} />
             </KeepAliveView>
           ))}
           <KeepAliveView active={view === 'tasks'}><TasksView demoMode={demoMode} onOpenTask={openTask} /></KeepAliveView>
-          <KeepAliveView active={view === 'task-detail'}><TaskDetailView demoMode={demoMode} taskId={activeTaskId} onBack={() => navigateToView('tasks')} /></KeepAliveView>
+          <KeepAliveView active={view === 'task-detail'}><TaskDetailView demoMode={demoMode} taskId={activeTaskId} onBack={() => navigateToView('tasks')} onAnalyzeWithAI={analyzeTaskWithAI} /></KeepAliveView>
           <KeepAliveView active={view === 'task-logs'}><TaskLogsView demoMode={demoMode} /></KeepAliveView>
-          <KeepAliveView active={view === 'scan-results'}><ScanResultsView demoMode={demoMode} onOpenTask={openTask} /></KeepAliveView>
+          <KeepAliveView active={view === 'scan-results'}><ScanResultsView demoMode={demoMode} onOpenTask={openTask} onAnalyzeWithAI={analyzeTaskWithAI} /></KeepAliveView>
           <KeepAliveView active={view === 'fingerprints'}><FingerprintView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'pocs'}><PocView demoMode={demoMode} onCreateTemplate={() => navigateToView('poc-builder')} /></KeepAliveView>
           <KeepAliveView active={view === 'poc-builder'}><PocBuilderView demoMode={demoMode} /></KeepAliveView>
@@ -1056,6 +1075,7 @@ function AppShell({
           <KeepAliveView active={view === 'space-api-keys'}><SpaceApiKeysView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'policies'}><PolicyView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'settings'}><SettingsView /></KeepAliveView>
+          <KeepAliveView active={view === 'ai-api-keys'}><AIAPIKeysView /></KeepAliveView>
           <KeepAliveView active={view === 'users'}><UsersView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'system-logs'}><SystemLogsView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'workers'}><WorkersView /></KeepAliveView>

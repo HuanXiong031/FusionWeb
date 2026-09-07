@@ -45,6 +45,11 @@ type TaskConfig struct {
 	DingTalkToken                string    `json:"ding_talk_token"`                   // 钉钉机器人Token
 	DingTalkSecret               string    `json:"ding_talk_secret"`                  // 钉钉机器人Secret
 	DingTalkKeyID                int       `json:"ding_talk_key_id"`                  // 系统设置中选择的钉钉Key
+	DingTalkBotID                int       `json:"dingtalk_bot_id"`                   // 统一钉钉机器人
+	DingTalkConversationID       string    `json:"dingtalk_conversation_id"`          // 来源会话
+	DingTalkConversationType     string    `json:"dingtalk_conversation_type"`        // 来源会话类型（单聊/群聊）
+	DingTalkSourceUserID         string    `json:"dingtalk_source_user_id"`           // 来源钉钉用户 ID
+	DingTalkSourceMessageID      string    `json:"dingtalk_source_message_id"`        // 来源消息幂等键
 	CreatedAt                    time.Time `json:"created_at"`
 	UpdatedAt                    time.Time `json:"updated_at"`
 	Status                       string    `json:"status"` // pending/running/completed/failed/paused/cancelled

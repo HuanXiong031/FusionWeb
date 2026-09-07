@@ -51,6 +51,7 @@ import {
   ScanLine,
   Search,
   Send,
+  Sparkles,
   Settings,
   ShieldAlert,
   ShieldBan,
@@ -325,7 +326,7 @@ async function copyText(value: string) {
   }
 }
 
-export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean; taskId: string; onBack: () => void }) {
+export function TaskDetailView({ demoMode, taskId, onBack, onAnalyzeWithAI }: { demoMode: boolean; taskId: string; onBack: () => void; onAnalyzeWithAI?: (context: string) => void }) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState('ports')
   const [vulnDetail, setVulnDetail] = React.useState<any | null>(null)
@@ -647,6 +648,7 @@ export function TaskDetailView({ demoMode, taskId, onBack }: { demoMode: boolean
         <PageTitle title="任务详情" description={taskId || '请选择任务'} />
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={onBack}>返回列表</Button>
+          <Button variant="outline" onClick={() => onAnalyzeWithAI?.(`请分析以下 FusionWeb 扫描任务，并给出风险判断、重点验证顺序和修复建议。\n\n任务 ID：${taskId}\n任务名称：${detail?.taskName || detail?.task_name || '-'}\n任务类型：${taskType || '-'}\n目标：${targetInputText || '-'}\n状态：${detail?.status || '-'}\n进度：${Math.round(detail?.percentage || detail?.progress || 0)}%\n端口结果数：${ports.length}\nURL 结果数：${urls.length}\n指纹结果数：${fingerprintRows.length}\n漏洞结果数：${vulns.length}`)} disabled={!taskId || !detail}><Sparkles className="size-4" />用 AI 分析</Button>
           <Button variant="outline" onClick={() => setTargetDrawerOpen(true)} disabled={!taskId}><Globe2 className="size-4" />目标</Button>
           <Button variant="outline" onClick={() => actionMutation.mutate('restart')} disabled={!taskId || actionMutation.isPending}><RotateCcw className="size-4" />重启</Button>
           <Button variant="outline" onClick={() => actionMutation.mutate('pause')} disabled={!taskId || actionMutation.isPending}><Pause className="size-4" />暂停</Button>

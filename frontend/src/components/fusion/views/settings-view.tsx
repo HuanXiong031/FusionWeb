@@ -1,440 +1,93 @@
 'use client'
 
 import * as React from 'react'
-import { createPortal } from 'react-dom'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ColumnDef } from '@tanstack/react-table'
 import { toast } from 'sonner'
+import { Bot, CircleAlert, CircleDot, Edit3, Link2, Loader2, Pause, Play, Plus, RadioTower, RefreshCw, Save, Send, ShieldCheck, Trash2, Users } from 'lucide-react'
 import {
-  Activity,
-  Bell,
-  Braces,
-  Bug,
-  Check,
-  Code2,
-  Copy,
-  Database,
-  Download,
-  Edit3,
-  Eye,
-  FileCode2,
-  FileDown,
-  FileText,
-  Fingerprint,
-  FolderOpen,
-  Globe2,
-  History,
-  Info,
-  KeyRound,
-  Layers3,
-  LayoutDashboard,
-  ListChecks,
-  Loader2,
-  LogOut,
-  MapPin,
-  Monitor,
-  Moon,
-  Network,
-  Palette,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pause,
-  Play,
-  Plus,
-  RadioTower,
-  RefreshCw,
-  RotateCcw,
-  Save,
-  ScanLine,
-  Search,
-  Send,
-  Settings,
-  ShieldAlert,
-  ShieldBan,
-  ShieldCheck,
-  SlidersHorizontal,
-  Square,
-  Sun,
-  Terminal,
-  Trash2,
-  Upload,
-  User,
-  Users,
-  X,
-  XCircle,
-} from 'lucide-react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
-  addToBlacklist,
-  addFingerprint,
-  addManualVulnVerify,
-  addVulnVerifyGroup,
-  batchQueryIPs,
-  batchCreateUsers,
-  changePassword,
-  createPocFile,
-  createPocTask,
-  createDingTalkKey,
-  createTask,
-  createUser,
-  debugScanPOC,
-  deleteAllFingerprints,
-  deleteFingerprint,
-  deleteManualVulnVerify,
-  deletePOC,
-  deletePocFile,
-  deletePocScanResult,
-  deletePocTask,
-  deleteDingTalkKey,
-  deleteTask,
-  deleteUser,
-  deleteVulnVerifyGroup,
-  downloadPocReport,
-  downloadUserImportTemplate,
-  downloadTaskReport,
-  executePocTask,
-  exportAllPOCs,
-  exportFingerprints,
-  exportSelectedPOCs,
-  exportSingleFingerprint,
-  exportUsers,
-  getBlacklistByCategory,
-  getDashboardStats,
-  getDingTalkKeys,
-  getFingerprintCategories,
-  getFingerprintResults,
-  getFingerprintStatistics,
-  getFingerprintsPage,
-  getIPDBInfo,
-  getManualVulnVerifyListByGroup,
-  getPOCList,
-  getPOCCategories,
-  getPocFileContent,
-  getPocScanResultDetail,
-  getPocScanResultStatistics,
-  getPocScanResults,
-  getPocTaskDetail,
-  getPocTaskList,
-  getPocTaskProgress,
-  getLoginLogs,
-  getProfile,
-  getReconResults,
-  getTaskLogs,
-  getTaskDetail,
-  getTasks,
-  getUsers,
-  getVulnResults,
-  getVulnVerifyWorkbench,
-  getVulnVerifyGroups,
-  importFingerprint,
-  importPocFile,
-  login,
-  logout,
-  pauseTask,
-  pausePocTask,
-  queryIP,
-  removeFromBlacklist,
-  reloadIPDB,
-  renamePocFile,
-  restartTask,
-  resumeTask,
-  resumePocTask,
-  saveBlacklistByCategory,
-  saveVulnVerifyWorkbench,
-  sendRawRequest,
-  stopTask,
-  stopDebugScan,
-  stopPocTask,
-  toggleFingerprintEnabled,
-  toggleFingerprintBlacklist,
-  updateFingerprint,
-  updateDingTalkKey,
-  updateManualVulnVerify,
-  updatePocFile,
-  updateUser,
-  updateVulnVerifyGroup,
-  validatePOC,
-  type DashboardStats,
-  type DingTalkKey,
-  type FingerprintRow,
-  type PocFileRow,
-  type TaskConfig,
-  type TaskRow,
-  type UserProfile,
+  bindDingTalkUser, createDingTalkBot, deleteDingTalkAllowlist, deleteDingTalkBinding, deleteDingTalkBot,
+  generateDingTalkBindingCode, getDingTalkBots, listDingTalkAllowlist, listDingTalkBindings, reconnectDingTalkBot,
+  saveDingTalkAllowlist, testDingTalkBot, updateDingTalkBot, type DingTalkAllowlist, type DingTalkBinding, type DingTalkBot,
 } from '@/lib/api'
-import { asList, cn, compactNumber, formatTime, getStatusLabel, getStatusTone, parseTargets, unwrap } from '@/lib/utils'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, EmptyState, Field, Input, Modal, Select, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@/components/ui'
-import { DataTable } from '@/components/data-table'
-import { CodeEditor } from '@/components/code-editor'
-import {
-  demoStats,
-  demoTasks,
-  demoBlacklistData,
-  demoWhitelistData,
-  accessPolicyCategories,
-  buildSeverityStats,
-  getSeverityText,
-  getSeverityTone,
-  formatUnknown,
-  getPocPath,
-  downloadContent,
-  downloadBlobResponse,
-  downloadBlob,
-  getFileNameFromDisposition,
-  getReportFileName,
-  getReportTypeLabel,
-  normalizeIPRows,
-  getIPDBStatusLabel,
-  getIPDBFileName,
-  readFileText,
-  readFileBase64,
-  toCsv,
-  blacklistToYaml,
-  getBlacklistCategoryLabel,
-  normalizeBlacklistConfig,
-  pickPolicyConfig,
-  parseBlacklistContent,
-  parseBatchUsers,
-  pickVulnField,
-  getVulnTarget,
-  getVulnTemplateID,
-  getVulnDisplayName,
-  normalizeVulnDetail,
-  LineNumberedCode,
-  HttpCodePanel,
-  CodeBlock,
-  VulnDetailRow,
-  getTaskColumns,
-  getTaskId,
-  getTaskDisplayName,
-  getPocTaskId,
-  getPocTaskDisplayName,
-  getLogLevelTone,
-  toTextList,
-  PillList,
-  getProgressTone,
-  getProgressFillClass,
-  getProgressTextClass,
-  PageTitle,
-  Metric,
-  ToggleField,
-  PreviewLine,
-  SeverityBadge
-} from '@/components/fusion/shared'
+import { asList, formatTime, unwrap } from '@/lib/utils'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Drawer, Field, Input, Select } from '@/components/ui'
+import { Metric, PageTitle, ToggleField } from '@/components/fusion/shared'
 
 export function SettingsView() {
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = React.useState(false)
-  const [editingKey, setEditingKey] = React.useState<DingTalkKey | null>(null)
-  const [draft, setDraft] = React.useState<DingTalkKey>(() => createEmptyDingTalkDraft())
-  const query = useQuery({ queryKey: ['dingtalk-keys'], queryFn: getDingTalkKeys })
-  const keys = unwrap<DingTalkKey[]>(query.data) || []
+  const [editingBot, setEditingBot] = React.useState<DingTalkBot | null>(null)
+  const [draft, setDraft] = React.useState<DingTalkBot>(() => createEmptyDingTalkDraft())
+  const [selectedBotID, setSelectedBotID] = React.useState<number | null>(null)
+  const [bindingForm, setBindingForm] = React.useState({ dingUserId: '', dingUserName: '', code: '' })
+  const [allowForm, setAllowForm] = React.useState({ entryType: 'user', entryValue: '', description: '', enabled: true })
+  const [bindingCode, setBindingCode] = React.useState<{ code: string; expiresAt: string } | null>(null)
+
+  const botsQuery = useQuery({ queryKey: ['dingtalk-bots'], queryFn: getDingTalkBots })
+  const bots = asList<DingTalkBot>(botsQuery.data)
+  const selectedBot = bots.find((item) => item.id === selectedBotID) || bots[0]
+  const botID = selectedBot?.id || null
+  React.useEffect(() => { if (botID && selectedBotID !== botID) setSelectedBotID(botID) }, [botID, selectedBotID])
+
+  const bindingsQuery = useQuery({ queryKey: ['dingtalk-bindings', botID], queryFn: () => listDingTalkBindings(botID as number), enabled: Boolean(botID) })
+  const allowlistQuery = useQuery({ queryKey: ['dingtalk-allowlist', botID], queryFn: () => listDingTalkAllowlist(botID as number), enabled: Boolean(botID) })
+  const bindings = asList<DingTalkBinding>(bindingsQuery.data)
+  const allowlist = asList<DingTalkAllowlist>(allowlistQuery.data)
+  const refreshBots = () => queryClient.invalidateQueries({ queryKey: ['dingtalk-bots'] })
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...draft,
-        name: String(draft.name || '').trim(),
-        accessToken: String(draft.accessToken || '').trim(),
-        secret: String(draft.secret || '').trim(),
-      }
-      if (!payload.name) throw new Error('请输入 Key 名称')
-      if (!payload.accessToken) throw new Error('请输入钉钉 access_token')
-      if (editingKey?.id) return updateDingTalkKey(editingKey.id, payload)
-      return createDingTalkKey(payload)
+    mutationFn: () => {
+      const payload = { ...draft, name: String(draft.name || '').trim() }
+      if (!payload.name) throw new Error('请输入机器人名称')
+      return editingBot?.id ? updateDingTalkBot(editingBot.id, payload) : createDingTalkBot(payload)
     },
-    onSuccess: () => {
-      toast.success('钉钉 Key 已保存')
-      setDrawerOpen(false)
-      setEditingKey(null)
-      setDraft(createEmptyDingTalkDraft())
-      queryClient.invalidateQueries({ queryKey: ['dingtalk-keys'] })
-    },
-    onError: (error: any) => toast.error(error.message || '保存失败'),
+    onSuccess: () => { toast.success('钉钉机器人已保存'); setDrawerOpen(false); setEditingBot(null); setDraft(createEmptyDingTalkDraft()); refreshBots() },
+    onError: (error: any) => toast.error(error?.message || '保存失败'),
   })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteDingTalkKey(id),
-    onSuccess: () => {
-      toast.success('钉钉 Key 已删除')
-      queryClient.invalidateQueries({ queryKey: ['dingtalk-keys'] })
-    },
-    onError: (error: any) => toast.error(error.message || '删除失败'),
+  const deleteMutation = useMutation({ mutationFn: (id: number) => deleteDingTalkBot(id), onSuccess: () => { toast.success('钉钉机器人已删除'); setSelectedBotID(null); refreshBots() }, onError: (e: any) => toast.error(e?.message || '删除失败') })
+  const toggleMutation = useMutation({ mutationFn: (bot: DingTalkBot) => updateDingTalkBot(bot.id as number, { ...bot, enabled: bot.enabled === false }), onSuccess: () => { toast.success('机器人状态已更新'); refreshBots() }, onError: (e: any) => toast.error(e?.message || '状态更新失败') })
+  const testMutation = useMutation({ mutationFn: (id: number) => testDingTalkBot(id), onSuccess: () => toast.success('测试消息已发送'), onError: (e: any) => toast.error(e?.message || '测试发送失败') })
+  const reconnectMutation = useMutation({ mutationFn: (id: number) => reconnectDingTalkBot(id), onSuccess: () => { toast.success('Stream 正在重连'); refreshBots() }, onError: (e: any) => toast.error(e?.message || '重连失败') })
+  const codeMutation = useMutation({
+    mutationFn: (id: number) => generateDingTalkBindingCode(id),
+    onSuccess: (result) => { setBindingCode(unwrap<{ code: string; expiresAt: string }>(result)); toast.success('绑定码已生成，10 分钟内有效') },
+    onError: (e: any) => toast.error(e?.message || '生成绑定码失败'),
   })
-
-  const toggleEnabledMutation = useMutation({
-    mutationFn: (row: DingTalkKey) => {
-      if (!row.id) throw new Error('Key ID 不正确')
-      return updateDingTalkKey(row.id, { ...row, enabled: row.enabled === false })
-    },
-    onSuccess: (_res, row) => {
-      toast.success(row.enabled === false ? '钉钉 Key 已启用' : '钉钉 Key 已禁用')
-      queryClient.invalidateQueries({ queryKey: ['dingtalk-keys'] })
-    },
-    onError: (error: any) => toast.error(error.message || '操作失败'),
+  const bindMutation = useMutation({
+    mutationFn: () => bindDingTalkUser({ botId: botID as number, ...bindingForm }),
+    onSuccess: () => { toast.success('钉钉用户已绑定'); setBindingForm({ dingUserId: '', dingUserName: '', code: '' }); bindingsQuery.refetch() },
+    onError: (e: any) => toast.error(e?.message || '绑定失败'),
   })
+  const deleteBindingMutation = useMutation({ mutationFn: (id: number) => deleteDingTalkBinding(id), onSuccess: () => bindingsQuery.refetch(), onError: (e: any) => toast.error(e?.message || '解绑失败') })
+  const saveAllowMutation = useMutation({
+    mutationFn: () => saveDingTalkAllowlist({ botId: botID as number, ...allowForm, entryType: allowForm.entryType as 'user' | 'group' }),
+    onSuccess: () => { setAllowForm({ entryType: 'user', entryValue: '', description: '', enabled: true }); allowlistQuery.refetch(); toast.success('白名单已保存') },
+    onError: (e: any) => toast.error(e?.message || '白名单保存失败'),
+  })
+  const deleteAllowMutation = useMutation({ mutationFn: (id: number) => deleteDingTalkAllowlist(id), onSuccess: () => allowlistQuery.refetch(), onError: (e: any) => toast.error(e?.message || '白名单删除失败') })
 
-  const openCreate = () => {
-    setEditingKey(null)
-    setDraft(createEmptyDingTalkDraft())
-    setDrawerOpen(true)
-  }
+  const openCreate = () => { setEditingBot(null); setDraft(createEmptyDingTalkDraft()); setDrawerOpen(true) }
+  const openEdit = (bot: DingTalkBot) => { setEditingBot(bot); setDraft({ ...bot, clientSecret: '', webhookSecret: '', webhookToken: bot.webhookToken || '' }); setDrawerOpen(true) }
+  const patchBot = (patch: Partial<DingTalkBot>) => selectedBot?.id && updateDingTalkBot(selectedBot.id, { ...selectedBot, ...patch }).then(refreshBots).catch((e: any) => toast.error(e?.message || '保存失败'))
+  const statusLabel = (status?: string) => ({ connected: '已连接', connecting: '连接中', error: '错误', disconnected: '未连接' } as Record<string, string>)[status || ''] || '未启动'
+  const statusTone = (status?: string): 'success' | 'warning' | 'danger' | 'neutral' => status === 'connected' ? 'success' : status === 'error' ? 'danger' : status === 'connecting' ? 'warning' : 'neutral'
 
-  const openEdit = (row: DingTalkKey) => {
-    setEditingKey(row)
-    setDraft({
-      ...row,
-      accessToken: row.accessToken || '',
-      secret: '',
-    })
-    setDrawerOpen(true)
-  }
-
-  const columns: ColumnDef<DingTalkKey>[] = [
-    {
-      header: 'Key 名称',
-      accessorKey: 'name',
-      cell: ({ row }) => <span className="font-semibold text-foreground">{row.original.name}</span>,
-    },
-    {
-      header: '状态',
-      accessorKey: 'enabled',
-      cell: ({ row }) => <Badge tone={row.original.enabled === false ? 'warning' : 'success'}>{row.original.enabled === false ? '停用' : '启用'}</Badge>,
-    },
-    {
-      header: '提醒范围',
-      cell: ({ row }) => <span className="text-sm text-muted">{formatDingTalkScopes(row.original)}</span>,
-    },
-    {
-      header: '更新时间',
-      accessorKey: 'updatedAt',
-      cell: ({ row }) => <span className="font-mono text-sm">{formatTime(row.original.updatedAt)}</span>,
-    },
-    {
-      header: '操作',
-      meta: { align: 'right' },
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant={row.original.enabled === false ? 'default' : 'outline'}
-            disabled={toggleEnabledMutation.isPending}
-            onClick={() => toggleEnabledMutation.mutate(row.original)}
-          >
-            {row.original.enabled === false ? <Play className="size-4" /> : <Pause className="size-4" />}
-            {row.original.enabled === false ? '启用' : '禁用'}
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => openEdit(row.original)}>
-            <Edit3 className="size-4" />
-            编辑
-          </Button>
-          <Button size="sm" variant="danger" disabled={deleteMutation.isPending} onClick={() => row.original.id && deleteMutation.mutate(row.original.id)}>
-            <Trash2 className="size-4" />
-            删除
-          </Button>
-        </div>
-      ),
-    },
-  ]
-
-  return (
-    <div className="grid gap-4">
-      <PageTitle title="系统设置" description="管理系统级通知 Key，以及每个 Key 可以接收哪些提醒。" />
-      <div className="grid gap-4 md:grid-cols-3">
-        <Metric label="钉钉 Key" value={String(keys.length)} icon={KeyRound} tone="info" badgeLabel="通知" />
-        <Metric label="启用数量" value={String(keys.filter((item) => item.enabled !== false).length)} icon={Bell} tone="success" badgeLabel="启用" />
-        <Metric label="提醒范围" value="4 类" icon={Database} tone="neutral" badgeLabel="范围" />
-      </div>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>钉钉通知 Key</CardTitle>
-              <CardDescription>支持多个机器人 Key；扫描任务中选择其中一个 Key 发送任务结果。</CardDescription>
-            </div>
-            <Button variant="default" onClick={openCreate}>
-              <Plus className="size-4" />
-              添加 Key
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={columns} data={keys} searchPlaceholder="搜索钉钉 Key" emptyTitle="暂无钉钉 Key" paginationStorageKey="settings-dingtalk-keys" />
-        </CardContent>
-      </Card>
-      <Drawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        title={editingKey ? '编辑钉钉 Key' : '添加钉钉 Key'}
-        description="选择该 Key 可以接收的提醒范围，未勾选的场景不会发送到这个机器人。"
-        className="max-w-xl"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setDrawerOpen(false)}>
-              取消
-            </Button>
-            <Button variant="default" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-              {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              保存
-            </Button>
-          </>
-        }
-      >
-        <div className="grid gap-4">
-          <Field label="Key 名称">
-            <Input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="例如：安全通知机器人" />
-          </Field>
-          <Field label="钉钉 access_token">
-            <Input value={draft.accessToken || ''} onChange={(event) => setDraft({ ...draft, accessToken: event.target.value })} placeholder="机器人 webhook 中的 access_token" />
-          </Field>
-          <Field label="钉钉 Secret" hint={editingKey ? '编辑时留空会保留旧 Secret；后端不会回显密钥。' : '如果机器人未开启加签，可以留空。'}>
-            <Input value={draft.secret || ''} onChange={(event) => setDraft({ ...draft, secret: event.target.value })} placeholder="SEC 开头的加签密钥，可留空" />
-          </Field>
-          <div className="grid gap-3 rounded-card border border-border bg-raised p-3">
-            <ToggleField label="添加黑名单时提醒" checked={Boolean(draft.notifyBlacklistAdd)} onChange={(value) => setDraft({ ...draft, notifyBlacklistAdd: value })} />
-            <ToggleField label="解除黑名单时提醒" checked={Boolean(draft.notifyBlacklistRemove)} onChange={(value) => setDraft({ ...draft, notifyBlacklistRemove: value })} />
-            <ToggleField label="Web 扫描任务结束后提醒" checked={Boolean(draft.notifyWebScanComplete)} onChange={(value) => setDraft({ ...draft, notifyWebScanComplete: value })} />
-            <ToggleField label="端口扫描任务结束后提醒" checked={Boolean(draft.notifyPortScanComplete)} onChange={(value) => setDraft({ ...draft, notifyPortScanComplete: value })} />
-          </div>
-        </div>
-      </Drawer>
+  return <div className="grid gap-4">
+    <PageTitle title="钉钉机器人" description="统一管理 Stream 入站、任务创建、AI 对话、通知目标与钉钉用户权限。" />
+    <div className="grid gap-4 md:grid-cols-4">
+      <Metric label="机器人" value={String(bots.length)} icon={Bot} tone="info" badgeLabel="统一配置" />
+      <Metric label="已启用" value={String(bots.filter((item) => item.enabled !== false).length)} icon={ShieldCheck} tone="success" badgeLabel="运行中" />
+      <Metric label="Stream 已连接" value={String(bots.filter((item) => item.streamStatus === 'connected').length)} icon={RadioTower} tone="neutral" badgeLabel="入站" />
+      <Metric label="待补充配置" value={String(bots.filter((item) => item.migrationPending).length)} icon={CircleAlert} tone="warning" badgeLabel="迁移" />
     </div>
-  )
+    <Card><CardHeader><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><CardTitle>统一钉钉机器人</CardTitle><CardDescription>旧通知 Key 已迁移为“仅通知机器人”；补充 Client ID/Secret 后即可开启 Stream、任务创建和 AI。</CardDescription></div><Button onClick={openCreate}><Plus className="size-4" />添加机器人</Button></div></CardHeader><CardContent>
+      {bots.length === 0 ? <div className="rounded-card border border-dashed border-border p-8 text-center text-sm text-muted">暂无钉钉机器人配置</div> : <div className="grid gap-3">{bots.map((bot) => <div key={bot.id} className={`rounded-card border p-4 ${selectedBot?.id === bot.id ? 'border-foreground bg-raised' : 'border-border'}`}><div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><button type="button" className="min-w-0 text-left" onClick={() => setSelectedBotID(bot.id || null)}><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-foreground">{bot.name}</span><Badge tone={bot.enabled === false ? 'warning' : 'success'}>{bot.enabled === false ? '已停用' : '已启用'}</Badge><Badge tone={statusTone(bot.streamStatus)}><CircleDot className="mr-1 inline size-3" />{statusLabel(bot.streamStatus)}</Badge>{bot.migrationPending && <Badge tone="warning">待补充 Stream 配置</Badge>}</div><div className="mt-2 flex flex-wrap gap-2 text-xs text-muted"><span>入站：{bot.clientId ? 'Client ID 已配置' : '未配置'}</span><span>出站：{bot.maskedWebhookToken ? 'Webhook 已配置' : (bot.defaultTargetType && bot.defaultTargetValue ? '默认目标已配置' : '未配置通知目标')}</span><span>任务：{bot.allowTaskCreation ? '开启' : '关闭'}</span><span>AI：{bot.allowAiChat ? '开启' : '关闭'}</span></div>{bot.streamLastError && <div className="mt-2 text-xs text-danger">Stream 错误：{bot.streamLastError}</div>}</button><div className="flex flex-wrap gap-2 xl:justify-end"><Button size="sm" variant="outline" onClick={() => bot.id && testMutation.mutate(bot.id)} disabled={!bot.id || testMutation.isPending}><Send className="size-4" />测试发送</Button><Button size="sm" variant="outline" onClick={() => bot.id && reconnectMutation.mutate(bot.id)} disabled={!bot.id || reconnectMutation.isPending}><RefreshCw className="size-4" />重连</Button><Button size="sm" variant="outline" onClick={() => toggleMutation.mutate(bot)} disabled={!bot.id || toggleMutation.isPending}>{bot.enabled === false ? <Play className="size-4" /> : <Pause className="size-4" />}{bot.enabled === false ? '启用' : '停用'}</Button><Button size="sm" variant="outline" onClick={() => openEdit(bot)}><Edit3 className="size-4" />编辑</Button><Button size="sm" variant="danger" onClick={() => bot.id && window.confirm(`确认删除机器人“${bot.name}”？相关任务通知配置将失效。`) && deleteMutation.mutate(bot.id)}><Trash2 className="size-4" />删除</Button></div></div></div>)}</div>}
+    </CardContent></Card>
+    {selectedBot && <div className="grid gap-4 xl:grid-cols-2"><Card><CardHeader><CardTitle>机器人能力与通知</CardTitle><CardDescription>{selectedBot.name} 的入站权限、出站通知开关和默认目标。</CardDescription></CardHeader><CardContent className="grid gap-3"><div className="grid gap-2 sm:grid-cols-2"><div className="rounded-card border border-border p-3 text-sm"><div className="text-muted">Stream 状态</div><div className="mt-1 font-semibold">{statusLabel(selectedBot.streamStatus)}{selectedBot.streamConnectedAt ? ` · ${formatTime(selectedBot.streamConnectedAt)}` : ''}</div></div><div className="rounded-card border border-border p-3 text-sm"><div className="text-muted">默认通知目标</div><div className="mt-1 font-semibold">{selectedBot.defaultTargetType && selectedBot.defaultTargetValue ? `${selectedBot.defaultTargetType}: ${selectedBot.defaultTargetValue}` : '未配置通知目标'}</div></div></div><div className="grid gap-2 rounded-card border border-border bg-raised p-3"><ToggleField label="允许 @机器人创建任务" checked={Boolean(selectedBot.allowTaskCreation)} onChange={(value) => patchBot({ allowTaskCreation: value })} /><ToggleField label="允许钉钉 AI 对话" checked={Boolean(selectedBot.allowAiChat)} onChange={(value) => patchBot({ allowAiChat: value })} /><ToggleField label="任务完成通知" checked={Boolean(selectedBot.notifyTaskCompleted)} onChange={(value) => patchBot({ notifyTaskCompleted: value })} /><ToggleField label="任务失败通知" checked={Boolean(selectedBot.notifyTaskFailed)} onChange={(value) => patchBot({ notifyTaskFailed: value })} /><ToggleField label="任务取消通知" checked={Boolean(selectedBot.notifyTaskCancelled)} onChange={(value) => patchBot({ notifyTaskCancelled: value })} /><ToggleField label="黑名单添加 / 解除通知" checked={Boolean(selectedBot.notifyBlacklistAdd && selectedBot.notifyBlacklistRemove)} onChange={(value) => patchBot({ notifyBlacklistAdd: value, notifyBlacklistRemove: value })} /><ToggleField label="Web / 端口扫描通知" checked={Boolean(selectedBot.notifyWebScanComplete && selectedBot.notifyPortScanComplete)} onChange={(value) => patchBot({ notifyWebScanComplete: value, notifyPortScanComplete: value })} /></div></CardContent></Card>
+    <Card><CardHeader><CardTitle>绑定用户与白名单</CardTitle><CardDescription>生成绑定码后，可在钉钉中发送“绑定 ABCD1234”；也可以手动录入用户并维护群聊白名单。</CardDescription></CardHeader><CardContent className="grid gap-4"><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => codeMutation.mutate(selectedBot.id as number)} disabled={codeMutation.isPending}><Link2 className="size-4" />生成绑定码</Button>{bindingCode && <div className="rounded-card border border-success/30 bg-success/5 px-3 py-2 text-sm">绑定码：<strong className="font-mono">{bindingCode.code}</strong> · 截止 {formatTime(bindingCode.expiresAt)}</div>}</div><div className="grid gap-2 rounded-card border border-border p-3 sm:grid-cols-4"><Input placeholder="钉钉用户 ID" value={bindingForm.dingUserId} onChange={(e) => setBindingForm({ ...bindingForm, dingUserId: e.target.value })} /><Input placeholder="用户名称" value={bindingForm.dingUserName} onChange={(e) => setBindingForm({ ...bindingForm, dingUserName: e.target.value })} /><Input placeholder="绑定码" value={bindingForm.code} onChange={(e) => setBindingForm({ ...bindingForm, code: e.target.value })} /><Button onClick={() => bindMutation.mutate()} disabled={bindMutation.isPending || !bindingForm.dingUserId || !bindingForm.code}><Users className="size-4" />手动绑定</Button></div><div className="grid gap-2">{bindings.map((item) => <div key={item.id} className="flex items-center justify-between rounded-card border border-border px-3 py-2 text-sm"><span>{item.dingUserName || '未命名用户'} <span className="font-mono text-xs text-muted">({item.dingUserId})</span></span><Button size="sm" variant="danger" onClick={() => item.id && deleteBindingMutation.mutate(item.id)}><Trash2 className="size-3" /></Button></div>)}{bindings.length === 0 && <div className="text-sm text-muted">暂无绑定用户</div>}</div><div className="grid gap-2 rounded-card border border-border p-3 sm:grid-cols-[120px_1fr_1fr_auto]"><Select value={allowForm.entryType} onChange={(e) => setAllowForm({ ...allowForm, entryType: e.target.value })}><option value="user">用户白名单</option><option value="group">群聊白名单</option></Select><Input placeholder="用户 ID 或群聊 Conversation ID" value={allowForm.entryValue} onChange={(e) => setAllowForm({ ...allowForm, entryValue: e.target.value })} /><Input placeholder="备注（可选）" value={allowForm.description} onChange={(e) => setAllowForm({ ...allowForm, description: e.target.value })} /><Button onClick={() => saveAllowMutation.mutate()} disabled={saveAllowMutation.isPending || !allowForm.entryValue}><ShieldCheck className="size-4" />添加</Button></div><div className="grid gap-2">{allowlist.map((item) => <div key={item.id} className="flex items-center justify-between rounded-card border border-border px-3 py-2 text-sm"><span><Badge tone="neutral">{item.entryType === 'group' ? '群聊' : '用户'}</Badge> <span className="font-mono">{item.entryValue}</span>{item.description && <span className="ml-2 text-muted">{item.description}</span>}</span><Button size="sm" variant="danger" onClick={() => item.id && deleteAllowMutation.mutate(item.id)}><Trash2 className="size-3" /></Button></div>)}{allowlist.length === 0 && <div className="text-sm text-muted">未配置白名单时，绑定用户即可使用；配置后将仅允许名单中的用户或群聊。</div>}</div></CardContent></Card></div>}
+    <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} title={editingBot ? '编辑钉钉机器人' : '添加钉钉机器人'} description="Client Secret、Webhook Token 和 Secret 仅加密保存，编辑时留空会保留旧值。" className="max-w-2xl" footer={<><Button variant="outline" onClick={() => setDrawerOpen(false)}>取消</Button><Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>{saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}保存</Button></>}><div className="grid gap-4"><Field label="机器人名称"><Input value={draft.name || ''} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="例如：FusionWeb 安全机器人" /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Stream Client ID"><Input value={draft.clientId || ''} onChange={(e) => setDraft({ ...draft, clientId: e.target.value })} placeholder="钉钉应用 Client ID" /></Field><Field label="Tenant ID（可选）"><Input value={draft.tenantId || ''} onChange={(e) => setDraft({ ...draft, tenantId: e.target.value })} placeholder="企业 / 租户标识" /></Field></div><Field label="Stream Client Secret" hint={editingBot ? '留空保留原 Secret。' : '用于接收钉钉 Stream 消息。'}><Input type="password" value={draft.clientSecret || ''} onChange={(e) => setDraft({ ...draft, clientSecret: e.target.value })} placeholder={editingBot ? '留空保留原 Secret' : '请输入 Client Secret'} /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="出站 Webhook Token" hint="只配置 Stream 时可以留空。"><Input value={draft.webhookToken || ''} onChange={(e) => setDraft({ ...draft, webhookToken: e.target.value })} placeholder="access_token" /></Field><Field label="出站 Webhook Secret" hint={editingBot ? '留空保留原 Secret。' : '未开启加签可留空。'}><Input type="password" value={draft.webhookSecret || ''} onChange={(e) => setDraft({ ...draft, webhookSecret: e.target.value })} placeholder="SEC..." /></Field></div><div className="grid gap-3 sm:grid-cols-2"><Field label="默认通知目标类型"><Select value={draft.defaultTargetType || ''} onChange={(e) => setDraft({ ...draft, defaultTargetType: e.target.value })}><option value="">未指定</option><option value="group">群聊</option><option value="user">用户</option><option value="webhook">Webhook</option></Select></Field><Field label="默认通知目标值"><Input value={draft.defaultTargetValue || ''} onChange={(e) => setDraft({ ...draft, defaultTargetValue: e.target.value })} placeholder="群聊 ID / 用户 ID / 说明" /></Field></div><div className="grid gap-2 rounded-card border border-border bg-raised p-3"><ToggleField label="启用机器人" checked={draft.enabled !== false} onChange={(value) => setDraft({ ...draft, enabled: value })} /><ToggleField label="允许任务创建" checked={Boolean(draft.allowTaskCreation)} onChange={(value) => setDraft({ ...draft, allowTaskCreation: value })} /><ToggleField label="允许 AI 对话" checked={Boolean(draft.allowAiChat)} onChange={(value) => setDraft({ ...draft, allowAiChat: value })} /><ToggleField label="仅通知机器人（迁移配置）" checked={Boolean(draft.notificationOnly)} onChange={(value) => setDraft({ ...draft, notificationOnly: value })} /></div><div className="grid gap-2 rounded-card border border-border bg-raised p-3"><div className="text-sm font-semibold">通知事件</div><ToggleField label="任务完成" checked={Boolean(draft.notifyTaskCompleted)} onChange={(value) => setDraft({ ...draft, notifyTaskCompleted: value })} /><ToggleField label="任务失败" checked={Boolean(draft.notifyTaskFailed)} onChange={(value) => setDraft({ ...draft, notifyTaskFailed: value })} /><ToggleField label="任务取消" checked={Boolean(draft.notifyTaskCancelled)} onChange={(value) => setDraft({ ...draft, notifyTaskCancelled: value })} /><ToggleField label="添加 / 解除黑名单" checked={Boolean(draft.notifyBlacklistAdd && draft.notifyBlacklistRemove)} onChange={(value) => setDraft({ ...draft, notifyBlacklistAdd: value, notifyBlacklistRemove: value })} /><ToggleField label="Web / 端口扫描完成" checked={Boolean(draft.notifyWebScanComplete && draft.notifyPortScanComplete)} onChange={(value) => setDraft({ ...draft, notifyWebScanComplete: value, notifyPortScanComplete: value })} /></div></div></Drawer>
+  </div>
 }
 
-function createEmptyDingTalkDraft(): DingTalkKey {
-  return {
-    name: '',
-    accessToken: '',
-    secret: '',
-    notifyBlacklistAdd: true,
-    notifyBlacklistRemove: true,
-    notifyWebScanComplete: true,
-    notifyPortScanComplete: true,
-    enabled: true,
-  }
-}
+function createEmptyDingTalkDraft(): DingTalkBot { return { name: '', enabled: true, notifyTaskCompleted: true, notifyTaskFailed: true, notifyTaskCancelled: true, notifyBlacklistAdd: true, notifyBlacklistRemove: true, notifyWebScanComplete: true, notifyPortScanComplete: true, allowTaskCreation: true, allowAiChat: true, notificationOnly: false } }
 
-function formatDingTalkScopes(item: DingTalkKey) {
-  const scopes = [
-    item.notifyBlacklistAdd ? '添加黑名单' : '',
-    item.notifyBlacklistRemove ? '解除黑名单' : '',
-    item.notifyWebScanComplete ? 'Web 扫描结束' : '',
-    item.notifyPortScanComplete ? '端口扫描结束' : '',
-  ].filter(Boolean)
-  return scopes.length ? scopes.join(' / ') : '未选择'
-}

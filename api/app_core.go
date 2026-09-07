@@ -2,6 +2,7 @@ package api
 
 import (
 	"FusionWeb/backend/logger"
+	"FusionWeb/backend/models"
 	"FusionWeb/backend/scheduler"
 	"FusionWeb/backend/service"
 	"FusionWeb/backend/websocket"
@@ -78,6 +79,15 @@ func (a *App) Init(ctx context.Context) {
 	// NewTaskScheduler 接收最大并发数。
 	a.scheduler = scheduler.NewTaskScheduler(10) // 默认并发数 10
 	// a.scheduler.Start() // TaskScheduler 自动启动，无需手动 Start
+
+	dingTalk := service.NewDingTalkBotService()
+	if err := dingTalk.MigrateLegacyDingTalkKeys(); err != nil {
+		logger.Warn("迁移旧钉钉通知配置失败: %v", err)
+	}
+	dingTalk.SetTaskCreator(func(config models.TaskConfig, userID uint) (string, error) {
+		return a.StartScanTaskWithUser(config, userID)
+	})
+	dingTalk.Start(ctx)
 
 	a.ready = true
 	logger.Info("Application initialized")

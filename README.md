@@ -144,14 +144,16 @@ flowchart TD
 ### 生产部署
 
 ```bash
-./fusionweb.sh install
+./fusionweb.sh
 ```
 
 Windows 环境使用：
 
 ```bat
-fusionweb.bat install
+fusionweb.bat
 ```
+
+运行后进入交互式管理菜单，按数字选项执行安装、升级、卸载、启停服务、查看状态与日志等操作。
 
 ### 开发模式
 
@@ -167,3 +169,24 @@ backend/    核心业务与公共模块
 frontend/   Web 前端
 worker/     Worker 执行器
 ```
+
+
+## AI、钉钉机器人与凭据安全
+
+系统设置中的 **AI API Key**、统一 **钉钉机器人**凭据均使用服务端 AES-256-GCM 加密后写入数据库，前端只显示脱敏状态。生产环境必须在 API 服务和执行迁移的所有实例中固定设置：
+
+```dotenv
+FUSIONWEB_ENCRYPTION_KEY=<长度足够且随机的固定密钥>
+```
+
+不要在部署后随机重新生成该值。密钥改变或丢失后，历史 AI Key、钉钉 Client Secret、Webhook Token 等密文将无法解密，需要重新录入；旧数据库不会自动恢复明文凭据。部署脚本只负责传递环境变量，不会把密钥写入代码或日志。
+
+钉钉功能统一在“系统设置 → 钉钉机器人”管理：
+
+- 配置 Stream Client ID/Secret 后接收 `@机器人` 消息；
+- 配置 Webhook Token/Secret，或配置默认群聊/用户通知目标，发送主动通知；
+- 通过绑定码绑定 FusionWeb 用户，再按用户和群聊白名单放行任务创建与 AI 对话；
+- 机器人任务创建会保存机器人 ID、会话 ID和源消息 ID，同一消息重试不会重复创建任务；
+- 旧 `dingtalk_keys` 会在启动时迁移为“仅通知机器人”，迁移失败会保留原始配置并记录日志。
+
+如果机器人只有 Stream 入站配置而没有出站 Webhook 或默认通知目标，仍可创建任务和进行 AI 对话，但不会发送主动任务完成通知，页面会显示“未配置通知目标”。

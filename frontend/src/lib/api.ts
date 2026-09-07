@@ -96,21 +96,85 @@ export interface TaskConfig {
   ding_talk_token?: string
   ding_talk_secret?: string
   ding_talk_key_id?: number
+  dingtalk_bot_id?: number
+  dingtalk_conversation_id?: string
+  dingtalk_conversation_type?: string
+  dingtalk_source_user_id?: string
+  dingtalk_source_message_id?: string
   [key: string]: any
 }
 
-export interface DingTalkKey {
+export interface DingTalkBot {
   id?: number
   name: string
-  accessToken?: string
-  secret?: string
+  enabled?: boolean
+  clientId?: string
+  clientSecret?: string
+  tenantId?: string
+  webhookToken?: string
+  webhookSecret?: string
+  maskedClientSecret?: string
+  maskedWebhookToken?: string
+  maskedWebhookSecret?: string
+  defaultTargetType?: string
+  defaultTargetValue?: string
+  notifyTaskCompleted?: boolean
+  notifyTaskFailed?: boolean
+  notifyTaskCancelled?: boolean
   notifyBlacklistAdd?: boolean
   notifyBlacklistRemove?: boolean
   notifyWebScanComplete?: boolean
   notifyPortScanComplete?: boolean
-  enabled?: boolean
+  allowTaskCreation?: boolean
+  allowAiChat?: boolean
+  notificationOnly?: boolean
+  streamStatus?: string
+  streamLastError?: string
+  streamConnectedAt?: string
+  migrationPending?: boolean
   createdAt?: string
   updatedAt?: string
+}
+
+export interface DingTalkBinding { id?: number; botId: number; userId: number; dingUserId: string; dingUserName?: string; conversationId?: string; enabled?: boolean }
+export interface DingTalkAllowlist { id?: number; botId: number; entryType: 'user' | 'group' | string; entryValue: string; enabled?: boolean; description?: string }
+
+export type AIProvider = 'openai' | 'deepseek' | 'anthropic' | 'openai_compatible' | string
+
+export interface AIAPIKey {
+  id?: number
+  provider: AIProvider
+  name: string
+  apiKey?: string
+  maskedApiKey?: string
+  baseUrl?: string
+  model?: string
+  enabled?: boolean
+  isDefault?: boolean
+  description?: string
+  lastTestStatus?: string
+  lastTestMessage?: string
+  lastTestAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface AIChatMessage {
+  role: 'system' | 'user' | 'assistant' | string
+  content: string
+}
+
+export interface AIChatResponse {
+  provider: string
+  model: string
+  content: string
+  usage?: Record<string, any>
+}
+
+export interface AIAPIKeyTestResult {
+  status: string
+  message: string
+  at: string
 }
 
 export interface TaskRow {
@@ -700,20 +764,44 @@ export function saveAccessBlacklistByCategory(config: Record<string, string[]>) 
   return request.post('/api/v1/access-blacklist/save', config)
 }
 
-export function getDingTalkKeys() {
-  return request.get('/api/v1/system/dingtalk-keys')
+export function getDingTalkBots() { return request.get<DingTalkBot[]>('/api/v1/system/dingtalk-bots') }
+export function createDingTalkBot(data: DingTalkBot) { return request.post<DingTalkBot>('/api/v1/system/dingtalk-bots', data) }
+export function updateDingTalkBot(id: number | string, data: DingTalkBot) { return request.put<DingTalkBot>(`/api/v1/system/dingtalk-bots/${id}`, data) }
+export function deleteDingTalkBot(id: number | string) { return request.delete(`/api/v1/system/dingtalk-bots/${id}`) }
+export function testDingTalkBot(id: number | string) { return request.post(`/api/v1/system/dingtalk-bots/${id}/test`, {}) }
+export function reconnectDingTalkBot(id: number | string) { return request.post(`/api/v1/system/dingtalk-bots/${id}/reconnect`, {}) }
+export function getDingTalkBotStatus(id: number | string) { return request.get<DingTalkBot>(`/api/v1/system/dingtalk-bots/${id}/status`) }
+export function generateDingTalkBindingCode(botId: number) { return request.post<{ code: string; expiresAt: string }>(`/api/v1/system/dingtalk-bindings/code`, { botId }) }
+export function bindDingTalkUser(data: { botId: number; dingUserId: string; dingUserName?: string; code: string }) { return request.post('/api/v1/system/dingtalk-bindings', data) }
+export function listDingTalkBindings(botId: number) { return request.get<DingTalkBinding[]>(`/api/v1/system/dingtalk-bindings?botId=${botId}`) }
+export function deleteDingTalkBinding(id: number) { return request.delete(`/api/v1/system/dingtalk-bindings/${id}`) }
+export function listDingTalkAllowlist(botId: number) { return request.get<DingTalkAllowlist[]>(`/api/v1/system/dingtalk-allowlist?botId=${botId}`) }
+export function saveDingTalkAllowlist(data: DingTalkAllowlist) { return request.post<DingTalkAllowlist>('/api/v1/system/dingtalk-allowlist', data) }
+export function updateDingTalkAllowlist(id: number, data: DingTalkAllowlist) { return request.put<DingTalkAllowlist>(`/api/v1/system/dingtalk-allowlist/${id}`, data) }
+export function deleteDingTalkAllowlist(id: number) { return request.delete(`/api/v1/system/dingtalk-allowlist/${id}`) }
+
+export function getAIAPIKeys() {
+  return request.get<AIAPIKey[]>('/api/v1/system/ai-api-keys')
 }
 
-export function createDingTalkKey(data: DingTalkKey) {
-  return request.post('/api/v1/system/dingtalk-keys', data)
+export function createAIAPIKey(data: AIAPIKey) {
+  return request.post<AIAPIKey>('/api/v1/system/ai-api-keys', data)
 }
 
-export function updateDingTalkKey(id: number | string, data: DingTalkKey) {
-  return request.put(`/api/v1/system/dingtalk-keys/${id}`, data)
+export function updateAIAPIKey(id: number | string, data: AIAPIKey) {
+  return request.put<AIAPIKey>(`/api/v1/system/ai-api-keys/${id}`, data)
 }
 
-export function deleteDingTalkKey(id: number | string) {
-  return request.delete(`/api/v1/system/dingtalk-keys/${id}`)
+export function deleteAIAPIKey(id: number | string) {
+  return request.delete(`/api/v1/system/ai-api-keys/${id}`)
+}
+
+export function testAIAPIKey(id: number | string) {
+  return request.post<AIAPIKeyTestResult>(`/api/v1/system/ai-api-keys/${id}/test`, {}, { timeout: 130000 })
+}
+
+export function sendAIChat(data: { keyId?: number; provider?: string; model?: string; systemPrompt?: string; messages: AIChatMessage[]; temperature?: number; maxTokens?: number }) {
+  return request.post<AIChatResponse>('/api/v1/ai/chat', data, { timeout: 130000 })
 }
 
 export function getUsers(params?: { page?: number; pageSize?: number }) {
@@ -927,4 +1015,5 @@ export function testSpaceEngineKey(id: number | string) {
 export function searchSpaceOnline(data: { provider: string; query: string; page?: number; pageSize?: number }) {
   return request.post<SpaceSearchResponse>('/api/v1/space/search', data, { timeout: 60000 })
 }
+
 

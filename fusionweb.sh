@@ -14,8 +14,10 @@ cd "${SCRIPT_DIR}" || exit 1
 
 if [[ -t 1 ]]; then
   GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'; CYAN='\033[36m'; RESET='\033[0m'
+  BWHITE='\033[1;37m'; ORANGE='\033[38;5;214m'; BCYAN='\033[1;36m'
 else
   GREEN=''; YELLOW=''; RED=''; CYAN=''; RESET=''
+  BWHITE=''; ORANGE=''; BCYAN=''
 fi
 
 info() { printf '%b[FusionWeb]%b %s\n' "${GREEN}" "${RESET}" "$*"; }
@@ -367,14 +369,6 @@ cmd_logs() {
   fi
 }
 
-cmd_version() {
-  local source_version="unknown" deployed_version="not-installed"
-  [[ -f "${VERSION_FILE}" ]] && source_version="$(read_version_file)"
-  [[ -f "${ENV_FILE}" ]] && deployed_version="$(get_env FUSIONWEB_VERSION)"
-  echo "FusionWeb 管理脚本: ${SCRIPT_VERSION}"
-  echo "源码 VERSION     : ${source_version}"
-  echo "部署镜像版本     : ${deployed_version:-unknown}"
-}
 
 cmd_check_update() {
   command_exists git || fail "未检测到 git。"
@@ -443,41 +437,84 @@ cmd_uninstall() {
   info "容器和数据卷已删除；源码与 .env 已保留。"
 }
 
-cmd_help() {
+print_banner() {
+  local banner_version="unknown"
+  [[ -f "${VERSION_FILE}" ]] && banner_version="$(read_version_file)"
+  printf '%b\n' "${BWHITE}"
   cat <<'EOF'
-FusionWeb 一键管理脚本
-
-用法：./fusionweb.sh <command> [service]
-
-命令：
-  install       初始化 .env、生成密钥、拉取并启动六个服务
-  upgrade       Git 快进更新后切换 VERSION 镜像，不删除数据卷
-  check-update  比较当前部署版本与 Git 上游 VERSION
-  start         启动或重建服务并等待就绪
-  stop          停止服务，保留容器和数据卷
-  restart       重启全部服务并等待就绪
-  status        显示 Compose 和六个容器状态
-  logs [name]   跟踪全部或指定服务日志
-  version       显示管理脚本、源码和部署版本
-  uninstall     确认后删除容器及全部数据卷，保留源码和 .env
-  help          显示帮助
-
-日志服务名：postgres、redis、minio、api、web、worker、all
+  ███████╗ ██╗   ██╗ ███████╗ ██╗  ██████╗  ███╗   ██╗ ██╗    ██╗ ███████╗ ██████╗
+  ██╔════╝ ██║   ██║ ██╔════╝ ██║ ██╔═══██╗ ████╗  ██║ ██║    ██║ ██╔════╝ ██╔══██╗
+  █████╗   ██║   ██║ ███████╗ ██║ ██║   ██║ ██╔██╗ ██║ ██║ █╗ ██║ █████╗   ██████╔╝
+  ██╔══╝   ██║   ██║ ╚════██║ ██║ ██║   ██║ ██║╚██╗██║ ██║███╗██║ ██╔══╝   ██╔══██╗
+  ██║      ╚██████╔╝ ███████║ ██║ ╚██████╔╝ ██║ ╚████║ ╚███╔███╔╝ ███████╗ ██████╔╝
+  ╚═╝       ╚═════╝  ╚══════╝ ╚═╝  ╚═════╝  ╚═╝  ╚═══╝  ╚══╝╚══╝  ╚══════╝ ╚═════╝
 EOF
+  printf '%b' "${ORANGE}"
+  printf '  FusionWeb 管理工具  v%s\n' "${SCRIPT_VERSION}"
+  printf '  企业级分布式网络安全扫描平台\n'
+  printf '  当前版本：%s\n' "${banner_version}"
+  printf '  当前时间：%s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+  printf '%b\n' "${RESET}"
 }
 
-case "${1:-help}" in
-  install) cmd_install ;;
-  upgrade) cmd_upgrade ;;
-  check-update) cmd_check_update ;;
-  start) cmd_start ;;
-  stop) cmd_stop ;;
-  restart) cmd_restart ;;
-  status) cmd_status ;;
-  logs) cmd_logs "${2:-all}" ;;
-  version) cmd_version ;;
-  uninstall) cmd_uninstall ;;
-  help|-h|--help) cmd_help ;;
-  *) fail "未知命令：$1。运行 ./fusionweb.sh help 查看用法。" ;;
-esac
+print_menu() {
+  printf '%b' "${BCYAN}"
+  cat <<'EOF'
+
+  1. 一键安装
+  2. 一键升级
+  3. 一键卸载
+  4. 查看状态
+  5. 查看日志
+  6. 启动服务
+  7. 停止服务
+  8. 重启服务
+  9. 检查更新
+  0. 退出
+
+EOF
+  printf '%b' "${RESET}"
+}
+
+menu_logs() {
+  local svc=""
+  printf '请输入服务名（postgres/redis/minio/api/web/worker/all，默认 all）：'
+  read -r svc || true
+  cmd_logs "${svc:-all}"
+}
+
+menu_loop() {
+  local choice
+  while :; do
+    clear 2>/dev/null || printf '\033[2J\033[H'
+    print_banner
+    print_menu
+    printf '%b请输入选项：%b' "${BWHITE}" "${RESET}"
+    choice=""
+    if ! read -r choice; then
+      echo
+      return 0
+    fi
+    choice="${choice%$'\r'}"
+    echo
+    case "${choice}" in
+      1) ( cmd_install ) ;;
+      2) ( cmd_upgrade ) ;;
+      3) ( cmd_uninstall ) ;;
+      4) ( cmd_status ) ;;
+      5) ( menu_logs ) ;;
+      6) ( cmd_start ) ;;
+      7) ( cmd_stop ) ;;
+      8) ( cmd_restart ) ;;
+      9) ( cmd_check_update ) ;;
+      0) info "已退出 FusionWeb 管理工具。"; return 0 ;;
+      *) warn "无效选项：${choice}" ;;
+    esac
+    echo
+    read -r -p "按回车键返回主菜单……" || return 0
+  done
+}
+
+# 纯交互式菜单模式：不接收命令行参数。
+menu_loop
 

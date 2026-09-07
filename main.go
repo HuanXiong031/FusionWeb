@@ -64,4 +64,5 @@ func main() {
 	if err := server.Shutdown(ctx); err != nil {
 		logger.Warn("HTTP 服务关闭失败: %v", err)
 	}
+	service.NewDingTalkBotService().StopAll()
 }

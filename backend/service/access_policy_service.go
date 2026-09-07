@@ -507,7 +507,7 @@ func normalizeAccessPolicyTime(value, fallback string) (string, error) {
 	return parsed.In(time.FixedZone("CST", 8*3600)).Format("2006-01-02 15:04:05"), nil
 }
 
-func notifyAccessBlacklistChange(event DingTalkNotifyEvent, category, item, startsAt, expiresAt, source string) {
+func notifyAccessBlacklistChange(event DingTalkEvent, category, item, startsAt, expiresAt, source string) {
 	action := "添加访问黑名单"
 	if event == DingTalkEventBlacklistRemove {
 		action = "解除访问黑名单"
@@ -530,5 +530,5 @@ func notifyAccessBlacklistChange(event DingTalkNotifyEvent, category, item, star
 	title := action
 	text := fmt.Sprintf("### %s\n\n- **类型**: %s\n- **访问来源**: %s\n- **限制目标**: `%s`\n- **生效范围**: %s\n- **通知时间**: %s",
 		action, categoryLabel, source, item, activeRange, utils.GetCurrentTimeString())
-	NotifyDingTalkEvent(event, title, text)
+	NewDingTalkBotService().NotifyEvent(event, title, text)
 }
