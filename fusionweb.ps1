@@ -1,4 +1,4 @@
-﻿# FusionWeb 交互式管理菜单（仅菜单模式，不接受命令行参数）。
+# FusionWeb 交互式管理菜单（仅菜单模式，不接受命令行参数）。
 #Requires -Version 5.1
 
 $SCRIPT_VERSION = '2.0.0'
@@ -154,6 +154,7 @@ function Ensure-Env {
   Ensure-Secret 'FUSIONWEB_JWT_SECRET' '' 48
   Ensure-Secret 'FUSIONWEB_BASIC_PASS' '' 18
   Ensure-Secret 'FUSIONWEB_WORKER_KEY' 'change-me-worker-key' 32
+  Ensure-Secret 'FUSIONWEB_ENCRYPTION_KEY' '' 48
   Sync-RemoteConnectionEnv
 }
 

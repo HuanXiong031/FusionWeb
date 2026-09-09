@@ -1,6 +1,10 @@
 package service
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/open-dingtalk/dingtalk-stream-sdk-go/chatbot"
+)
 
 func TestParseDingTalkTaskCommand(t *testing.T) {
 	tests := []struct {
@@ -81,5 +85,59 @@ func TestResolveDingTalkTarget(t *testing.T) {
 	conversation, users, kind = resolveDingTalkTarget("", "", "", "user", "staff-1, staff-2;staff-3")
 	if conversation != "" || kind != "user" || len(users) != 3 {
 		t.Fatalf("user target = (%q, %#v, %q)", conversation, users, kind)
+	}
+}
+
+func TestParseDingTalkBindingCommand(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "Chinese", in: "绑定 62FB2267", want: "62FB2267"},
+		{name: "English case insensitive", in: "bind 62fb2267", want: "62FB2267"},
+		{name: "Mention prefix", in: "@FusionWeb安全机器人 绑定 62FB2267", want: "62FB2267"},
+		{name: "Non breaking space and colon", in: "@FusionWeb安全机器人\u00a0绑定：62FB2267", want: "62FB2267"},
+		{name: "Full width spaces", in: " @机器人　绑定　62FB2267 ", want: "62FB2267"},
+		{name: "Text around command", in: "请绑定 62FB2267，谢谢", want: "62FB2267"},
+		{name: "No code", in: "绑定", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseDingTalkBindingCommand(tt.in); got != tt.want {
+				t.Fatalf("parseDingTalkBindingCommand(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDingTalkMessageIDUsesFallbackWhenSDKOmitsMessageID(t *testing.T) {
+	data := &chatbot.BotCallbackDataModel{
+		ConversationId: "cid-1",
+		SenderId:       "user-1",
+		SenderStaffId:  "staff-1",
+		CreateAt:       123,
+	}
+	first := dingTalkMessageID(7, data, "绑定 62FB2267")
+	second := dingTalkMessageID(7, data, "绑定 62FB2267")
+	if first == "" || first != second || len(first) != len("fallback-")+32 {
+		t.Fatalf("fallback message id = %q, second = %q", first, second)
+	}
+	data.MsgId = "sdk-message-id"
+	if got := dingTalkMessageID(7, data, "内容"); got != "sdk-message-id" {
+		t.Fatalf("message id = %q, want SDK id", got)
+	}
+}
+
+func TestDingTalkSenderIDsPrefersStaffIDAndDeduplicates(t *testing.T) {
+	data := &chatbot.BotCallbackDataModel{SenderId: "user-1", SenderStaffId: "staff-1"}
+	got := dingTalkSenderIDs(data)
+	if len(got) != 2 || got[0] != "staff-1" || got[1] != "user-1" {
+		t.Fatalf("sender ids = %#v", got)
+	}
+	data.SenderId = "staff-1"
+	got = dingTalkSenderIDs(data)
+	if len(got) != 1 || got[0] != "staff-1" {
+		t.Fatalf("deduplicated sender ids = %#v", got)
 	}
 }

@@ -571,13 +571,7 @@ func isDingTalkSingleConversation(conversationType string) bool {
 }
 
 func dingTalkSourceUserID(data *chatbot.BotCallbackDataModel) string {
-	if data == nil {
-		return ""
-	}
-	if staffID := strings.TrimSpace(data.SenderStaffId); staffID != "" {
-		return staffID
-	}
-	return strings.TrimSpace(data.SenderId)
+	return primaryDingTalkSenderID(data)
 }
 
 type dingTalkAccessTokenResponse struct {
@@ -769,11 +763,13 @@ func (s *DingTalkBotService) callback(botID int) chatbot.IChatBotMessageHandler 
 }
 
 func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data *chatbot.BotCallbackDataModel) error {
-	if data == nil || strings.TrimSpace(data.MsgId) == "" {
+	if data == nil {
 		return nil
 	}
-	content := strings.TrimSpace(data.Text.Content)
-	res, err := database.DB.Exec(`INSERT INTO dingtalk_messages (bot_id,message_id,conversation_id,conversation_type,sender_id,sender_staff_id,content,processed_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT (bot_id,message_id) DO NOTHING`, botID, data.MsgId, data.ConversationId, data.ConversationType, data.SenderId, data.SenderStaffId, content)
+	content := normalizeDingTalkText(data.Text.Content)
+	messageID := dingTalkMessageID(botID, data, content)
+	logger.Info("钉钉入站消息: bot=%d msg=%s sender=%s staff=%s conv=%s content=%q", botID, maskedDingTalkValue(messageID), maskedDingTalkValue(data.SenderId), maskedDingTalkValue(data.SenderStaffId), maskedDingTalkValue(data.ConversationId), truncateDing(content, 80))
+	res, err := database.DB.Exec(`INSERT INTO dingtalk_messages (bot_id,message_id,conversation_id,conversation_type,sender_id,sender_staff_id,content,processed_at) VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT (bot_id,message_id) DO NOTHING`, botID, messageID, data.ConversationId, data.ConversationType, data.SenderId, data.SenderStaffId, content)
 	if err != nil {
 		return err
 	}
@@ -833,13 +829,13 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 		cfg.DingTalkConversationID = data.ConversationId
 		cfg.DingTalkConversationType = data.ConversationType
 		cfg.DingTalkSourceUserID = dingTalkSourceUserID(data)
-		cfg.DingTalkSourceMessageID = data.MsgId
+		cfg.DingTalkSourceMessageID = messageID
 		taskID, err := creator(cfg, uint(userID))
 		if err != nil {
 			_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("任务创建失败："+err.Error()))
 			return nil
 		}
-		_, _ = database.DB.Exec(`UPDATE dingtalk_messages SET task_id=? WHERE bot_id=? AND message_id=?`, taskID, botID, data.MsgId)
+		_, _ = database.DB.Exec(`UPDATE dingtalk_messages SET task_id=? WHERE bot_id=? AND message_id=?`, taskID, botID, messageID)
 		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("任务已创建："+taskID))
 		return nil
 	}
@@ -850,26 +846,84 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 	return s.handleDingTalkAI(ctx, botID, userID, data, content)
 }
 
+var dingTalkBindingCommandRE = regexp.MustCompile(`(?i)(?:bind|绑定)\s*[:：]?\s*([a-z0-9]{6,16})`)
+
+func dingTalkMessageID(botID int, data *chatbot.BotCallbackDataModel, content string) string {
+	if data == nil {
+		return ""
+	}
+	if msgID := strings.TrimSpace(data.MsgId); msgID != "" {
+		return msgID
+	}
+	base := fmt.Sprintf("%d|%s|%s|%s|%s|%d", botID, strings.TrimSpace(data.ConversationId), strings.TrimSpace(data.SenderStaffId), strings.TrimSpace(data.SenderId), content, data.CreateAt)
+	return "fallback-" + sha256Hex(base)[:32]
+}
+
+func normalizeDingTalkText(v string) string {
+	replacer := strings.NewReplacer(
+		"\u00a0", " ",
+		"\u1680", " ",
+		"\u180e", "",
+		"\u2000", " ", "\u2001", " ", "\u2002", " ", "\u2003", " ", "\u2004", " ",
+		"\u2005", " ", "\u2006", " ", "\u2007", " ", "\u2008", " ", "\u2009", " ", "\u200a", " ",
+		"\u200b", "", "\u200c", "", "\u200d", "",
+		"\u2028", " ", "\u2029", " ",
+		"\u202f", " ",
+		"\u205f", " ",
+		"\u3000", " ",
+		"\ufeff", "",
+	)
+	v = replacer.Replace(v)
+	return strings.TrimSpace(strings.Join(strings.Fields(v), " "))
+}
+
 func parseDingTalkBindingCommand(content string) string {
-	content = strings.TrimSpace(content)
-	if strings.HasPrefix(content, "@") {
-		if index := strings.IndexAny(content, " \t\r\n"); index >= 0 {
-			content = strings.TrimSpace(content[index:])
+	content = normalizeDingTalkText(content)
+	m := dingTalkBindingCommandRE.FindStringSubmatch(content)
+	if len(m) < 2 {
+		return ""
+	}
+	return strings.ToUpper(strings.TrimSpace(m[1]))
+}
+
+func dingTalkSenderIDs(data *chatbot.BotCallbackDataModel) []string {
+	if data == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, 2)
+	for _, id := range []string{strings.TrimSpace(data.SenderStaffId), strings.TrimSpace(data.SenderId)} {
+		if id == "" || seen[id] {
+			continue
 		}
+		seen[id] = true
+		out = append(out, id)
 	}
-	parts := strings.Fields(content)
-	if len(parts) == 2 && (strings.EqualFold(parts[0], "bind") || parts[0] == "绑定") {
-		return strings.ToUpper(strings.TrimSpace(parts[1]))
+	return out
+}
+
+func primaryDingTalkSenderID(data *chatbot.BotCallbackDataModel) string {
+	ids := dingTalkSenderIDs(data)
+	if len(ids) == 0 {
+		return ""
 	}
-	return ""
+	return ids[0]
+}
+
+func maskedDingTalkValue(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return ""
+	}
+	runes := []rune(v)
+	if len(runes) <= 8 {
+		return fmt.Sprintf("***(%d)", len(runes))
+	}
+	return string(runes[:4]) + "***" + string(runes[len(runes)-4:])
 }
 
 func (s *DingTalkBotService) lookupBoundUser(botID int, data *chatbot.BotCallbackDataModel) (int, error) {
-	ids := []string{strings.TrimSpace(data.SenderId), strings.TrimSpace(data.SenderStaffId)}
-	for _, dingID := range ids {
-		if dingID == "" {
-			continue
-		}
+	for _, dingID := range dingTalkSenderIDs(data) {
 		var userID int
 		if err := database.DB.QueryRow(`SELECT user_id FROM dingtalk_bindings WHERE bot_id=? AND ding_user_id=? AND enabled=1`, botID, dingID).Scan(&userID); err == nil {
 			return userID, nil
@@ -879,15 +933,15 @@ func (s *DingTalkBotService) lookupBoundUser(botID int, data *chatbot.BotCallbac
 }
 
 func (s *DingTalkBotService) bindIncomingCode(botID int, data *chatbot.BotCallbackDataModel, code string) error {
+	code = strings.ToUpper(strings.TrimSpace(code))
 	var codeID, userID int
 	if err := database.DB.QueryRow(`SELECT id,user_id FROM dingtalk_binding_codes WHERE bot_id=? AND code_hash=? AND used_at IS NULL AND expires_at>CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1`, botID, sha256Hex(code)).Scan(&codeID, &userID); err != nil {
+		logger.Warn("钉钉绑定失败: bot=%d code=%s sender=%s staff=%s err=code_invalid", botID, maskedDingTalkValue(code), maskedDingTalkValue(data.SenderId), maskedDingTalkValue(data.SenderStaffId))
 		return fmt.Errorf("绑定码无效或已过期")
 	}
-	dingID := strings.TrimSpace(data.SenderId)
+	dingID := primaryDingTalkSenderID(data)
 	if dingID == "" {
-		dingID = strings.TrimSpace(data.SenderStaffId)
-	}
-	if dingID == "" {
+		logger.Warn("钉钉绑定失败: bot=%d code=%s sender=%s staff=%s err=empty_sender", botID, maskedDingTalkValue(code), maskedDingTalkValue(data.SenderId), maskedDingTalkValue(data.SenderStaffId))
 		return fmt.Errorf("无法识别钉钉用户")
 	}
 	tx, err := database.DB.Begin()
@@ -895,13 +949,20 @@ func (s *DingTalkBotService) bindIncomingCode(botID int, data *chatbot.BotCallba
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec(`INSERT INTO dingtalk_bindings (bot_id,user_id,ding_user_id,ding_user_name,conversation_id,enabled,created_at,updated_at) VALUES (?,?,?,?,?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT (bot_id,ding_user_id) DO UPDATE SET user_id=excluded.user_id,ding_user_name=excluded.ding_user_name,conversation_id=excluded.conversation_id,enabled=1,updated_at=CURRENT_TIMESTAMP`, botID, userID, dingID, data.SenderNick, data.ConversationId); err != nil {
+	if _, err := tx.Exec(`DELETE FROM dingtalk_bindings WHERE bot_id=? AND (ding_user_id=? OR user_id=?)`, botID, dingID, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO dingtalk_bindings (bot_id,user_id,ding_user_id,ding_user_name,conversation_id,enabled,created_at,updated_at) VALUES (?,?,?,?,?,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, botID, userID, dingID, strings.TrimSpace(data.SenderNick), strings.TrimSpace(data.ConversationId)); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(`UPDATE dingtalk_binding_codes SET used_at=CURRENT_TIMESTAMP WHERE id=?`, codeID); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	logger.Info("钉钉绑定成功: bot=%d user=%d ding=%s conv=%s", botID, userID, maskedDingTalkValue(dingID), maskedDingTalkValue(data.ConversationId))
+	return nil
 }
 
 func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID int, data *chatbot.BotCallbackDataModel, content string) error {
@@ -911,7 +972,7 @@ func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID
 	}
 	conversationID := strings.TrimSpace(data.ConversationId)
 	if conversationID == "" {
-		conversationID = "user:" + strings.TrimSpace(data.SenderId)
+		conversationID = "user:" + primaryDingTalkSenderID(data)
 	}
 	var sessionID int64
 	err := database.DB.QueryRow(`INSERT INTO dingtalk_ai_sessions (bot_id,user_id,conversation_id,title,created_at,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT (bot_id,user_id,conversation_id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP RETURNING id`, botID, userID, conversationID, truncateDing(content, 80)).Scan(&sessionID)
@@ -962,10 +1023,7 @@ func (s *DingTalkBotService) allowed(botID int, data *chatbot.BotCallbackDataMod
 		return true
 	}
 	userAllowed := false
-	for _, senderID := range []string{strings.TrimSpace(data.SenderId), strings.TrimSpace(data.SenderStaffId)} {
-		if senderID == "" {
-			continue
-		}
+	for _, senderID := range dingTalkSenderIDs(data) {
 		var count int
 		_ = database.DB.QueryRow(`SELECT COUNT(1) FROM dingtalk_allowlist WHERE bot_id=? AND enabled=1 AND entry_type='user' AND entry_value=?`, botID, senderID).Scan(&count)
 		if count > 0 {
@@ -981,7 +1039,7 @@ func (s *DingTalkBotService) allowed(botID int, data *chatbot.BotCallbackDataMod
 var taskCommandRE = regexp.MustCompile(`(?i)^\s*(?:@[^\s]+\s*)?(web|port|subdomain|子域名|端口|网站|扫描)(?:\s+(.+?))?\s*$`)
 
 func ParseDingTalkTaskCommand(content string) (models.TaskConfig, bool, string) {
-	content = strings.TrimSpace(content)
+	content = normalizeDingTalkText(content)
 	if strings.HasPrefix(content, "@") {
 		if i := strings.IndexAny(content, " \t\r\n"); i >= 0 {
 			content = strings.TrimSpace(content[i:])

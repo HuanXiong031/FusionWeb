@@ -211,6 +211,7 @@ ensure_env() {
   ensure_secret FUSIONWEB_JWT_SECRET "" 48
   ensure_secret FUSIONWEB_BASIC_PASS
   ensure_secret FUSIONWEB_WORKER_KEY change-me-worker-key 32
+  ensure_secret FUSIONWEB_ENCRYPTION_KEY '' 48
   sync_remote_connection_env
 }
 
