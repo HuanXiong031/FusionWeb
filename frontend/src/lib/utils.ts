@@ -41,6 +41,14 @@ export function formatTime(value?: string | number | Date | null) {
       const [, year, month, day, hour, minute, second] = goChinaTimeMatch
       return `${year}/${Number(month)}/${Number(day)} ${hour}:${minute}:${second}`
     }
+    // Postgres timestamptz 格式，例如 "2026-09-09 07:48:24.99421 +0000" / "+08:00"，按偏移换算后显示为北京时间。
+    const pgTzMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?\s*([+-])(\d{2}):?(\d{2})$/)
+    if (pgTzMatch) {
+      const [, year, month, day, hour, minute, second, sign, offsetHour, offsetMinute] = pgTzMatch
+      const offsetMinutes = (Number(offsetHour) * 60 + Number(offsetMinute)) * (sign === '-' ? -1 : 1)
+      const epoch = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)) - offsetMinutes * 60000
+      return formatChinaDisplayTime(new Date(epoch))
+    }
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
@@ -60,6 +68,12 @@ export function getTimeValue(value?: string | number | Date | null) {
     if (goChinaTimeMatch) {
       const [, year, month, day, hour, minute, second] = goChinaTimeMatch.map(Number)
       return new Date(year, month - 1, day, hour, minute, second).getTime()
+    }
+    const pgTzMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?\s*([+-])(\d{2}):?(\d{2})$/)
+    if (pgTzMatch) {
+      const [, year, month, day, hour, minute, second, sign, offsetHour, offsetMinute] = pgTzMatch
+      const offsetMinutes = (Number(offsetHour) * 60 + Number(offsetMinute)) * (sign === '-' ? -1 : 1)
+      return Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)) - offsetMinutes * 60000
     }
   }
   const date = new Date(value)
