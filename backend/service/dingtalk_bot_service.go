@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1153,7 +1154,29 @@ func (s *DingTalkBotService) allowed(botID int, data *chatbot.BotCallbackDataMod
 	return userAllowed || groupAllowed > 0
 }
 
-var taskCommandRE = regexp.MustCompile(`(?i)^\s*(?:@[^\s]+\s*)?(web|port|subdomain|子域名|端口|网站|扫描)(?:\s+(.+?))?\s*$`)
+const dingTalkHelpText = `【FusionWeb 钉钉机器人 · 支持命令】
+/help 或 /?        查看支持的功能
+/web <网址>        Web 扫描（默认模式 alive）
+/port <IP>         端口扫描（默认 port_service）
+/subdomain <域名>  子域名枚举
+绑定 <绑定码>       绑定 FusionWeb 账号
+
+参数（--key value 或 --flag，空格分隔）：
+  --mode <alive|fingerprint|fingerprint_poc|poc>  Web 扫描模式（默认 alive）
+  --ports <80,443|1-1000|all>   端口范围
+  --threads <n>    并发线程数（默认 10）
+  --timeout <秒>   Web 探测/端口扫描超时（默认 20 / 3）
+  --rate <pps>     SYN 扫描速率（默认 10000）
+  --screenshot     启用页面截图
+  --poc-all        全量 POC（忽略指纹）
+  --fingerprint    启用主动指纹探测
+  --proxy <url>    HTTP 代理
+  --dict <a,b,c>   子域名字典
+
+示例：
+  /web https://example.com --mode fingerprint_poc --screenshot
+  /port 192.168.1.1 --ports 80,443 --timeout 3
+  /subdomain example.com --threads 20`
 
 func ParseDingTalkTaskCommand(content string) (models.TaskConfig, bool, string) {
 	content = normalizeDingTalkText(content)
@@ -1162,34 +1185,119 @@ func ParseDingTalkTaskCommand(content string) (models.TaskConfig, bool, string) 
 			content = strings.TrimSpace(content[i:])
 		}
 	}
-	m := taskCommandRE.FindStringSubmatch(content)
-	if len(m) < 3 {
-		return models.TaskConfig{}, false, "请输入：web <网址>、port <IP> [--ports 80,443] 或 subdomain <域名>"
+	fields := strings.Fields(content)
+	if len(fields) == 0 {
+		return models.TaskConfig{}, false, ""
 	}
-	typ := strings.ToLower(m[1])
-	target := strings.TrimSpace(m[2])
-	if typ == "扫描" || typ == "网站" {
+	isSlash := strings.HasPrefix(fields[0], "/")
+	cmd := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
+
+	if cmd == "help" || cmd == "?" || cmd == "帮助" {
+		return models.TaskConfig{}, true, dingTalkHelpText
+	}
+
+	typ := ""
+	switch cmd {
+	case "web", "网站", "扫描":
 		typ = "web"
-	}
-	if typ == "端口" {
+	case "port", "端口":
 		typ = "port"
-	}
-	if typ == "子域名" {
+	case "subdomain", "子域名":
 		typ = "subdomain"
+	default:
+		if isSlash {
+			return models.TaskConfig{}, true, "未知命令：" + fields[0] + "。发送 /help 查看支持的功能。"
+		}
+		return models.TaskConfig{}, false, "请输入：/web <网址>、/port <IP> [--ports 80,443] 或 /subdomain <域名>（发送 /help 查看帮助）"
 	}
-	ports := ""
-	if i := strings.Index(strings.ToLower(target), "--ports"); i >= 0 {
-		ports = strings.TrimSpace(target[i+7:])
-		target = strings.TrimSpace(target[:i])
+
+	// 解析 --key value 与 --flag 参数；其余 token 作为扫描目标（可含空格/URL）。
+	params := map[string]string{}
+	var targetParts []string
+	rest := fields[1:]
+	for i := 0; i < len(rest); i++ {
+		t := rest[i]
+		if strings.HasPrefix(t, "--") {
+			key := strings.ToLower(strings.TrimPrefix(t, "--"))
+			if i+1 < len(rest) && !strings.HasPrefix(rest[i+1], "--") {
+				params[key] = rest[i+1]
+				i++
+			} else {
+				params[key] = ""
+			}
+			continue
+		}
+		targetParts = append(targetParts, t)
 	}
+	target := strings.TrimSpace(strings.Join(targetParts, " "))
 	if target == "" {
 		return models.TaskConfig{}, true, "请提供扫描目标"
 	}
-	mode := "alive"
-	if typ == "port" {
-		mode = "port_service"
+
+	cfg := models.TaskConfig{
+		TaskName:        "钉钉创建-" + truncateDing(target, 40),
+		TaskType:        typ,
+		TargetInput:     target,
+		PortRange:       params["ports"],
+		ScanMode:        "alive",
+		ScanOptions:     "{}",
+		SelectedDicts:   "[]",
+		ThreadCount:     10,
+		PortScanTimeout: 3,
+		WebTimeout:      20,
+		PortsThreshold:  65535,
+		SYNScanRate:     10000,
 	}
-	return models.TaskConfig{TaskName: "钉钉创建-" + truncateDing(target, 40), TaskType: typ, TargetInput: target, PortRange: ports, ScanMode: mode, ScanOptions: "{}", SelectedDicts: "[]", ThreadCount: 10, PortScanTimeout: 3, WebTimeout: 20, PortsThreshold: 65535, SYNScanRate: 10000}, true, ""
+	if typ == "port" {
+		cfg.ScanMode = "port_service"
+	}
+	if v, ok := params["mode"]; ok && v != "" {
+		cfg.ScanMode = strings.ToLower(strings.TrimSpace(v))
+	}
+	if v, ok := params["threads"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.ThreadCount = n
+		}
+	}
+	if v, ok := params["timeout"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			if typ == "port" {
+				cfg.PortScanTimeout = n
+			} else {
+				cfg.WebTimeout = n
+			}
+		}
+	}
+	if v, ok := params["rate"]; ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.SYNScanRate = n
+		}
+	}
+	if v, ok := params["proxy"]; ok {
+		cfg.HTTPProxy = strings.TrimSpace(v)
+	}
+	if v, ok := params["dict"]; ok && v != "" {
+		items := strings.FieldsFunc(v, func(r rune) bool { return r == ',' || r == ';' || r == ' ' })
+		quoted := make([]string, 0, len(items))
+		for _, it := range items {
+			if it = strings.TrimSpace(it); it != "" {
+				quoted = append(quoted, it)
+			}
+		}
+		if len(quoted) > 0 {
+			cfg.SelectedDicts = "[" + strings.Join(quoted, `","`) + "]"
+		}
+	}
+	if _, ok := params["screenshot"]; ok {
+		cfg.EnableScreenshot = true
+	}
+	if _, ok := params["poc-all"]; ok {
+		cfg.FullPocScan = true
+	}
+	if _, ok := params["fingerprint"]; ok {
+		cfg.EnableActiveFingerprint = true
+	}
+	return cfg, true, ""
 }
 
 func (s *DingTalkBotService) GenerateBindingCode(botID, userID int) (DingTalkBindingCode, error) {

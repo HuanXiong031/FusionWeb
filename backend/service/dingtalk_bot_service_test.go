@@ -19,8 +19,11 @@ func TestParseDingTalkTaskCommand(t *testing.T) {
 		{name: "web target", content: "web https://example.com", recognized: true, typ: "web", target: "https://example.com"},
 		{name: "port target and ports", content: "@FusionBot port 10.0.0.1 --ports 80,443", recognized: true, typ: "port", target: "10.0.0.1", ports: "80,443"},
 		{name: "Chinese subdomain", content: "子域名 example.com", recognized: true, typ: "subdomain", target: "example.com"},
+		{name: "slash help", content: "/help", recognized: true, message: dingTalkHelpText},
+		{name: "slash web with mode", content: "/web https://example.com --mode fingerprint_poc", recognized: true, typ: "web", target: "https://example.com"},
+		{name: "unknown slash command", content: "/xyz", recognized: true},
 		{name: "missing target is recognized", content: "web", recognized: true, message: "请提供扫描目标"},
-		{name: "ordinary text", content: "帮我分析这个结果", recognized: false, message: "请输入：web <网址>、port <IP> [--ports 80,443] 或 subdomain <域名>"},
+		{name: "ordinary text is not a command", content: "帮我分析这个结果", recognized: false},
 	}
 
 	for _, tt := range tests {
