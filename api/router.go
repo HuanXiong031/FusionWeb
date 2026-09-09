@@ -319,6 +319,7 @@ func NewRouter(app *App) *gin.Engine {
 			system.POST("/dingtalk-bots/:id/test", HandleTestDingTalkBot())
 			system.POST("/dingtalk-bots/:id/reconnect", HandleReconnectDingTalkBot())
 			system.GET("/dingtalk-bots/:id/status", HandleDingTalkBotStatus())
+			system.GET("/dingtalk-bots/:id/diagnostics", HandleDingTalkBotDiagnostics())
 			system.POST("/dingtalk-bindings/code", HandleGenerateDingTalkBindingCode())
 			system.POST("/dingtalk-bindings", HandleBindDingTalkUser())
 			system.GET("/dingtalk-bindings", HandleListDingTalkBindings())

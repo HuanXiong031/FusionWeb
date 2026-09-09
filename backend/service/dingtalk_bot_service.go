@@ -80,6 +80,30 @@ type DingTalkBindingCode struct {
 	Code      string `json:"code"`
 	ExpiresAt string `json:"expiresAt"`
 }
+
+type DingTalkMessageDiagnostic struct {
+	ID               int    `json:"id"`
+	BotID            int    `json:"botId"`
+	MessageID        string `json:"messageId"`
+	ConversationID   string `json:"conversationId"`
+	ConversationType string `json:"conversationType"`
+	SenderID         string `json:"senderId"`
+	SenderStaffID    string `json:"senderStaffId"`
+	Content          string `json:"content"`
+	TaskID           string `json:"taskId,omitempty"`
+	ReplyError       string `json:"replyError,omitempty"`
+	RepliedAt        string `json:"repliedAt,omitempty"`
+	CreatedAt        string `json:"createdAt"`
+}
+
+type DingTalkDiagnostics struct {
+	BotID          int                        `json:"botId"`
+	StreamStatus   string                     `json:"streamStatus"`
+	BindingCount   int                        `json:"bindingCount"`
+	AllowlistCount int                        `json:"allowlistCount"`
+	MessageCount   int                        `json:"messageCount"`
+	LatestMessage  *DingTalkMessageDiagnostic `json:"latestMessage,omitempty"`
+}
 type DingTalkEvent string
 
 const (
@@ -785,38 +809,38 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 	}
 
 	if bot.NotificationOnly {
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("当前机器人仅用于出站通知，未开启钉钉入站能力。"))
+		_ = s.replyText(ctx, botID, messageID, data, "当前机器人仅用于出站通知，未开启钉钉入站能力。")
 		return nil
 	}
 
 	// 绑定命令允许尚未绑定的用户完成首次绑定。
 	if bindingCode := parseDingTalkBindingCommand(content); bindingCode != "" {
 		if err := s.bindIncomingCode(botID, data, bindingCode); err != nil {
-			_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("绑定失败："+err.Error()))
+			_ = s.replyText(ctx, botID, messageID, data, "绑定失败："+err.Error())
 			return nil
 		}
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("绑定成功，现在可以创建扫描任务或进行 AI 对话。"))
+		_ = s.replyText(ctx, botID, messageID, data, "绑定成功，现在可以创建扫描任务或进行 AI 对话。")
 		return nil
 	}
 
 	userID, err := s.lookupBoundUser(botID, data)
 	if err != nil {
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("请先在 FusionWeb 的钉钉机器人页面生成绑定码，然后发送：绑定 <绑定码>"))
+		_ = s.replyText(ctx, botID, messageID, data, "请先在 FusionWeb 的钉钉机器人页面生成绑定码，然后发送：绑定 <绑定码>")
 		return nil
 	}
 	if !s.allowed(botID, data) {
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("当前用户或群聊不在机器人白名单中。"))
+		_ = s.replyText(ctx, botID, messageID, data, "当前用户或群聊不在机器人白名单中。")
 		return nil
 	}
 
 	cfg, recognized, message := ParseDingTalkTaskCommand(content)
 	if recognized {
 		if message != "" {
-			_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte(message))
+			_ = s.replyText(ctx, botID, messageID, data, message)
 			return nil
 		}
 		if !bot.AllowTaskCreation {
-			_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("当前机器人未开启任务创建功能。"))
+			_ = s.replyText(ctx, botID, messageID, data, "当前机器人未开启任务创建功能。")
 			return nil
 		}
 		s.mu.Lock()
@@ -832,18 +856,18 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 		cfg.DingTalkSourceMessageID = messageID
 		taskID, err := creator(cfg, uint(userID))
 		if err != nil {
-			_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("任务创建失败："+err.Error()))
+			_ = s.replyText(ctx, botID, messageID, data, "任务创建失败："+err.Error())
 			return nil
 		}
 		_, _ = database.DB.Exec(`UPDATE dingtalk_messages SET task_id=? WHERE bot_id=? AND message_id=?`, taskID, botID, messageID)
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("任务已创建："+taskID))
+		_ = s.replyText(ctx, botID, messageID, data, "任务已创建："+taskID)
 		return nil
 	}
 	if !bot.AllowAIChat {
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("未识别到任务命令，且当前机器人未开启 AI 对话。可发送：web <网址>、port <IP> --ports 80,443 或 subdomain <域名>。"))
+		_ = s.replyText(ctx, botID, messageID, data, "未识别到任务命令，且当前机器人未开启 AI 对话。可发送：web <网址>、port <IP> --ports 80,443 或 subdomain <域名>。")
 		return nil
 	}
-	return s.handleDingTalkAI(ctx, botID, userID, data, content)
+	return s.handleDingTalkAI(ctx, botID, userID, messageID, data, content)
 }
 
 var dingTalkBindingCommandRE = regexp.MustCompile(`(?i)(?:bind|绑定)\s*[:：]?\s*([a-z0-9]{6,16})`)
@@ -965,7 +989,7 @@ func (s *DingTalkBotService) bindIncomingCode(botID int, data *chatbot.BotCallba
 	return nil
 }
 
-func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID int, data *chatbot.BotCallbackDataModel, content string) error {
+func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID int, messageID string, data *chatbot.BotCallbackDataModel, content string) error {
 	content = strings.TrimSpace(content)
 	if content == "" {
 		return nil
@@ -1007,13 +1031,59 @@ func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID
 		SystemPrompt: "你是 FusionWeb 安全扫描平台的钉钉 AI 助手。请使用简体中文，回答清晰、准确、可执行。",
 	}, userID)
 	if err != nil {
-		_ = chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte("AI 对话失败："+err.Error()))
+		_ = s.replyText(ctx, botID, messageID, data, "AI 对话失败："+err.Error())
 		return nil
 	}
 	if _, err := database.DB.Exec(`INSERT INTO dingtalk_ai_messages (session_id,role,content) VALUES (?,?,?)`, sessionID, "assistant", response.Content); err != nil {
 		return err
 	}
-	return chatbot.NewChatbotReplier().SimpleReplyMarkdown(ctx, data.SessionWebhook, []byte("AI 回复"), []byte(response.Content))
+	return s.replyMarkdown(ctx, botID, messageID, data, "AI 回复", response.Content)
+}
+
+func (s *DingTalkBotService) replyText(ctx context.Context, botID int, messageID string, data *chatbot.BotCallbackDataModel, content string) error {
+	if data == nil || strings.TrimSpace(data.SessionWebhook) == "" {
+		err := fmt.Errorf("钉钉回复地址为空")
+		s.recordReplyError(botID, messageID, err)
+		logger.Warn("钉钉回复失败: bot=%d msg=%s err=%v", botID, maskedDingTalkValue(messageID), err)
+		return err
+	}
+	err := chatbot.NewChatbotReplier().SimpleReplyText(ctx, data.SessionWebhook, []byte(content))
+	if err != nil {
+		s.recordReplyError(botID, messageID, err)
+		logger.Warn("钉钉回复失败: bot=%d msg=%s err=%v", botID, maskedDingTalkValue(messageID), err)
+		return err
+	}
+	s.recordReplySuccess(botID, messageID)
+	return nil
+}
+
+func (s *DingTalkBotService) replyMarkdown(ctx context.Context, botID int, messageID string, data *chatbot.BotCallbackDataModel, title, content string) error {
+	if data == nil || strings.TrimSpace(data.SessionWebhook) == "" {
+		err := fmt.Errorf("钉钉回复地址为空")
+		s.recordReplyError(botID, messageID, err)
+		logger.Warn("钉钉 Markdown 回复失败: bot=%d msg=%s err=%v", botID, maskedDingTalkValue(messageID), err)
+		return err
+	}
+	err := chatbot.NewChatbotReplier().SimpleReplyMarkdown(ctx, data.SessionWebhook, []byte(title), []byte(content))
+	if err != nil {
+		s.recordReplyError(botID, messageID, err)
+		logger.Warn("钉钉 Markdown 回复失败: bot=%d msg=%s err=%v", botID, maskedDingTalkValue(messageID), err)
+		return err
+	}
+	s.recordReplySuccess(botID, messageID)
+	return nil
+}
+
+func (s *DingTalkBotService) recordReplyError(botID int, messageID string, err error) {
+	if database.DB != nil && strings.TrimSpace(messageID) != "" {
+		_, _ = database.DB.Exec(`UPDATE dingtalk_messages SET reply_error=? WHERE bot_id=? AND message_id=?`, truncateDing(err.Error(), 500), botID, messageID)
+	}
+}
+
+func (s *DingTalkBotService) recordReplySuccess(botID int, messageID string) {
+	if database.DB != nil && strings.TrimSpace(messageID) != "" {
+		_, _ = database.DB.Exec(`UPDATE dingtalk_messages SET reply_error='',replied_at=CURRENT_TIMESTAMP WHERE bot_id=? AND message_id=?`, botID, messageID)
+	}
 }
 
 func (s *DingTalkBotService) allowed(botID int, data *chatbot.BotCallbackDataModel) bool {
@@ -1096,6 +1166,38 @@ func (s *DingTalkBotService) BindCode(botID, userID int, dingID, name, code stri
 	}
 	return err
 }
+func (s *DingTalkBotService) GetDiagnostics(botID int) (DingTalkDiagnostics, error) {
+	if botID <= 0 {
+		return DingTalkDiagnostics{}, fmt.Errorf("botId 不正确")
+	}
+	bot, err := s.GetBotStatus(botID)
+	if err != nil {
+		return DingTalkDiagnostics{}, err
+	}
+	d := DingTalkDiagnostics{BotID: botID, StreamStatus: bot.StreamStatus}
+	if err := database.DB.QueryRow(`SELECT COUNT(1) FROM dingtalk_bindings WHERE bot_id=? AND enabled=1`, botID).Scan(&d.BindingCount); err != nil {
+		return d, err
+	}
+	if err := database.DB.QueryRow(`SELECT COUNT(1) FROM dingtalk_allowlist WHERE bot_id=? AND enabled=1`, botID).Scan(&d.AllowlistCount); err != nil {
+		return d, err
+	}
+	if err := database.DB.QueryRow(`SELECT COUNT(1) FROM dingtalk_messages WHERE bot_id=?`, botID).Scan(&d.MessageCount); err != nil {
+		return d, err
+	}
+	var item DingTalkMessageDiagnostic
+	var repliedAt sql.NullString
+	err = database.DB.QueryRow(`SELECT id,bot_id,message_id,conversation_id,conversation_type,sender_id,sender_staff_id,content,task_id,reply_error,replied_at,created_at FROM dingtalk_messages WHERE bot_id=? ORDER BY id DESC LIMIT 1`, botID).Scan(&item.ID, &item.BotID, &item.MessageID, &item.ConversationID, &item.ConversationType, &item.SenderID, &item.SenderStaffID, &item.Content, &item.TaskID, &item.ReplyError, &repliedAt, &item.CreatedAt)
+	if err == nil {
+		if repliedAt.Valid {
+			item.RepliedAt = repliedAt.String
+		}
+		d.LatestMessage = &item
+	} else if err != sql.ErrNoRows {
+		return d, err
+	}
+	return d, nil
+}
+
 func (s *DingTalkBotService) ListBindings(botID int) ([]DingTalkBinding, error) {
 	rows, err := database.DB.Query(`SELECT id,bot_id,user_id,ding_user_id,ding_user_name,conversation_id,enabled,created_at FROM dingtalk_bindings WHERE bot_id=? ORDER BY id DESC`, botID)
 	if err != nil {

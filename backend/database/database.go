@@ -663,6 +663,8 @@ func createTables() error {
             content TEXT DEFAULT '',
             task_id TEXT DEFAULT '',
             processed_at TIMESTAMP,
+            reply_error TEXT DEFAULT '',
+            replied_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(bot_id, message_id)
         )`,
@@ -957,6 +959,8 @@ func ensureDingTalkMessageColumns() error {
 	}{
 		{"conversation_type", "conversation_type TEXT DEFAULT ''"},
 		{"sender_staff_id", "sender_staff_id TEXT DEFAULT ''"},
+		{"reply_error", "reply_error TEXT DEFAULT ''"},
+		{"replied_at", "replied_at TIMESTAMP"},
 	}
 
 	for _, item := range columns {

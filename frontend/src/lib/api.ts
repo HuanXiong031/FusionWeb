@@ -137,6 +137,8 @@ export interface DingTalkBot {
 }
 
 export interface DingTalkBinding { id?: number; botId: number; userId: number; dingUserId: string; dingUserName?: string; conversationId?: string; enabled?: boolean }
+export interface DingTalkMessageDiagnostic { id: number; botId: number; messageId: string; conversationId: string; conversationType: string; senderId: string; senderStaffId: string; content: string; taskId?: string; replyError?: string; repliedAt?: string; createdAt: string }
+export interface DingTalkDiagnostics { botId: number; streamStatus: string; bindingCount: number; allowlistCount: number; messageCount: number; latestMessage?: DingTalkMessageDiagnostic }
 export interface DingTalkAllowlist { id?: number; botId: number; entryType: 'user' | 'group' | string; entryValue: string; enabled?: boolean; description?: string }
 
 export type AIProvider = 'openai' | 'deepseek' | 'anthropic' | 'openai_compatible' | string
@@ -771,6 +773,7 @@ export function deleteDingTalkBot(id: number | string) { return request.delete(`
 export function testDingTalkBot(id: number | string) { return request.post(`/api/v1/system/dingtalk-bots/${id}/test`, {}) }
 export function reconnectDingTalkBot(id: number | string) { return request.post(`/api/v1/system/dingtalk-bots/${id}/reconnect`, {}) }
 export function getDingTalkBotStatus(id: number | string) { return request.get<DingTalkBot>(`/api/v1/system/dingtalk-bots/${id}/status`) }
+export function getDingTalkBotDiagnostics(id: number | string) { return request.get<DingTalkDiagnostics>(`/api/v1/system/dingtalk-bots/${id}/diagnostics`) }
 export function generateDingTalkBindingCode(botId: number) { return request.post<{ code: string; expiresAt: string }>(`/api/v1/system/dingtalk-bindings/code`, { botId }) }
 export function bindDingTalkUser(data: { botId: number; dingUserId: string; dingUserName?: string; code: string }) { return request.post('/api/v1/system/dingtalk-bindings', data) }
 export function listDingTalkBindings(botId: number) { return request.get<DingTalkBinding[]>(`/api/v1/system/dingtalk-bindings?botId=${botId}`) }

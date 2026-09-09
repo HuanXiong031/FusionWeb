@@ -147,6 +147,25 @@ func HandleDingTalkBotStatus() gin.HandlerFunc {
 	}
 }
 
+func HandleDingTalkBotDiagnostics() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireDingTalkAdmin(c) {
+			return
+		}
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil || id <= 0 {
+			BadRequestResponse(c, "机器人 ID 不正确", err)
+			return
+		}
+		item, err := service.NewDingTalkBotService().GetDiagnostics(id)
+		if err != nil {
+			InternalServerErrorResponse(c, err.Error(), err)
+			return
+		}
+		SuccessResponse(c, item)
+	}
+}
+
 func HandleGenerateDingTalkBindingCode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireDingTalkAdmin(c) {
