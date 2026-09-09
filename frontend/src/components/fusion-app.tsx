@@ -214,7 +214,7 @@ const navSections: Array<{
     title: '系统设置',
     items: [
       { key: 'policies', label: '策略管理', icon: Database },
-      { key: 'settings', label: '系统设置', icon: KeyRound },
+      { key: 'settings', label: '钉钉机器人配置', icon: KeyRound },
       { key: 'ai-api-keys', label: 'AI Key', icon: Bot },
       { key: 'users', label: '用户管理', icon: Users },
       { key: 'system-logs', label: '日志审计', icon: Terminal },
