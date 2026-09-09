@@ -162,6 +162,12 @@ func (s *DingTalkBotService) ListBots() ([]DingTalkBot, error) {
 			return nil, fmt.Errorf("解密钉钉机器人 Client ID 失败: %w", decryptErr)
 		}
 		b.ClientID = plainClientID
+		// 允许管理员在界面上核对已保存的 Stream Client Secret（与钉钉后台 AppSecret 比对）。
+		if csec.String != "" {
+			if plainSecret, err := DecryptSecret(csec.String); err == nil {
+				b.ClientSecret = plainSecret
+			}
+		}
 		b.Enabled = en == 1
 		b.NotifyTaskCompleted = tc == 1
 		b.NotifyTaskFailed = tf == 1
@@ -176,7 +182,7 @@ func (s *DingTalkBotService) ListBots() ([]DingTalkBot, error) {
 		b.StreamConnectedAt = connected.String
 		b.CreatedAt = created.String
 		b.UpdatedAt = updated.String
-		if cid.String != "" {
+		if csec.String != "" {
 			b.MaskedClientSecret = "已配置"
 		}
 		if wt.String != "" {
