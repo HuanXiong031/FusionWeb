@@ -773,12 +773,13 @@ func severityDingIcon(sev string) (string, string) {
 }
 
 // buildWebScanDingTalkMessage 构建 Web 扫描完成后的富文本钉钉通知。
+// 使用钉钉可识别的 Markdown：`- ` 列表项逐行换行、`\n\n` 分段、`**加粗**` 作小标题。
 func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 	title := "🚨 扫描完成"
-	text := "⚠️ 发现安全漏洞，请及时处理！\n"
-	text += "● 任务名称: " + task.TaskName + "\n"
-	text += "● 目标: " + truncateDing(task.TargetInput, 300) + "\n"
-	text += "● 扫描模式: " + truncateDing(task.ScanMode, 40) + "\n"
+	text := "⚠️ 发现安全漏洞，请及时处理！\n\n"
+	text += "- 任务名称: " + task.TaskName + "\n"
+	text += "- 目标: " + truncateDing(task.TargetInput, 300) + "\n"
+	text += "- 扫描模式: " + truncateDing(task.ScanMode, 40) + "\n"
 
 	counts := map[string]int{"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0, "unknown": 0}
 	if database.DB != nil {
@@ -794,22 +795,22 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 		}
 	}
 	total := counts["critical"] + counts["high"] + counts["medium"] + counts["low"] + counts["info"] + counts["unknown"]
-	text += fmt.Sprintf("● 发现漏洞: %d 个\n", total)
-	text += fmt.Sprintf("● 🔴 严重: %d\n", counts["critical"])
-	text += fmt.Sprintf("● 🟠 高危: %d\n", counts["high"])
-	text += fmt.Sprintf("● 🟡 中危: %d\n", counts["medium"])
-	text += fmt.Sprintf("● 🔵 低危: %d\n", counts["low"])
-	text += fmt.Sprintf("● 🟢 信息: %d\n", counts["info"])
-	text += fmt.Sprintf("● ⚪ 未知: %d\n", counts["unknown"])
+	text += fmt.Sprintf("- 发现漏洞: %d 个\n", total)
+	text += fmt.Sprintf("- 🔴 严重: %d\n", counts["critical"])
+	text += fmt.Sprintf("- 🟠 高危: %d\n", counts["high"])
+	text += fmt.Sprintf("- 🟡 中危: %d\n", counts["medium"])
+	text += fmt.Sprintf("- 🔵 低危: %d\n", counts["low"])
+	text += fmt.Sprintf("- 🟢 信息: %d\n", counts["info"])
+	text += fmt.Sprintf("- ⚪ 未知: %d\n", counts["unknown"])
 
 	if total > 0 && database.DB != nil {
-		text += "漏洞详情:\n"
+		text += "\n**漏洞详情:**\n"
 		if rows, err := database.DB.Query(`SELECT name,severity,COALESCE(target,'') FROM vuln_results WHERE task_id=? ORDER BY id ASC LIMIT 20`, task.TaskID); err == nil {
 			for rows.Next() {
 				var name, sev, target string
 				if rows.Scan(&name, &sev, &target) == nil {
 					icon, label := severityDingIcon(sev)
-					text += fmt.Sprintf("● %s [%s] %s: %s\n", icon, label, truncateDing(name, 80), truncateDing(target, 200))
+					text += fmt.Sprintf("- %s [%s] %s: %s\n", icon, label, truncateDing(name, 80), truncateDing(target, 200))
 				}
 			}
 			rows.Close()
@@ -826,17 +827,17 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 				if rows.Scan(&target, &fname) == nil {
 					fcount++
 					targets[target] = true
-					finfo.WriteString(fmt.Sprintf("%02d、  %s  %s\n", fcount, truncateDing(target, 120), fname))
+					finfo.WriteString(fmt.Sprintf("- %02d、  %s  %s\n", fcount, truncateDing(target, 120), fname))
 				}
 			}
 			rows.Close()
 		}
 	}
 	if fcount > 0 {
-		text += fmt.Sprintf("指纹识别 (共 %d 个目标，%d 条记录):\n%s", len(targets), fcount, finfo.String())
+		text += fmt.Sprintf("\n**指纹识别 (共 %d 个目标，%d 条记录):**\n%s", len(targets), fcount, finfo.String())
 	}
 
-	text += "🕒 通知时间: " + utils.GetCurrentTimeString()
+	text += "\n🕒 通知时间: " + utils.GetCurrentTimeString()
 	return title, text
 }
 
