@@ -1,6 +1,7 @@
 package service
 
 import (
+	"FusionWeb/backend/config"
 	"FusionWeb/backend/database"
 	"FusionWeb/backend/logger"
 	"FusionWeb/backend/models"
@@ -838,6 +839,9 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 	}
 
 	text += "\n🕒 通知时间: " + utils.GetCurrentTimeString()
+	if pub := strings.TrimSpace(config.Get().PublicURL); pub != "" {
+		text += fmt.Sprintf("\n📄 下载报告: %s/api/v1/reports/%s/download/html", strings.TrimRight(pub, "/"), task.TaskID)
+	}
 	return title, text
 }
 

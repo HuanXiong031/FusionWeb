@@ -34,6 +34,7 @@ type Config struct {
 	MinIORegion    string
 	MinIOUseSSL    bool
 	MinIOPublicURL string
+	PublicURL      string
 
 	WorkerKey     string
 	LocalConsumer bool
@@ -69,6 +70,7 @@ func Get() *Config {
 			MinIORegion:    env("FUSIONWEB_MINIO_REGION", "us-east-1"),
 			MinIOUseSSL:    envBool("FUSIONWEB_MINIO_USE_SSL", false),
 			MinIOPublicURL: env("FUSIONWEB_MINIO_PUBLIC_URL", ""),
+			PublicURL:      env("FUSIONWEB_PUBLIC_URL", ""),
 			WorkerKey:      env("FUSIONWEB_WORKER_KEY", ""),
 			LocalConsumer:  envBool("FUSIONWEB_LOCAL_CONSUMER", true),
 		}
