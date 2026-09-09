@@ -749,7 +749,95 @@ func (s *DingTalkBotService) NotifyTask(task *models.TaskConfig) {
 	if strings.EqualFold(task.TaskType, "port") && strings.EqualFold(task.Status, "completed") {
 		title, text = buildPortScanDingTalkMessage(task)
 	}
+	if strings.EqualFold(task.TaskType, "web") && strings.EqualFold(task.Status, "completed") {
+		title, text = buildWebScanDingTalkMessage(task)
+	}
 	s.notifyTaskToBots(task, title, text, event)
+}
+
+func severityDingIcon(sev string) (string, string) {
+	switch strings.ToLower(strings.TrimSpace(sev)) {
+	case "critical":
+		return "🔴", "严重"
+	case "high":
+		return "🟠", "高危"
+	case "medium":
+		return "🟡", "中危"
+	case "low":
+		return "🔵", "低危"
+	case "info":
+		return "🟢", "信息"
+	default:
+		return "⚪", "未知"
+	}
+}
+
+// buildWebScanDingTalkMessage 构建 Web 扫描完成后的富文本钉钉通知。
+func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
+	title := "🚨 扫描完成"
+	text := "⚠️ 发现安全漏洞，请及时处理！\n"
+	text += "● 任务名称: " + task.TaskName + "\n"
+	text += "● 目标: " + truncateDing(task.TargetInput, 300) + "\n"
+	text += "● 扫描模式: " + truncateDing(task.ScanMode, 40) + "\n"
+
+	counts := map[string]int{"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0, "unknown": 0}
+	if database.DB != nil {
+		if rows, err := database.DB.Query(`SELECT COALESCE(NULLIF(severity,''),'unknown') AS sev, COUNT(*) FROM vuln_results WHERE task_id=? GROUP BY 1`, task.TaskID); err == nil {
+			for rows.Next() {
+				var sev string
+				var n int
+				if rows.Scan(&sev, &n) == nil {
+					counts[sev] = n
+				}
+			}
+			rows.Close()
+		}
+	}
+	total := counts["critical"] + counts["high"] + counts["medium"] + counts["low"] + counts["info"] + counts["unknown"]
+	text += fmt.Sprintf("● 发现漏洞: %d 个\n", total)
+	text += fmt.Sprintf("● 🔴 严重: %d\n", counts["critical"])
+	text += fmt.Sprintf("● 🟠 高危: %d\n", counts["high"])
+	text += fmt.Sprintf("● 🟡 中危: %d\n", counts["medium"])
+	text += fmt.Sprintf("● 🔵 低危: %d\n", counts["low"])
+	text += fmt.Sprintf("● 🟢 信息: %d\n", counts["info"])
+	text += fmt.Sprintf("● ⚪ 未知: %d\n", counts["unknown"])
+
+	if total > 0 && database.DB != nil {
+		text += "漏洞详情:\n"
+		if rows, err := database.DB.Query(`SELECT name,severity,COALESCE(target,'') FROM vuln_results WHERE task_id=? ORDER BY id ASC LIMIT 20`, task.TaskID); err == nil {
+			for rows.Next() {
+				var name, sev, target string
+				if rows.Scan(&name, &sev, &target) == nil {
+					icon, label := severityDingIcon(sev)
+					text += fmt.Sprintf("● %s [%s] %s: %s\n", icon, label, truncateDing(name, 80), truncateDing(target, 200))
+				}
+			}
+			rows.Close()
+		}
+	}
+
+	targets := map[string]bool{}
+	fcount := 0
+	var finfo strings.Builder
+	if database.DB != nil {
+		if rows, err := database.DB.Query(`SELECT target,COALESCE(fingerprint_name,'') FROM fingerprint_results WHERE task_id=? ORDER BY id ASC LIMIT 30`, task.TaskID); err == nil {
+			for rows.Next() {
+				var target, fname string
+				if rows.Scan(&target, &fname) == nil {
+					fcount++
+					targets[target] = true
+					finfo.WriteString(fmt.Sprintf("%02d、  %s  %s\n", fcount, truncateDing(target, 120), fname))
+				}
+			}
+			rows.Close()
+		}
+	}
+	if fcount > 0 {
+		text += fmt.Sprintf("指纹识别 (共 %d 个目标，%d 条记录):\n%s", len(targets), fcount, finfo.String())
+	}
+
+	text += "🕒 通知时间: " + utils.GetCurrentTimeString()
+	return title, text
 }
 
 func truncateDing(v string, n int) string {

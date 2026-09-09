@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const fusionWebHTMLReportCSS = `*{box-sizing:border-box}
+const fusionWebHTMLReportCSS = ` *{box-sizing:border-box}
 body{margin:0;background:#eef2f6;color:#17202a;font-family:"Microsoft YaHei",Arial,sans-serif}
 .page{max-width:1240px;margin:0 auto;padding:26px}
 .top{background:#fff;border:1px solid #d7dfe8;border-radius:8px;padding:26px;display:flex;justify-content:space-between;gap:20px;align-items:center}
@@ -78,7 +78,7 @@ a:hover{color:#2563eb;text-decoration:none}
 .page-info{font-size:13px;color:#64748b;margin-left:4px}
 .filter-hidden,.search-hidden{display:none!important}
 .footer{text-align:center;color:#64748b;font-size:13px;padding:22px}
-@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}.packet-grid{grid-template-columns:1fr}.vuln-title{align-items:flex-start;flex-direction:column}.vuln-time{white-space:normal}}`
+@media(max-width:900px){.page{padding:14px}.cards{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column;padding:18px}.top h1{font-size:24px}.num{font-size:24px}.section{padding:14px}.section-head{flex-direction:column;align-items:flex-start}.hint{font-size:12px;line-height:1.6}.packet-grid{grid-template-columns:1fr}.vuln-title{align-items:flex-start;flex-direction:column}.vuln-time{white-space:normal}.kv{grid-template-columns:90px 1fr}table{display:block;overflow-x:auto;border-collapse:collapse}td,th{white-space:normal;min-width:96px}.toolbar{flex-wrap:wrap}}`
 
 const fusionWebHTMLReportScript = `<script>
 function visibleItems(module){
