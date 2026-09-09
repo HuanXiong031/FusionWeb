@@ -40,6 +40,7 @@ type DingTalkBot struct {
 	MaskedWebhookSecret    string `json:"maskedWebhookSecret,omitempty"`
 	DefaultTargetType      string `json:"defaultTargetType,omitempty"`
 	DefaultTargetValue     string `json:"defaultTargetValue,omitempty"`
+	ClearWebhook           bool   `json:"clearWebhook,omitempty"`
 	NotifyTaskCompleted    bool   `json:"notifyTaskCompleted"`
 	NotifyTaskFailed       bool   `json:"notifyTaskFailed"`
 	NotifyTaskCancelled    bool   `json:"notifyTaskCancelled"`
@@ -258,11 +259,17 @@ func (s *DingTalkBotService) SaveBot(item DingTalkBot) (DingTalkBot, error) {
 		if item.ClientSecret == "" {
 			item.ClientSecret = old.clientSecret
 		}
-		if item.WebhookToken == "" {
-			item.WebhookToken = old.webhookToken
-		}
-		if item.WebhookSecret == "" {
-			item.WebhookSecret = old.webhookSecret
+		if item.ClearWebhook {
+			// 显式清除已保存的出站 Webhook，使通知改为通过企业应用机器人主动推送。
+			item.WebhookToken = ""
+			item.WebhookSecret = ""
+		} else {
+			if item.WebhookToken == "" {
+				item.WebhookToken = old.webhookToken
+			}
+			if item.WebhookSecret == "" {
+				item.WebhookSecret = old.webhookSecret
+			}
 		}
 		ci, err := enc(item.ClientID)
 		if err != nil {
@@ -370,8 +377,31 @@ func (s *DingTalkBotService) GetBotStatus(id int) (DingTalkBot, error) { return 
 
 func (s *DingTalkBotService) DeleteBot(id int) error {
 	s.StopBot(id)
-	_, err := database.DB.Exec(`DELETE FROM dingtalk_bots WHERE id=?`, id)
-	return err
+	tx, err := database.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// 级联清理该机器人的全部相关数据，避免残留孤儿记录。
+	if _, err := tx.Exec(`DELETE FROM dingtalk_ai_messages WHERE session_id IN (SELECT id FROM dingtalk_ai_sessions WHERE bot_id=?)`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM dingtalk_ai_sessions WHERE bot_id=?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM dingtalk_messages WHERE bot_id=?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM dingtalk_bindings WHERE bot_id=?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM dingtalk_binding_codes WHERE bot_id=?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM dingtalk_bots WHERE id=?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func sendDingTalkMarkdown(token, secret, title, text string) error {

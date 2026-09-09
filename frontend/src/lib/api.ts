@@ -118,6 +118,7 @@ export interface DingTalkBot {
   maskedWebhookSecret?: string
   defaultTargetType?: string
   defaultTargetValue?: string
+  clearWebhook?: boolean
   notifyTaskCompleted?: boolean
   notifyTaskFailed?: boolean
   notifyTaskCancelled?: boolean
