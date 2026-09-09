@@ -541,7 +541,7 @@ func (s *TaskScheduler) SubmitTaskWithUser(config *models.TaskConfig, userID uin
         no_port_string, scan_mode, scan_tool, scan_options, thread_count, port_scan_timeout, web_timeout, http_proxy, skip_host_discovery, no_icmp_ping, 
         tcp_ping, ports_threshold, syn_scan_rate, web_link, enable_screenshot,
         scan_all_pocs_when_no_fingerprint, full_poc_scan, enable_active_fingerprint, selected_dicts, assigned_worker, ding_talk_token, ding_talk_secret, ding_talk_key_id, dingtalk_bot_id, dingtalk_conversation_id, dingtalk_conversation_type, dingtalk_source_user_id, dingtalk_source_message_id, created_at, updated_at, status, user_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	logger.Debug("SubmitTaskWithUser TaskType=%s, UserID=%d", config.TaskType, userID)
 	_, err := database.DB.Exec(query,
