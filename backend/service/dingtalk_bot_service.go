@@ -168,6 +168,17 @@ func (s *DingTalkBotService) ListBots() ([]DingTalkBot, error) {
 				b.ClientSecret = plainSecret
 			}
 		}
+		// 允许管理员在界面上核对已保存的出站 Webhook Token / Secret。
+		if wt.String != "" {
+			if plainToken, err := DecryptSecret(wt.String); err == nil {
+				b.WebhookToken = plainToken
+			}
+		}
+		if ws.String != "" {
+			if plainSecret, err := DecryptSecret(ws.String); err == nil {
+				b.WebhookSecret = plainSecret
+			}
+		}
 		b.Enabled = en == 1
 		b.NotifyTaskCompleted = tc == 1
 		b.NotifyTaskFailed = tf == 1
