@@ -383,6 +383,10 @@ func (s *DingTalkBotService) DeleteBot(id int) error {
 		return err
 	}
 	defer tx.Rollback()
+	// 记录该机器人是否由遗留 dingtalk_keys 迁移而来，删除时一并清除旧记录，
+	// 避免下次启动 MigrateLegacyDingTalkKeys 又重新创建该机器人。
+	var migratedKeyID int
+	_ = tx.QueryRow(`SELECT COALESCE(migrated_from_key_id,0) FROM dingtalk_bots WHERE id=?`, id).Scan(&migratedKeyID)
 	// 级联清理该机器人的全部相关数据，避免残留孤儿记录。
 	if _, err := tx.Exec(`DELETE FROM dingtalk_ai_messages WHERE session_id IN (SELECT id FROM dingtalk_ai_sessions WHERE bot_id=?)`, id); err != nil {
 		return err
@@ -401,6 +405,11 @@ func (s *DingTalkBotService) DeleteBot(id int) error {
 	}
 	if _, err := tx.Exec(`DELETE FROM dingtalk_bots WHERE id=?`, id); err != nil {
 		return err
+	}
+	if migratedKeyID > 0 {
+		if _, err := tx.Exec(`DELETE FROM dingtalk_keys WHERE id=?`, migratedKeyID); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
