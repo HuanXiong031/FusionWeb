@@ -817,24 +817,24 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 		}
 	}
 
-	targets := map[string]bool{}
-	fcount := 0
+	targets := 0
+	fpTotal := 0
 	var finfo strings.Builder
 	if database.DB != nil {
-		if rows, err := database.DB.Query(`SELECT target,COALESCE(fingerprint_name,'') FROM fingerprint_results WHERE task_id=? ORDER BY id ASC LIMIT 30`, task.TaskID); err == nil {
+		_ = database.DB.QueryRow(`SELECT COUNT(*) FROM fingerprint_results WHERE task_id=?`, task.TaskID).Scan(&fpTotal)
+		if rows, err := database.DB.Query(`SELECT target, STRING_AGG(COALESCE(fingerprint_name,''), '、') AS fnames FROM fingerprint_results WHERE task_id=? GROUP BY target ORDER BY MIN(id)`, task.TaskID); err == nil {
 			for rows.Next() {
-				var target, fname string
-				if rows.Scan(&target, &fname) == nil {
-					fcount++
-					targets[target] = true
-					finfo.WriteString(fmt.Sprintf("- %02d、  %s  %s\n", fcount, truncateDing(target, 120), fname))
+				var target, fnames string
+				if rows.Scan(&target, &fnames) == nil {
+					targets++
+					finfo.WriteString(fmt.Sprintf("- %02d、  %s  %s\n", targets, truncateDing(target, 120), fnames))
 				}
 			}
 			rows.Close()
 		}
 	}
-	if fcount > 0 {
-		text += fmt.Sprintf("\n**指纹识别 (共 %d 个目标，%d 条记录):**\n%s", len(targets), fcount, finfo.String())
+	if targets > 0 && fpTotal > 0 {
+		text += fmt.Sprintf("\n**指纹识别 (共 %d 个目标，%d 条记录):**\n%s", targets, fpTotal, finfo.String())
 	}
 
 	text += "\n🕒 通知时间: " + utils.GetCurrentTimeString()
