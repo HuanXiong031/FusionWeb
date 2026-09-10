@@ -79,6 +79,10 @@ jobs:
             context: .
             dockerfile: docker/Dockerfile.worker
             cache_scope: fusionweb-worker-scanner-tools
+          - name: dsh
+            context: .
+            dockerfile: docker/Dockerfile.dsh
+            cache_scope: fusionweb-dsh
     steps:
       - uses: actions/checkout@v4
 
@@ -158,6 +162,7 @@ jobs:
           - \`${{ needs.prepare.outputs.image_prefix }}-api:${{ needs.prepare.outputs.version }}\`
           - \`${{ needs.prepare.outputs.image_prefix }}-web:${{ needs.prepare.outputs.version }}\`
           - \`${{ needs.prepare.outputs.image_prefix }}-worker:${{ needs.prepare.outputs.version }}\`
+          - \`${{ needs.prepare.outputs.image_prefix }}-dsh:${{ needs.prepare.outputs.version }}\`
           - \`${{ needs.prepare.outputs.image_prefix }}-postgres:${{ env.POSTGRES_VERSION }}\`
           - \`${{ needs.prepare.outputs.image_prefix }}-redis:${{ env.REDIS_VERSION }}\`
           - \`${{ needs.prepare.outputs.image_prefix }}-minio:${{ env.MINIO_VERSION }}\`

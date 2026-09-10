@@ -113,7 +113,7 @@ services:
       FUSIONWEB_HTTPS_PORT: ${FUSIONWEB_HTTPS_PORT:-8988}
     ports:
       - "${FUSIONWEB_HTTP_PORT:-8756}:80"
-      - "${FUSIONWEB_HTTPS_PORT:-8988}:443"
+      - "${FUSIONWEB_HTTPS_PORT:-8988}:80"
     volumes:
       - fusionweb_secrets:/run/fusionweb-secrets:ro
       - fusionweb_ssl:/etc/nginx/ssl
@@ -150,10 +150,27 @@ services:
       fusionweb-api: { condition: service_healthy }
     networks: [fusionweb]
 
+  # DeepSeek Harness（DSH）：自带 Web UI，作为 FusionWeb 的智能体入口。
+  # 保持 DSH 默认安装形态；模型凭据与偏好在 DSH 界面内配置，持久化于卷中。
+  fusionweb-dsh:
+    image: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-dsh:${FUSIONWEB_VERSION:-latest}
+    container_name: fusionweb_dsh
+    restart: unless-stopped
+    environment:
+      DSH_HOME: /root/.dsh
+      DSH_PORT: ${FUSIONWEB_DSH_PORT:-8990}
+      DSH_TRUSTED_HOSTS: ${FUSIONWEB_PUBLIC_HOST:-127.0.0.1}:${FUSIONWEB_DSH_PORT:-8990}
+    volumes:
+      - fusionweb_dsh_home:/root/.dsh
+    ports:
+      - "${FUSIONWEB_DSH_PORT:-8990}:${FUSIONWEB_DSH_PORT:-8990}"
+    networks: [fusionweb]
+
 networks:
   fusionweb:
     driver: bridge
 volumes:
+  fusionweb_dsh_home:
   postgres_data:
   redis_data:
   minio_data:
