@@ -1,0 +1,5 @@
+# fusionweb-tools 的 profile 补丁层：向 Loader 树插入本插件的一个条目。
+# 条目是普通 cordis loader entry（id + 包名）；包名按 profile 的 node_modules 解析。
+- insert:
+    - id: fusionweb-tools
+      name: 'fusionweb-tools'

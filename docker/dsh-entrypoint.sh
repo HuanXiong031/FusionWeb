@@ -19,6 +19,25 @@ for host in ${DSH_TRUSTED_HOSTS:-}; do
 done
 
 echo "DSH starting: dsh $*"
+
+# ── 安装内置插件 fusionweb-tools ──────────────────────────────────────
+# 直接放入 profile 的 node_modules 并登记到 bundle 列表，无需 pnpm、无需联网。
+install_fusionweb_tools() {
+  profile_dir="${DSH_HOME:-/root/.dsh}/profiles/web"
+  if [ ! -d "$profile_dir" ]; then
+    # --dump-config 会触发 profile 首次初始化，但不启动服务
+    dsh --profile web --dump-config >/dev/null 2>&1 || true
+  fi
+  if [ ! -d "$profile_dir" ]; then
+    echo "WARN: 未找到 DSH profile（$profile_dir），跳过 fusionweb-tools 安装" >&2
+    return 0
+  fi
+  mkdir -p "$profile_dir/node_modules/fusionweb-tools"
+  cp -r /opt/fusionweb-tools/. "$profile_dir/node_modules/fusionweb-tools/" 2>/dev/null || true
+  node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" fusionweb-tools /opt/fusionweb-tools || true
+}
+install_fusionweb_tools
+
 : >"$log_file"
 dsh "$@" >"$log_file" 2>&1 &
 dsh_pid=$!

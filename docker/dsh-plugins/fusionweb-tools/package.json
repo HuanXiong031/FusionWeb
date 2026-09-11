@@ -1,0 +1,18 @@
+{
+  "name": "fusionweb-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DSH 插件：把 FusionWeb 安全扫描平台的能力暴露为工具（建任务/查任务/查结果）。",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
