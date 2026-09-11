@@ -351,6 +351,10 @@ func NewRouter(app *App) *gin.Engine {
 		svc.GET("/tasks/:id/progress", ServiceTokenAuthMiddleware("tasks:read"), HandleGetTaskProgress())
 		svc.GET("/tasks/:id/vuln", aliasServiceTaskIDParam, ServiceTokenAuthMiddleware("results:read"), HandleGetVulnResults())
 		svc.GET("/tasks/:id/fingerprint", aliasServiceTaskIDParam, ServiceTokenAuthMiddleware("results:read"), HandleGetFingerprintResults())
+		// Phase 3：主动推送钉钉消息 + 在钉钉上提问并等待确认
+		svc.POST("/notify", ServiceTokenAuthMiddleware("notify:send"), HandleSvcNotify())
+		svc.POST("/confirmations", ServiceTokenAuthMiddleware("confirm:write"), HandleSvcCreateConfirmation())
+		svc.GET("/confirmations/:id", ServiceTokenAuthMiddleware("confirm:read"), HandleSvcGetConfirmation())
 	}
 
 	RegisterWorkerRoutes(r, v1)

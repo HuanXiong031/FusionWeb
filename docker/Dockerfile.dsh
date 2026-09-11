@@ -29,9 +29,11 @@ ENV DSH_AUTH_PROXY=1
 
 COPY docker/dsh-entrypoint.sh /usr/local/bin/dsh-entrypoint
 COPY docker/dsh-proxy.mjs /usr/local/bin/dsh-proxy.mjs
+COPY docker/dsh-bridge.mjs /usr/local/bin/dsh-bridge.mjs
 COPY docker/dsh-ensure-bundle.mjs /usr/local/bin/dsh-ensure-bundle.mjs
 COPY docker/dsh-plugins/fusionweb-tools /opt/fusionweb-tools
-RUN chmod +x /usr/local/bin/dsh-entrypoint
+RUN chmod +x /usr/local/bin/dsh-entrypoint \
+    && mkdir -p /workspace
 
 EXPOSE 8990
 

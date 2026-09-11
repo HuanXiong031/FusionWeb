@@ -181,5 +181,85 @@ export function apply(ctx) {
     },
   })
 
+  // ── 主动推送钉钉消息 ────────────────────────────────────────────────
+  safeRegister({
+    name: 'notify_dingtalk',
+    description: '主动向钉钉推送一条消息（发往机器人默认目标，通常是你的单聊）。',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['text'],
+      properties: {
+        text: { type: 'string', description: '消息内容（支持 Markdown）' },
+        title: { type: 'string', description: '消息标题，默认「DSH 消息」' },
+      },
+    },
+    output: {
+      schema: { type: 'object', additionalProperties: true, required: ['sent'], properties: { sent: { type: 'boolean' } } },
+      render: (_args, value) => renderText(`钉钉消息${value && value.sent ? '已推送' : '推送失败'}`),
+    },
+    timeoutMs: 60000,
+    execute: async (args) =>
+      await callAPI('/api/v1/svc/notify', {
+        method: 'POST',
+        body: JSON.stringify({ text: String(args.text), title: args.title ? String(args.title) : '' }),
+      }),
+  })
+
+  // ── 在钉钉上提问并等待确认 ──────────────────────────────────────────
+  safeRegister({
+    name: 'ask_dingtalk',
+    description:
+      '在钉钉上向用户提问并等待其回复确认（回复 1 确认 / 0 取消）。适用于执行有副作用或破坏性的操作前征求同意。' +
+      '超时未回复视为「不执行」。',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['question'],
+      properties: {
+        question: { type: 'string', description: '要问用户的问题（会自动附上短码与回复方式）' },
+        timeoutSec: { type: 'integer', description: '等待秒数，默认 600，最大 1500' },
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: true,
+        required: ['status'],
+        properties: {
+          status: { type: 'string', description: 'confirmed | denied | expired' },
+          answer: { type: 'string' },
+          code: { type: 'string' },
+        },
+      },
+      render: (_args, value) => {
+        const status = value && value.status
+        if (status === 'confirmed') return renderText('用户已在钉钉确认：可以继续执行。')
+        if (status === 'denied') return renderText('用户已在钉钉拒绝：不要执行该操作。')
+        return renderText('等待超时：用户未在钉钉确认，视为不执行。')
+      },
+    },
+    timeoutMs: 1800000,
+    execute: async (args) => {
+      const timeoutSec = Math.min(Math.max(Number(args.timeoutSec) || 600, 30), 1500)
+      const created = await callAPI('/api/v1/svc/confirmations', {
+        method: 'POST',
+        body: JSON.stringify({ question: String(args.question), timeoutSec }),
+      })
+      const id = created && created.id
+      if (!id) throw new Error('创建钉钉确认请求失败')
+      const deadline = Date.now() + (timeoutSec + 20) * 1000
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+        const state = await callAPI(`/api/v1/svc/confirmations/${encodeURIComponent(String(id))}`)
+        const status = state && state.status
+        if (status && status !== 'pending') {
+          return { status, answer: (state && state.answer) || '', code: (state && state.code) || created.code || '' }
+        }
+      }
+      return { status: 'expired', answer: '', code: created.code || '' }
+    },
+  })
+
   ctx.logger?.info?.(`fusionweb-tools 已注册（FusionWeb=${BASE}，令牌${TOKEN ? '已配置' : '缺失'}）`)
 }

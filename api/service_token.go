@@ -30,9 +30,12 @@ const ServiceTokenPrefix = "fwsvc_"
 
 // allowedServiceTokenScopes 允许授权的权限范围白名单。
 var allowedServiceTokenScopes = map[string]bool{
-	"tasks:read":   true,
-	"tasks:write":  true,
-	"results:read": true,
+	"tasks:read":    true,
+	"tasks:write":   true,
+	"results:read":  true,
+	"notify:send":   true,
+	"confirm:write": true,
+	"confirm:read":  true,
 }
 
 type serviceTokenRow struct {
@@ -140,7 +143,7 @@ func HandleCreateServiceToken() gin.HandlerFunc {
 		}
 		req.Scopes = strings.TrimSpace(req.Scopes)
 		if req.Scopes == "" {
-			req.Scopes = "tasks:read,tasks:write,results:read"
+			req.Scopes = "tasks:read,tasks:write,results:read,notify:send,confirm:read,confirm:write"
 		}
 		normalized := make([]string, 0, 3)
 		for _, item := range strings.Split(req.Scopes, ",") {

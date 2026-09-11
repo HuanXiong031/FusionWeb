@@ -340,6 +340,11 @@ func boolInt(v bool) int {
 type botSecrets struct{ clientID, clientSecret, webhookToken, webhookSecret string }
 
 func (s *DingTalkBotService) loadBotSecrets(id int) (botSecrets, error) {
+	return loadBotSecretsByID(id)
+}
+
+// loadBotSecretsByID 包级版本：供确认服务等非服务实例场景复用。
+func loadBotSecretsByID(id int) (botSecrets, error) {
 	var a, b, c, d string
 	err := database.DB.QueryRow(`SELECT client_id_cipher,client_secret_cipher,webhook_token_cipher,webhook_secret_cipher FROM dingtalk_bots WHERE id=?`, id).Scan(&a, &b, &c, &d)
 	if err != nil {
@@ -979,6 +984,12 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 		return nil
 	}
 
+	// 待确认回复优先结算（附件 Phase 3）：回复短码或 1/0 时不再当作新命令或 AI 对话。
+	if reply, handled := TryResolveConfirmationReply(botID, content); handled {
+		_ = s.replyText(ctx, botID, messageID, data, reply)
+		return nil
+	}
+
 	cfg, recognized, message := ParseDingTalkTaskCommand(content)
 	if recognized {
 		if message != "" {
@@ -1011,6 +1022,11 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 	}
 	if !bot.AllowAIChat {
 		_ = s.replyText(ctx, botID, messageID, data, "未识别到任务命令，且当前机器人未开启 AI 对话。可发送：web <网址>、port <IP> --ports 80,443 或 subdomain <域名>。")
+		return nil
+	}
+	// Phase 3：优先交给 DSH（配置了 FUSIONWEB_DSH_BRIDGE_URL 时）；未配置则退回旧 AI 对话。
+	if handled, ack := s.handleDingTalkDSH(ctx, botID, content); handled {
+		_ = s.replyText(ctx, botID, messageID, data, ack)
 		return nil
 	}
 	return s.handleDingTalkAI(ctx, botID, userID, messageID, data, content)

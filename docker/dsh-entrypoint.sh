@@ -22,21 +22,27 @@ echo "DSH starting: dsh $*"
 
 # ── 安装内置插件 fusionweb-tools ──────────────────────────────────────
 # 直接放入 profile 的 node_modules 并登记到 bundle 列表，无需 pnpm、无需联网。
+# web profile 供界面使用；headless profile 供桥（钉钉消息转 DSH 任务）使用。
 install_fusionweb_tools() {
-  profile_dir="${DSH_HOME:-/root/.dsh}/profiles/web"
-  if [ ! -d "$profile_dir" ]; then
-    # --dump-config 会触发 profile 首次初始化，但不启动服务
-    dsh --profile web --dump-config >/dev/null 2>&1 || true
-  fi
-  if [ ! -d "$profile_dir" ]; then
-    echo "WARN: 未找到 DSH profile（$profile_dir），跳过 fusionweb-tools 安装" >&2
-    return 0
-  fi
-  mkdir -p "$profile_dir/node_modules/fusionweb-tools"
-  cp -r /opt/fusionweb-tools/. "$profile_dir/node_modules/fusionweb-tools/" 2>/dev/null || true
-  node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" fusionweb-tools /opt/fusionweb-tools || true
+  for profile_name in web headless; do
+    profile_dir="${DSH_HOME:-/root/.dsh}/profiles/${profile_name}"
+    if [ ! -d "$profile_dir" ]; then
+      dsh --profile "$profile_name" --dump-config >/dev/null 2>&1 || true
+    fi
+    if [ ! -d "$profile_dir" ]; then
+      echo "WARN: 未找到 DSH profile（$profile_dir），跳过 fusionweb-tools 安装" >&2
+      continue
+    fi
+    mkdir -p "$profile_dir/node_modules/fusionweb-tools"
+    cp -r /opt/fusionweb-tools/. "$profile_dir/node_modules/fusionweb-tools/" 2>/dev/null || true
+    node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" fusionweb-tools /opt/fusionweb-tools || true
+  done
 }
 install_fusionweb_tools
+
+# ── 启动 DSH 桥（把钉钉消息转成 DSH 任务，并把结果推回钉钉） ───────────
+node /usr/local/bin/dsh-bridge.mjs &
+bridge_pid=$!
 
 : >"$log_file"
 dsh "$@" >"$log_file" 2>&1 &
@@ -69,11 +75,11 @@ node /usr/local/bin/dsh-proxy.mjs &
 proxy_pid=$!
 
 # 任一进程退出即结束容器
-while kill -0 "$dsh_pid" 2>/dev/null && kill -0 "$proxy_pid" 2>/dev/null; do
+while kill -0 "$dsh_pid" 2>/dev/null && kill -0 "$proxy_pid" 2>/dev/null && kill -0 "$bridge_pid" 2>/dev/null; do
   sleep 2
 done
 
 echo "DSH process exited; shutting down container"
-kill "$dsh_pid" "$proxy_pid" "$tail_pid" 2>/dev/null || true
+kill "$dsh_pid" "$proxy_pid" "$bridge_pid" "$tail_pid" 2>/dev/null || true
 wait "$dsh_pid" 2>/dev/null || true
 exit 1

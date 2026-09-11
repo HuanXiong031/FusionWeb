@@ -773,6 +773,20 @@ func createTables() error {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// 待确认请求：DSH 等外部智能体通过钉钉向人提问，答复由入站消息匹配后写入。
+		`CREATE TABLE IF NOT EXISTS pending_confirmations (
+			id BIGSERIAL PRIMARY KEY,
+			code TEXT NOT NULL,
+			question TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			answer TEXT DEFAULT '',
+			bot_id INTEGER NOT NULL DEFAULT 0,
+			expires_at TIMESTAMP NOT NULL,
+			answered_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+
 		// 空间测绘 API Key：保存 FOFA、Hunter、Quake 等在线资产引擎配置。
 		`CREATE TABLE IF NOT EXISTS space_engine_keys (
 			id BIGSERIAL PRIMARY KEY,
