@@ -767,7 +767,7 @@ func severityDingIcon(sev string) (string, string) {
 	case "info":
 		return "🟢", "信息"
 	default:
-		return "⚫", "未知"
+		return "🟤", "未知"
 	}
 }
 
@@ -808,7 +808,7 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 			{"🟡", "中危", counts["medium"]},
 			{"🔵", "低危", counts["low"]},
 			{"🟢", "信息", counts["info"]},
-			{"⚫", "未知", counts["unknown"]},
+			{"🟤", "未知", counts["unknown"]},
 		} {
 			if row.count > 0 {
 				text += fmt.Sprintf("- %s %s: %d\n", row.icon, row.label, row.count)
