@@ -114,6 +114,7 @@ services:
     ports:
       - "${FUSIONWEB_HTTP_PORT:-8756}:80"
       - "${FUSIONWEB_HTTPS_PORT:-8988}:80"
+      - "${FUSIONWEB_DSH_PORT:-8990}:8990"
     volumes:
       - fusionweb_secrets:/run/fusionweb-secrets:ro
       - fusionweb_ssl:/etc/nginx/ssl
@@ -160,10 +161,9 @@ services:
       DSH_HOME: /root/.dsh
       DSH_PORT: ${FUSIONWEB_DSH_PORT:-8990}
       DSH_TRUSTED_HOSTS: ${FUSIONWEB_PUBLIC_HOST:-127.0.0.1}:${FUSIONWEB_DSH_PORT:-8990}
+      DSH_AUTH_PROXY: "1"
     volumes:
       - fusionweb_dsh_home:/root/.dsh
-    ports:
-      - "${FUSIONWEB_DSH_PORT:-8990}:${FUSIONWEB_DSH_PORT:-8990}"
     networks: [fusionweb]
 
 networks:
