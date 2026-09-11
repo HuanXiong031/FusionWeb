@@ -767,7 +767,7 @@ func severityDingIcon(sev string) (string, string) {
 	case "info":
 		return "🟢", "信息"
 	default:
-		return "🔘", "未知"
+		return "⚫", "未知"
 	}
 }
 
@@ -800,7 +800,7 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 	text += fmt.Sprintf("- 🟡 中危: %d\n", counts["medium"])
 	text += fmt.Sprintf("- 🔵 低危: %d\n", counts["low"])
 	text += fmt.Sprintf("- 🟢 信息: %d\n", counts["info"])
-	text += fmt.Sprintf("- 🔘 未知: %d\n", counts["unknown"])
+	text += fmt.Sprintf("- ⚫ 未知: %d\n", counts["unknown"])
 
 	// 按实际结果决定抬头：有漏洞才告警，0 漏洞则明确说明「未发现」
 	if total > 0 {
