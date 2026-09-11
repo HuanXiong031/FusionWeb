@@ -1,0 +1,20 @@
+[Unit]
+Description=FusionWeb self-scan（为容器开放宿主映射端口，使扫描容器能扫到 8988/8756/8990 等）
+Documentation=https://github.com/HuanXiong031/FusionWeb
+After=docker.service network-online.target
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# 脚本需以 root 运行（修改 iptables）。
+# 部署时把下面路径改成你机器上的实际路径，例如：
+#   /root/FusionWeb-test-20260828/scripts/fusionweb-enable-self-scan.sh
+ExecStart=/opt/fusionweb/scripts/fusionweb-enable-self-scan.sh
+ExecStop=/opt/fusionweb/scripts/fusionweb-enable-self-scan.sh --remove
+# 容器重建后宿主机端口映射可能变化，失败不阻塞启动
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

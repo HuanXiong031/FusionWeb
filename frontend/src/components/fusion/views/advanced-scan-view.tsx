@@ -259,7 +259,7 @@ export type ScanTaskType = 'web' | 'port' | 'subdomain' | 'weak_password' | 'dir
 
 const taskTypeItems: Array<{ value: ScanTaskType; label: string; icon: React.ElementType; description: string }> = [
   { value: 'web', label: 'Web 扫描', icon: Globe2, description: 'Web 探测、指纹和 POC' },
-  { value: 'port', label: '端口扫描', icon: Network, description: 'naabu / masscan 端口发现' },
+  { value: 'port', label: '端口扫描', icon: Network, description: 'naabu / masscan / nmap 端口发现' },
   { value: 'subdomain', label: '子域名扫描', icon: Layers3, description: 'subfinder 枚举' },
   { value: 'weak_password', label: '弱口令扫描', icon: KeyRound, description: '服务账号密码验证' },
   { value: 'directory', label: '目录扫描', icon: FolderOpen, description: 'ffuf 路径发现' },
@@ -632,8 +632,9 @@ export function AdvancedScanView({
                 <div className="grid gap-4 md:grid-cols-4">
                   <Field label="扫描工具">
                     <Select value={draft.portScanTool} onChange={(event) => setDraft({ ...draft, portScanTool: event.target.value })}>
-                      <option value="naabu">naabu</option>
-                      <option value="masscan">masscan</option>
+                      <option value="naabu">naabu（默认，快）</option>
+                      <option value="masscan">masscan（大范围高速）</option>
+                      <option value="nmap">nmap（精确，含服务版本）</option>
                     </Select>
                   </Field>
                   <Field label="扫描类型">

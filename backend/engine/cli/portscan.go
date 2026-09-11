@@ -61,6 +61,8 @@ func RunPortScan(ctx context.Context, options PortScanOptions) ([]common.PortSer
 		results, err = runNaabuPortScan(ctx, specs, options)
 	case "masscan":
 		results, err = runMasscanPortScan(ctx, specs, options)
+	case "nmap":
+		results, err = runNmapPortScan(ctx, specs, options)
 	default:
 		return nil, fmt.Errorf("不支持的端口扫描 CLI 工具: %s", tool)
 	}
@@ -69,7 +71,8 @@ func RunPortScan(ctx context.Context, options PortScanOptions) ([]common.PortSer
 	}
 
 	results = dedupePortResults(results)
-	if options.IdentifyService && serviceIdentifyEnabled() && len(results) > 0 {
+	// nmap 作为主扫描器时已在同一次调用里做了 -sV，无需再跑一遍服务识别
+	if options.IdentifyService && serviceIdentifyEnabled() && tool != "nmap" && len(results) > 0 {
 		results, err = identifyPortServicesWithNmap(ctx, results, options)
 		if err != nil {
 			return nil, err
@@ -486,7 +489,11 @@ func scanNmapHost(ctx context.Context, host, ports string, options PortScanOptio
 		}
 		return nil
 	}
+	return parseNmapRunResults(host, parsed)
+}
 
+// parseNmapRunResults 把 nmap XML 结果转换成统一端口结果（服务识别与 nmap 主扫描共用）。
+func parseNmapRunResults(host string, parsed nmapRun) []common.PortServiceResult {
 	var results []common.PortServiceResult
 	for _, h := range parsed.Hosts {
 		for _, p := range h.Ports.Ports {
@@ -523,6 +530,59 @@ func scanNmapHost(ctx context.Context, host, ports string, options PortScanOptio
 		}
 	}
 	return results
+}
+
+// runNmapPortScan 直接以 nmap 作为端口发现工具（-Pn -p <端口/范围>，支持 top100/top1000 预设）。
+// 开启服务识别时在同一次调用里带 -sV，避免"发现 + 识别"跑两遍 nmap。
+func runNmapPortScan(ctx context.Context, specs []hostScanSpec, options PortScanOptions) ([]common.PortServiceResult, error) {
+	if _, err := ResolveTool("nmap"); err != nil {
+		return nil, err
+	}
+
+	results := make([]common.PortServiceResult, 0)
+	for _, spec := range specs {
+		ports := strings.TrimSpace(spec.Ports)
+		if ports == "" {
+			continue
+		}
+
+		args := []string{"-Pn"}
+		switch strings.ToLower(ports) {
+		case "top100":
+			args = append(args, "--top-ports", "100")
+		case "top1000":
+			args = append(args, "--top-ports", "1000")
+		default:
+			args = append(args, "-p", ports)
+		}
+		if options.IdentifyService {
+			args = append(args, "-sV", "--version-intensity", "5")
+		}
+		args = append(args, "-oX", "-", spec.Host)
+
+		timeout := time.Duration(defaultInt(options.TimeoutSeconds, 30)+120) * time.Second
+		if options.Logf != nil {
+			options.Logf("INFO", "[CLI] nmap %s", strings.Join(args, " "))
+		}
+		result, err := Execute(ctx, "nmap", args, ExecuteOptions{Timeout: timeout, Logf: options.Logf})
+		if err != nil {
+			// 单个目标失败不应中断整批扫描
+			if options.Logf != nil {
+				options.Logf("WARN", "nmap 扫描失败 %s: %v", spec.Host, err)
+			}
+			continue
+		}
+
+		var parsed nmapRun
+		if err := xml.Unmarshal([]byte(result.Stdout), &parsed); err != nil {
+			if options.Logf != nil {
+				options.Logf("WARN", "nmap XML 解析失败 %s: %v", spec.Host, err)
+			}
+			continue
+		}
+		results = append(results, parseNmapRunResults(spec.Host, parsed)...)
+	}
+	return results, nil
 }
 
 func splitHostPortTarget(target string) (string, int, bool) {
