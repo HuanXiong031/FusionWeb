@@ -780,9 +780,9 @@ func severityDingIcon(sev string) (string, string) {
 // buildWebScanDingTalkMessage 构建 Web 扫描完成后的富文本钉钉通知。
 // 使用钉钉可识别的 Markdown：`- ` 列表项逐行换行、`\n\n` 分段、`**加粗**` 作小标题。
 func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
-	title := "🚨 扫描完成"
-	text := "⚠️ 发现安全漏洞，请及时处理！\n\n"
-	text += "- 任务名称: " + task.TaskName + "\n"
+	title := "✅ 扫描完成"
+	// 抬头文案在统计完漏洞数量后再决定（此前写死为「发现安全漏洞」，导致 0 漏洞也报警）
+	text := "- 任务名称: " + task.TaskName + "\n"
 	text += "- 目标: " + truncateDing(task.TargetInput, 300) + "\n"
 	text += "- 扫描模式: " + truncateDing(task.ScanMode, 40) + "\n"
 
@@ -807,6 +807,15 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 	text += fmt.Sprintf("- 🔵 低危: %d\n", counts["low"])
 	text += fmt.Sprintf("- 🟢 信息: %d\n", counts["info"])
 	text += fmt.Sprintf("- ⚪ 未知: %d\n", counts["unknown"])
+
+	// 按实际结果决定抬头：有漏洞才告警，0 漏洞则明确说明「未发现」
+	if total > 0 {
+		title = "⚠️ 发现安全漏洞，请及时处理！"
+		text = title + "\n\n" + text
+	} else {
+		title = "✅ 扫描完成，未发现漏洞"
+		text = "✅ 本次扫描未发现漏洞。\n\n" + text
+	}
 
 	if total > 0 && database.DB != nil {
 		text += "\n**漏洞详情:**\n"
