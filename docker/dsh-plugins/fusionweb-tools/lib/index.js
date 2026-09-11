@@ -52,8 +52,17 @@ function renderText(str) {
 const objectSchema = { type: 'object', additionalProperties: true }
 
 export function apply(ctx) {
+  // 单个工具注册失败不应拖垮整个 DSH（插件加载失败会让进程退出）。
+  const safeRegister = (definition) => {
+    try {
+      ctx.tools.register(definition)
+    } catch (err) {
+      ctx.logger?.warn?.(`fusionweb-tools: 注册工具 ${definition && definition.name} 失败：${(err && err.message) || err}`)
+    }
+  }
+
   // ── 建任务 ──────────────────────────────────────────────────────────
-  ctx.tools.register({
+  safeRegister({
     name: 'fusionweb_create_task',
     description:
       '在 FusionWeb 安全扫描平台创建扫描任务。task_type: web（网址）/ port（IP）/ subdomain（域名）。' +
@@ -99,7 +108,7 @@ export function apply(ctx) {
   })
 
   // ── 任务列表 ────────────────────────────────────────────────────────
-  ctx.tools.register({
+  safeRegister({
     name: 'fusionweb_list_tasks',
     description: '列出 FusionWeb 上的扫描任务（最近的在前）。',
     parameters: {
@@ -133,7 +142,7 @@ export function apply(ctx) {
   })
 
   // ── 任务进度 ────────────────────────────────────────────────────────
-  ctx.tools.register({
+  safeRegister({
     name: 'fusionweb_task_progress',
     description: '查询某个 FusionWeb 扫描任务的进度与阶段。',
     parameters: {
@@ -152,7 +161,7 @@ export function apply(ctx) {
   })
 
   // ── 任务漏洞结果 ────────────────────────────────────────────────────
-  ctx.tools.register({
+  safeRegister({
     name: 'fusionweb_task_vulns',
     description: '查询某个 FusionWeb 扫描任务发现的漏洞结果。',
     parameters: {
@@ -162,12 +171,14 @@ export function apply(ctx) {
       properties: { task_id: { type: 'string', description: '任务 ID' } },
     },
     output: {
-      schema: { type: ['array', 'null'], items: objectSchema },
+      schema: { type: 'array', items: objectSchema },
       render: (_args, value) => renderJSON(value),
     },
     timeoutMs: 60000,
-    execute: async (args) =>
-      await callAPI(`/api/v1/svc/tasks/${encodeURIComponent(String(args.task_id))}/vuln`),
+    execute: async (args) => {
+      const value = await callAPI(`/api/v1/svc/tasks/${encodeURIComponent(String(args.task_id))}/vuln`)
+      return Array.isArray(value) ? value : []
+    },
   })
 
   ctx.logger?.info?.(`fusionweb-tools 已注册（FusionWeb=${BASE}，令牌${TOKEN ? '已配置' : '缺失'}）`)
