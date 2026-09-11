@@ -794,13 +794,27 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 		}
 	}
 	total := counts["critical"] + counts["high"] + counts["medium"] + counts["low"] + counts["info"] + counts["unknown"]
+	// 漏洞统计：0 漏洞时只给一行总数；有漏洞时只列非 0 的等级，
+	// 避免出现一堆"0"以及不同尺寸的圆点图标（钉钉的灰色圆圈属于中等尺寸，和彩色大圆不同款）。
 	text += fmt.Sprintf("- 发现漏洞: %d 个\n", total)
-	text += fmt.Sprintf("- 🔴 严重: %d\n", counts["critical"])
-	text += fmt.Sprintf("- 🟠 高危: %d\n", counts["high"])
-	text += fmt.Sprintf("- 🟡 中危: %d\n", counts["medium"])
-	text += fmt.Sprintf("- 🔵 低危: %d\n", counts["low"])
-	text += fmt.Sprintf("- 🟢 信息: %d\n", counts["info"])
-	text += fmt.Sprintf("- ⚫ 未知: %d\n", counts["unknown"])
+	if total > 0 {
+		for _, row := range []struct {
+			icon  string
+			label string
+			count int
+		}{
+			{"🔴", "严重", counts["critical"]},
+			{"🟠", "高危", counts["high"]},
+			{"🟡", "中危", counts["medium"]},
+			{"🔵", "低危", counts["low"]},
+			{"🟢", "信息", counts["info"]},
+			{"⚫", "未知", counts["unknown"]},
+		} {
+			if row.count > 0 {
+				text += fmt.Sprintf("- %s %s: %d\n", row.icon, row.label, row.count)
+			}
+		}
+	}
 
 	// 按实际结果决定抬头：有漏洞才告警，0 漏洞则明确说明「未发现」
 	if total > 0 {
