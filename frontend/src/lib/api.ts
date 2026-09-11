@@ -142,43 +142,6 @@ export interface DingTalkMessageDiagnostic { id: number; botId: number; messageI
 export interface DingTalkDiagnostics { botId: number; streamStatus: string; bindingCount: number; allowlistCount: number; messageCount: number; latestMessage?: DingTalkMessageDiagnostic }
 export interface DingTalkAllowlist { id?: number; botId: number; entryType: 'user' | 'group' | string; entryValue: string; enabled?: boolean; description?: string }
 
-export type AIProvider = 'openai' | 'deepseek' | 'anthropic' | 'openai_compatible' | string
-
-export interface AIAPIKey {
-  id?: number
-  provider: AIProvider
-  name: string
-  apiKey?: string
-  maskedApiKey?: string
-  baseUrl?: string
-  model?: string
-  enabled?: boolean
-  isDefault?: boolean
-  description?: string
-  lastTestStatus?: string
-  lastTestMessage?: string
-  lastTestAt?: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface AIChatMessage {
-  role: 'system' | 'user' | 'assistant' | string
-  content: string
-}
-
-export interface AIChatResponse {
-  provider: string
-  model: string
-  content: string
-  usage?: Record<string, any>
-}
-
-export interface AIAPIKeyTestResult {
-  status: string
-  message: string
-  at: string
-}
 
 export interface TaskRow {
   taskID?: string
@@ -783,30 +746,6 @@ export function listDingTalkAllowlist(botId: number) { return request.get<DingTa
 export function saveDingTalkAllowlist(data: DingTalkAllowlist) { return request.post<DingTalkAllowlist>('/api/v1/system/dingtalk-allowlist', data) }
 export function updateDingTalkAllowlist(id: number, data: DingTalkAllowlist) { return request.put<DingTalkAllowlist>(`/api/v1/system/dingtalk-allowlist/${id}`, data) }
 export function deleteDingTalkAllowlist(id: number) { return request.delete(`/api/v1/system/dingtalk-allowlist/${id}`) }
-
-export function getAIAPIKeys() {
-  return request.get<AIAPIKey[]>('/api/v1/system/ai-api-keys')
-}
-
-export function createAIAPIKey(data: AIAPIKey) {
-  return request.post<AIAPIKey>('/api/v1/system/ai-api-keys', data)
-}
-
-export function updateAIAPIKey(id: number | string, data: AIAPIKey) {
-  return request.put<AIAPIKey>(`/api/v1/system/ai-api-keys/${id}`, data)
-}
-
-export function deleteAIAPIKey(id: number | string) {
-  return request.delete(`/api/v1/system/ai-api-keys/${id}`)
-}
-
-export function testAIAPIKey(id: number | string) {
-  return request.post<AIAPIKeyTestResult>(`/api/v1/system/ai-api-keys/${id}/test`, {}, { timeout: 130000 })
-}
-
-export function sendAIChat(data: { keyId?: number; provider?: string; model?: string; systemPrompt?: string; messages: AIChatMessage[]; temperature?: number; maxTokens?: number }) {
-  return request.post<AIChatResponse>('/api/v1/ai/chat', data, { timeout: 130000 })
-}
 
 export function getUsers(params?: { page?: number; pageSize?: number }) {
   return request.get('/api/v1/users', { params })

@@ -668,23 +668,6 @@ func createTables() error {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(bot_id, message_id)
         )`,
-		`CREATE TABLE IF NOT EXISTS dingtalk_ai_sessions (
-            id BIGSERIAL PRIMARY KEY,
-            bot_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            conversation_id TEXT NOT NULL,
-            title TEXT DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(bot_id, user_id, conversation_id)
-        )`,
-		`CREATE TABLE IF NOT EXISTS dingtalk_ai_messages (
-            id BIGSERIAL PRIMARY KEY,
-            session_id INTEGER NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
 
 		// 扫描配置：保存工具级配置，内容以 JSON 字符串存储。
 		`CREATE TABLE IF NOT EXISTS scan_config (
@@ -737,25 +720,6 @@ func createTables() error {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(dict_type, value)
-		)`,
-
-		// AI API Key：保存 GPT、DeepSeek、Claude/Claude Code 和 OpenAI 兼容模型配置。
-		`CREATE TABLE IF NOT EXISTS ai_api_keys (
-			id BIGSERIAL PRIMARY KEY,
-			provider TEXT NOT NULL,
-			name TEXT NOT NULL,
-			api_key TEXT NOT NULL,
-			base_url TEXT DEFAULT '',
-			model TEXT DEFAULT '',
-			enabled INTEGER DEFAULT 1,
-			is_default INTEGER DEFAULT 0,
-			description TEXT DEFAULT '',
-			last_test_status TEXT DEFAULT '',
-			last_test_message TEXT DEFAULT '',
-			last_test_at TIMESTAMP,
-			created_by INTEGER DEFAULT 0,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 服务账号令牌：供外部智能体（DSH / fusionweb-tools 插件）以最小权限调用 API。
@@ -900,10 +864,7 @@ func createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_type ON scan_dictionaries(dict_type)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_enabled ON scan_dictionaries(enabled)",
 		"CREATE INDEX IF NOT EXISTS idx_scan_dictionary_builtin ON scan_dictionaries(is_builtin)",
-		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_provider ON ai_api_keys(provider)",
-		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_user ON ai_api_keys(created_by)",
-		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_enabled ON ai_api_keys(enabled)",
-		"CREATE INDEX IF NOT EXISTS idx_ai_api_keys_default ON ai_api_keys(is_default)",
+		"CREATE INDEX IF NOT EXISTS idx_pending_confirmations_status ON pending_confirmations(status)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_provider ON space_engine_keys(provider)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_user ON space_engine_keys(created_by)",
 		"CREATE INDEX IF NOT EXISTS idx_space_engine_enabled ON space_engine_keys(enabled)",

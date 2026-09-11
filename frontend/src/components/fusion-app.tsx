@@ -87,7 +87,6 @@ import { SystemLogsView } from '@/components/fusion/views/system-logs-view'
 import { SettingsView } from '@/components/fusion/views/settings-view'
 import { WorkersView } from '@/components/fusion/views/workers-view'
 import { AIChatView } from '@/components/fusion/views/ai-chat-view'
-import { AIAPIKeysView } from '@/components/fusion/views/ai-api-keys-view'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -132,7 +131,6 @@ type ViewKey =
   | 'space-api-keys'
   | 'policies'
   | 'settings'
-  | 'ai-api-keys'
   | 'users'
   | 'system-logs'
   | 'workers'
@@ -215,7 +213,6 @@ const navSections: Array<{
     items: [
       { key: 'policies', label: '策略管理', icon: Database },
       { key: 'settings', label: '钉钉机器人配置', icon: KeyRound },
-      { key: 'ai-api-keys', label: 'AI Key', icon: Bot },
       { key: 'users', label: '用户管理', icon: Users },
       { key: 'system-logs', label: '日志审计', icon: Terminal },
       { key: 'workers', label: '节点管理', icon: Server },
@@ -259,7 +256,6 @@ const viewPaths: Record<ViewKey, string> = {
   'space-api-keys': '/space/api-keys',
   policies: '/system/policies',
   settings: '/system/settings',
-  'ai-api-keys': '/system/ai-api-keys',
   users: '/system/users',
   'system-logs': '/system/logs',
   workers: '/system/workers',
@@ -1075,7 +1071,6 @@ function AppShell({
           <KeepAliveView active={view === 'space-api-keys'}><SpaceApiKeysView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'policies'}><PolicyView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'settings'}><SettingsView /></KeepAliveView>
-          <KeepAliveView active={view === 'ai-api-keys'}><AIAPIKeysView /></KeepAliveView>
           <KeepAliveView active={view === 'users'}><UsersView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'system-logs'}><SystemLogsView demoMode={demoMode} /></KeepAliveView>
           <KeepAliveView active={view === 'workers'}><WorkersView /></KeepAliveView>

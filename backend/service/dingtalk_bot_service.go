@@ -393,12 +393,6 @@ func (s *DingTalkBotService) DeleteBot(id int) error {
 	var migratedKeyID int
 	_ = tx.QueryRow(`SELECT COALESCE(migrated_from_key_id,0) FROM dingtalk_bots WHERE id=?`, id).Scan(&migratedKeyID)
 	// 级联清理该机器人的全部相关数据，避免残留孤儿记录。
-	if _, err := tx.Exec(`DELETE FROM dingtalk_ai_messages WHERE session_id IN (SELECT id FROM dingtalk_ai_sessions WHERE bot_id=?)`, id); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`DELETE FROM dingtalk_ai_sessions WHERE bot_id=?`, id); err != nil {
-		return err
-	}
 	if _, err := tx.Exec(`DELETE FROM dingtalk_messages WHERE bot_id=?`, id); err != nil {
 		return err
 	}
@@ -773,7 +767,7 @@ func severityDingIcon(sev string) (string, string) {
 	case "info":
 		return "🟢", "信息"
 	default:
-		return "⚪", "未知"
+		return "🔘", "未知"
 	}
 }
 
@@ -806,7 +800,7 @@ func buildWebScanDingTalkMessage(task *models.TaskConfig) (string, string) {
 	text += fmt.Sprintf("- 🟡 中危: %d\n", counts["medium"])
 	text += fmt.Sprintf("- 🔵 低危: %d\n", counts["low"])
 	text += fmt.Sprintf("- 🟢 信息: %d\n", counts["info"])
-	text += fmt.Sprintf("- ⚪ 未知: %d\n", counts["unknown"])
+	text += fmt.Sprintf("- 🔘 未知: %d\n", counts["unknown"])
 
 	// 按实际结果决定抬头：有漏洞才告警，0 漏洞则明确说明「未发现」
 	if total > 0 {
@@ -1033,12 +1027,13 @@ func (s *DingTalkBotService) processMessage(ctx context.Context, botID int, data
 		_ = s.replyText(ctx, botID, messageID, data, "未识别到任务命令，且当前机器人未开启 AI 对话。可发送：web <网址>、port <IP> --ports 80,443 或 subdomain <域名>。")
 		return nil
 	}
-	// Phase 3：优先交给 DSH（配置了 FUSIONWEB_DSH_BRIDGE_URL 时）；未配置则退回旧 AI 对话。
+	// 自然语言交给 DSH（配置了 FUSIONWEB_DSH_BRIDGE_URL 时）。
 	if handled, ack := s.handleDingTalkDSH(ctx, botID, content); handled {
 		_ = s.replyText(ctx, botID, messageID, data, ack)
 		return nil
 	}
-	return s.handleDingTalkAI(ctx, botID, userID, messageID, data, content)
+	_ = s.replyText(ctx, botID, messageID, data, dingTalkHelpText)
+	return nil
 }
 
 var dingTalkBindingCommandRE = regexp.MustCompile(`(?i)(?:bind|绑定)\s*[:：]?\s*([a-z0-9]{6,16})`)
@@ -1158,57 +1153,6 @@ func (s *DingTalkBotService) bindIncomingCode(botID int, data *chatbot.BotCallba
 	}
 	logger.Info("钉钉绑定成功: bot=%d user=%d ding=%s conv=%s", botID, userID, maskedDingTalkValue(dingID), maskedDingTalkValue(data.ConversationId))
 	return nil
-}
-
-func (s *DingTalkBotService) handleDingTalkAI(ctx context.Context, botID, userID int, messageID string, data *chatbot.BotCallbackDataModel, content string) error {
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return nil
-	}
-	conversationID := strings.TrimSpace(data.ConversationId)
-	if conversationID == "" {
-		conversationID = "user:" + primaryDingTalkSenderID(data)
-	}
-	var sessionID int64
-	err := database.DB.QueryRow(`INSERT INTO dingtalk_ai_sessions (bot_id,user_id,conversation_id,title,created_at,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT (bot_id,user_id,conversation_id) DO UPDATE SET updated_at=CURRENT_TIMESTAMP RETURNING id`, botID, userID, conversationID, truncateDing(content, 80)).Scan(&sessionID)
-	if err != nil {
-		return err
-	}
-	if _, err := database.DB.Exec(`INSERT INTO dingtalk_ai_messages (session_id,role,content) VALUES (?,?,?)`, sessionID, "user", content); err != nil {
-		return err
-	}
-	rows, err := database.DB.Query(`SELECT role,content FROM (SELECT id,role,content FROM dingtalk_ai_messages WHERE session_id=? ORDER BY id DESC LIMIT 20) history ORDER BY id ASC`, sessionID)
-	if err != nil {
-		return err
-	}
-	messages := make([]AIChatMessage, 0, 20)
-	for rows.Next() {
-		var message AIChatMessage
-		if err := rows.Scan(&message.Role, &message.Content); err != nil {
-			rows.Close()
-			return err
-		}
-		messages = append(messages, message)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return err
-	}
-	if err := rows.Close(); err != nil {
-		return err
-	}
-	response, err := NewSystemSettingsService().ChatWithAI(AIChatRequest{
-		Messages:     messages,
-		SystemPrompt: "你是 FusionWeb 安全扫描平台的钉钉 AI 助手。请使用简体中文，回答清晰、准确、可执行。",
-	}, userID)
-	if err != nil {
-		_ = s.replyText(ctx, botID, messageID, data, "AI 对话失败："+err.Error())
-		return nil
-	}
-	if _, err := database.DB.Exec(`INSERT INTO dingtalk_ai_messages (session_id,role,content) VALUES (?,?,?)`, sessionID, "assistant", response.Content); err != nil {
-		return err
-	}
-	return s.replyMarkdown(ctx, botID, messageID, data, "AI 回复", response.Content)
 }
 
 func (s *DingTalkBotService) replyText(ctx context.Context, botID int, messageID string, data *chatbot.BotCallbackDataModel, content string) error {

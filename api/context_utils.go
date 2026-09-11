@@ -135,3 +135,11 @@ func RequireRole(c *gin.Context, requiredRoles ...string) bool {
 
 	return false
 }
+
+// currentUserIDValue 返回当前登录用户 ID（无则返回 0）。
+func currentUserIDValue(c *gin.Context) int {
+	if userID, ok := GetUserIDFromContext(c); ok && userID != nil {
+		return *userID
+	}
+	return 0
+}

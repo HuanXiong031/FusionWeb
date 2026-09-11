@@ -270,12 +270,6 @@ func NewRouter(app *App) *gin.Engine {
 			vulnVerifyGroup.GET("/:id/vulns", HandleGetManualVulnVerifyListByGroup())
 		}
 
-		// AI 对话
-		ai := v1.Group("/ai")
-		{
-			ai.POST("/chat", HandleAIChat())
-		}
-
 		// 工具方法
 		tools := v1.Group("/tools")
 		{
@@ -328,11 +322,6 @@ func NewRouter(app *App) *gin.Engine {
 			system.POST("/dingtalk-allowlist", HandleSaveDingTalkAllowlist())
 			system.PUT("/dingtalk-allowlist/:id", HandleUpdateDingTalkAllowlist())
 			system.DELETE("/dingtalk-allowlist/:id", HandleDeleteDingTalkAllowlist())
-			system.GET("/ai-api-keys", HandleListAIAPIKeys())
-			system.POST("/ai-api-keys", HandleSaveAIAPIKey())
-			system.PUT("/ai-api-keys/:id", HandleUpdateAIAPIKey())
-			system.DELETE("/ai-api-keys/:id", HandleDeleteAIAPIKey())
-			system.POST("/ai-api-keys/:id/test", HandleTestAIAPIKey())
 			// 服务账号令牌（供 DSH / fusionweb-tools 等外部智能体调用）
 			system.GET("/service-tokens", HandleListServiceTokens())
 			system.POST("/service-tokens", HandleCreateServiceToken())
