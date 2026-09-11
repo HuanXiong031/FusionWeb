@@ -64,6 +64,52 @@ func resetFingerprintRuntimeCache() {
 	structs.DirDB = nil
 }
 
+// fingerprintCacheVersion 本进程上次看到的指纹库版本（用于跨进程感知指纹库变化）。
+var fingerprintCacheVersion string
+
+// FingerprintCacheVersion 计算指纹库版本（被动/主动指纹的条数 + 最近更新时间）。
+//
+// 背景：增删改指纹发生在 api 进程，而扫描执行在 worker 进程，两个进程各自持有
+// structs.FingerprintDB / structs.DirDB 缓存；api 侧清缓存清不到 worker，
+// 因此 worker 必须在扫描前自查版本，否则新加的被动指纹要等 worker 重启才生效。
+func FingerprintCacheVersion() string {
+	if database.DB == nil {
+		return ""
+	}
+	var passiveCount, activeCount int
+	var passiveMax, activeMax string
+
+	if err := database.DB.QueryRow(
+		`SELECT COUNT(*), COALESCE(MAX(updated_at)::text,'') FROM passive_fingerprints`,
+	).Scan(&passiveCount, &passiveMax); err != nil {
+		return ""
+	}
+	if err := database.DB.QueryRow(
+		`SELECT COUNT(*), COALESCE(MAX(updated_at)::text,'') FROM active_fingerprints`,
+	).Scan(&activeCount, &activeMax); err != nil {
+		return ""
+	}
+	return fmt.Sprintf("passive=%d@%s;active=%d@%s", passiveCount, passiveMax, activeCount, activeMax)
+}
+
+// EnsureFingerprintCacheFresh 让本进程的指纹缓存与数据库保持一致：
+// 版本未变则什么都不做；版本变化则清空缓存（下次使用时会重新从库加载）。
+// 返回 true 表示本次检测到指纹库变化并已使缓存失效。
+func EnsureFingerprintCacheFresh() bool {
+	version := FingerprintCacheVersion()
+	if version == "" {
+		return false
+	}
+	previous := fingerprintCacheVersion
+	fingerprintCacheVersion = version
+	if previous == "" || previous == version {
+		return false
+	}
+	resetFingerprintRuntimeCache()
+	logger.Info("指纹库已变化，清空本进程指纹缓存以便重新加载（%s -> %s）", previous, version)
+	return true
+}
+
 func (f *FingerprintDBService) GetFingerprintsPageByType(page, pageSize int, fpType, category, keyword, sortBy, sortOrder string, createdByFilter *int, blacklistedOnly bool) ([]FingerprintItem, int, error) {
 	if database.DB == nil {
 		return nil, 0, fmt.Errorf("数据库未初始化")

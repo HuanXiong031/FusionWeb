@@ -34,6 +34,13 @@ func (w *Worker) runScanWorkflow(taskCtx *TaskContext) (err error) {
 		}
 	}()
 
+	// 指纹库可能刚在 api 进程里被改动（新增/导入/启停指纹），而扫描跑在 worker 进程，
+	// 两边缓存互不相通；这里先自查版本，变化了就清掉本进程缓存，避免"加了指纹扫不到"。
+	if service.EnsureFingerprintCacheFresh() {
+		w.logInfo(taskCtx.Config.TaskID, "检测到指纹库已更新，已重新加载指纹缓存")
+		websocket.BroadcastLog(taskCtx.Config.TaskID, "INFO", "指纹库已更新，本次扫描将使用最新指纹")
+	}
+
 	w.logInfo(taskCtx.Config.TaskID, "开始执行扫描任务")
 	websocket.BroadcastLog(taskCtx.Config.TaskID, "INFO", "开始执行扫描任务")
 

@@ -91,6 +91,14 @@ func (f *FingerprintService) RunFingerprintIdentification(targets []string) erro
 
 	f.logInfo(fmt.Sprintf("使用任务实例 URLMap，包含 %d 个URL", len(taskMap)))
 
+	// 确保指纹库已加载。
+	// 注意：此前指纹库只在「主动指纹探测」阶段加载，而该阶段在主动字典为空时会提前 return，
+	// 结果本阶段会被整段跳过。这里自己兜底加载，避免"worker 启动后第一次扫描扫不到指纹"。
+	if len(structs.FingerprintDB) == 0 {
+		f.logInfo("指纹库未加载，正在初始化指纹库...")
+		f.initFingerDBIfNeeded()
+	}
+
 	// 检查指纹库是否加载
 	if len(structs.FingerprintDB) == 0 {
 		f.logWarning("指纹库未加载或为空，跳过指纹识别")
