@@ -758,6 +758,21 @@ func createTables() error {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 
+		// 服务账号令牌：供外部智能体（DSH / fusionweb-tools 插件）以最小权限调用 API。
+		// 仅存 sha256 哈希；明文只在创建时返回一次。
+		`CREATE TABLE IF NOT EXISTS service_tokens (
+			id BIGSERIAL PRIMARY KEY,
+			name TEXT NOT NULL,
+			token_hash TEXT NOT NULL UNIQUE,
+			scopes TEXT NOT NULL DEFAULT '',
+			user_id INTEGER NOT NULL DEFAULT 1,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			expires_at TIMESTAMP,
+			last_used_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+
 		// 空间测绘 API Key：保存 FOFA、Hunter、Quake 等在线资产引擎配置。
 		`CREATE TABLE IF NOT EXISTS space_engine_keys (
 			id BIGSERIAL PRIMARY KEY,

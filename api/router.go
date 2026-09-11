@@ -333,7 +333,24 @@ func NewRouter(app *App) *gin.Engine {
 			system.PUT("/ai-api-keys/:id", HandleUpdateAIAPIKey())
 			system.DELETE("/ai-api-keys/:id", HandleDeleteAIAPIKey())
 			system.POST("/ai-api-keys/:id/test", HandleTestAIAPIKey())
+			// 服务账号令牌（供 DSH / fusionweb-tools 等外部智能体调用）
+			system.GET("/service-tokens", HandleListServiceTokens())
+			system.POST("/service-tokens", HandleCreateServiceToken())
+			system.DELETE("/service-tokens/:id", HandleDeleteServiceToken())
 		}
+	}
+
+	// 服务账号通道（不走 JWT）：按最小权限的 scope 授权，供外部智能体（DSH 等）调用。
+	// 处理器与 JWT 路由完全复用；认证由 ServiceTokenAuthMiddleware 完成。
+	svc := r.Group("/api/v1/svc")
+	{
+		svc.POST("/tasks", ServiceTokenAuthMiddleware("tasks:write"), ValidateTaskTargetLimit(), HandleCreateTask())
+		svc.GET("/tasks", ServiceTokenAuthMiddleware("tasks:read"), HandleGetTasks())
+		svc.GET("/tasks/:id", ServiceTokenAuthMiddleware("tasks:read"), HandleGetTaskDetail())
+		svc.GET("/tasks/:id/results", ServiceTokenAuthMiddleware("tasks:read"), HandleGetTaskResults())
+		svc.GET("/tasks/:id/progress", ServiceTokenAuthMiddleware("tasks:read"), HandleGetTaskProgress())
+		svc.GET("/tasks/:id/vuln", aliasServiceTaskIDParam, ServiceTokenAuthMiddleware("results:read"), HandleGetVulnResults())
+		svc.GET("/tasks/:id/fingerprint", aliasServiceTaskIDParam, ServiceTokenAuthMiddleware("results:read"), HandleGetFingerprintResults())
 	}
 
 	RegisterWorkerRoutes(r, v1)
