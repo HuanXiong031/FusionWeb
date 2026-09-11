@@ -21,6 +21,17 @@ const RUN_TIMEOUT_MS = Number(process.env.DSH_BRIDGE_TIMEOUT_MS || 30 * 60 * 100
 const WORKSPACE = process.env.DSH_BRIDGE_WORKSPACE || '/workspace'
 const ACK_TEXT = '已交给 DSH 处理，完成后我会把结果发到这里。'
 
+// 钉钉渠道的行为约束：用户只看得到最终这段文字，所以要求 DSH 少绕弯、快返回、别长时间轮询
+// （任务完成由 FusionWeb 自身通知，无需 DSH 守着）。
+const PREAMBLE = [
+  '【渠道说明】你正在通过钉钉与用户一对一对话。用户看不到你的中间步骤，只会在稍后收到你这段最终回复。',
+  '【行为要求】',
+  '1. 需要扫描时直接调用 fusionweb_create_task 建任务，并在最终回复里给出 taskId；',
+  '2. 只按用户明确要求建任务，不要自行扩展到其它端口/路径（如确有发现，写在回复里建议即可）；',
+  '3. **不要轮询等待扫描完成**（FusionWeb 会在任务完成时自动通知用户），建完任务就结束本轮；',
+  '4. 最终回复用简体中文、简短（几句话内），说明你做了什么、taskId 是什么、结果会自动通知。',
+].join('\n')
+
 function json(res, code, payload) {
   const body = JSON.stringify(payload)
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(body) })
@@ -82,8 +93,9 @@ function truncate(text, max) {
   return s.length > max ? `${s.slice(0, max)}\n...(已截断)` : s
 }
 
-async function runDsh(prompt) {
-  console.log(`[bridge] 开始 DSH 运行，提示词长度=${prompt.length}`)
+async function runDsh(userPrompt) {
+  const prompt = `${PREAMBLE}\n\n【用户消息】\n${userPrompt}`
+  console.log(`[bridge] 开始 DSH 运行，用户消息长度=${userPrompt.length}`)
   const child = spawn('dsh', ['--profile', 'headless', prompt], {
     cwd: WORKSPACE,
     env: { ...process.env, HOME: process.env.DSH_HOME ? `${process.env.DSH_HOME}/home` : process.env.HOME },
@@ -112,8 +124,10 @@ async function runDsh(prompt) {
     await notifyDingTalk(truncate(stdout, 3000), 'DSH 结果')
     return
   }
+  // 失败时把详情同时打进容器日志，便于排障（此前只有钉钉里能看到）
   const detail = truncate(stderr || stdout || `exit=${code}`, 1500)
-  await notifyDingTalk(`DSH 执行未成功（exit=${code}）：\n\n${detail}`, 'DSH 执行失败')
+  console.error(`[bridge] DSH 执行失败 exit=${code}\n${detail}`)
+  await notifyDingTalk(`DSH 执行未成功（exit=${code}）：\n\n${detail}\n\n可以直接重发一次消息重试。`, 'DSH 执行失败')
 }
 
 const server = http.createServer(async (req, res) => {
