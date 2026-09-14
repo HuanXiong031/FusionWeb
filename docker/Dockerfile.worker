@@ -5,22 +5,28 @@ FROM golang:1.25-bookworm AS worker-builder
 WORKDIR /src
 ARG GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 ENV GOPROXY=${GOPROXY}
+RUN printf '%s\n' '#!/bin/sh' 'n=0' 'until "$@"; do n=$((n+1)); if [ "$n" -ge 5 ]; then echo "重试 5 次仍失败: $*" >&2; exit 1; fi; echo "第 $n 次失败，5 秒后重试: $*" >&2; sleep 5; done' > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
+# 说明：Go 模块代理偶发断流（stream error: INTERNAL_ERROR）会让整次构建失败，
+# 且 GOPROXY 的降级链只在模块缺失(404)时生效、对断流无效，故统一用 retry 包装。
 COPY go.mod go.sum ./
 COPY backend/engine/lib/gonmap/go.mod backend/engine/lib/gonmap/go.sum ./backend/engine/lib/gonmap/
 COPY backend/engine/lib/dnsx/go.mod backend/engine/lib/dnsx/go.sum ./backend/engine/lib/dnsx/
 COPY backend/engine/lib/gologger/go.mod backend/engine/lib/gologger/go.sum ./backend/engine/lib/gologger/
 COPY backend/engine/lib/httpx/go.mod backend/engine/lib/httpx/go.sum ./backend/engine/lib/httpx/
 COPY backend/engine/lib/nuclei/go.mod backend/engine/lib/nuclei/go.sum ./backend/engine/lib/nuclei/
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN --mount=type=cache,target=/go/pkg/mod retry go mod download
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/fusionweb-worker ./worker
+    retry env CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/fusionweb-worker ./worker
 
 # 扫描 CLI 在 CI 构建镜像时编译，部署机器只拉取镜像。
 FROM golang:1.26-bookworm AS scanner-tool-base
 ARG GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 ENV GOPROXY=${GOPROXY}
+RUN printf '%s\n' '#!/bin/sh' 'n=0' 'until "$@"; do n=$((n+1)); if [ "$n" -ge 5 ]; then echo "重试 5 次仍失败: $*" >&2; exit 1; fi; echo "第 $n 次失败，5 秒后重试: $*" >&2; sleep 5; done' > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
+# 说明：Go 模块代理偶发断流（stream error: INTERNAL_ERROR）会让整次构建失败，
+# 且 GOPROXY 的降级链只在模块缺失(404)时生效、对断流无效，故统一用 retry 包装。
 ENV GOSUMDB=off
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libpcap-dev \
@@ -29,32 +35,32 @@ RUN apt-get update \
 FROM scanner-tool-base AS tool-httpx
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.10.0
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.10.0
 
 FROM scanner-tool-base AS tool-nuclei
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
 
 FROM scanner-tool-base AS tool-naabu
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.6.1
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.6.1
 
 FROM scanner-tool-base AS tool-subfinder
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.15.0
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.15.0
 
 FROM scanner-tool-base AS tool-dnsx
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.3.0
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.3.0
 
 FROM scanner-tool-base AS tool-ffuf
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go install -v github.com/ffuf/ffuf/v2@v2.2.1
+    retry env CGO_ENABLED=0 go install -v github.com/ffuf/ffuf/v2@v2.2.1
 
 FROM debian:bookworm-slim
 ARG DEBIAN_MIRROR=http://deb.debian.org/debian
