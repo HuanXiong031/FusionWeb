@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { toast } from 'sonner'
-import { CheckCircle2, Database, Edit3, KeyRound, Loader2, Pause, Play, Plus, Save, Search, ShieldCheck, Trash2, XCircle } from 'lucide-react'
+import { CheckCircle2, Edit3, Loader2, Pause, Play, Plus, Save, Search, ShieldCheck, Trash2, XCircle } from 'lucide-react'
 import { Badge, Button, Card, CardContent, Drawer, Field, Input, Select, Textarea } from '@/components/ui'
 import { DataTable } from '@/components/data-table'
 import {
@@ -16,8 +16,8 @@ import {
   type SpaceEngineKey,
   type SpaceProvider,
 } from '@/lib/api'
-import { asList, compactNumber, formatTime } from '@/lib/utils'
-import { Metric, PageTitle } from '@/components/fusion/shared'
+import { asList, formatTime } from '@/lib/utils'
+import { PageTitle } from '@/components/fusion/shared'
 
 const providers: Array<{ value: SpaceProvider; label: string; description: string; version?: boolean }> = [
   { value: 'fofa', label: 'FOFA', description: 'FOFA 网络空间搜索引擎', version: true },
@@ -39,9 +39,6 @@ export function SpaceApiKeysView({ demoMode }: { demoMode: boolean }) {
     enabled: !demoMode,
   })
   const rows = demoMode ? demoRows : asList<SpaceEngineKey>(query.data)
-  const configuredProviders = new Set(rows.map((row) => String(row.provider).toLowerCase()))
-  const enabledCount = rows.filter((row) => row.enabled !== false).length
-  const lastTestSuccess = rows.filter((row) => row.lastTestStatus === 'success').length
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -201,13 +198,6 @@ export function SpaceApiKeysView({ demoMode }: { demoMode: boolean }) {
   return (
     <div className="grid gap-4">
       <PageTitle title="空间测绘 - API 密钥配置" description="维护 FOFA、Hunter、Quake、Shodan、ZoomEye 在线搜索使用的 API Key。" />
-      <div className="grid gap-4 md:grid-cols-4">
-        <Metric label="支持引擎" value={providers.length} icon={Database} tone="info" badgeLabel="引擎" />
-        <Metric label="已配置" value={compactNumber(configuredProviders.size)} icon={KeyRound} tone={configuredProviders.size ? 'success' : 'warning'} badgeLabel="配置" />
-        <Metric label="已启用" value={compactNumber(enabledCount)} icon={ShieldCheck} tone={enabledCount ? 'success' : 'warning'} badgeLabel="启用" />
-        <Metric label="测试成功" value={compactNumber(lastTestSuccess)} icon={CheckCircle2} tone={lastTestSuccess ? 'success' : 'neutral'} badgeLabel="测试" />
-      </div>
-
       <div className="grid gap-4 lg:grid-cols-3 2xl:grid-cols-5">
         {providers.map((provider) => {
           const configured = rows.find((row) => row.provider === provider.value)
