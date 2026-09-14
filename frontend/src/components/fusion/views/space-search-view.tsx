@@ -1,15 +1,15 @@
 'use client'
 
 import * as React from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { toast } from 'sonner'
-import { Copy, Database, FileDown, KeyRound, Layers3, Loader2, MapPin, RefreshCw, Search } from 'lucide-react'
+import { Copy, FileDown, Loader2, RefreshCw, Search } from 'lucide-react'
 import { Badge, Button, Card, CardContent, Field, Input, Select } from '@/components/ui'
 import { DataTable } from '@/components/data-table'
-import { getSpaceEngineKeys, searchSpaceOnline, type SpaceProvider, type SpaceSearchResult } from '@/lib/api'
-import { asList, compactNumber, formatTime, unwrap } from '@/lib/utils'
-import { Metric, PageTitle, downloadContent, toCsv } from '@/components/fusion/shared'
+import { searchSpaceOnline, type SpaceProvider, type SpaceSearchResult } from '@/lib/api'
+import { unwrap } from '@/lib/utils'
+import { PageTitle, downloadContent, toCsv } from '@/components/fusion/shared'
 
 const providers: Array<{ value: SpaceProvider; label: string; maxSize: number }> = [
   { value: 'fofa', label: 'FOFA', maxSize: 500 },
@@ -58,18 +58,10 @@ export function SpaceSearchView({ demoMode }: { demoMode: boolean }) {
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(50)
   const [rows, setRows] = React.useState<SpaceSearchResult[]>([])
-  const [total, setTotal] = React.useState(0)
-  const [lastSearchedAt, setLastSearchedAt] = React.useState('')
 
-  const keysQuery = useQuery({
-    queryKey: ['space-engine-keys'],
-    queryFn: getSpaceEngineKeys,
-    enabled: !demoMode,
-  })
-  const keys = demoMode ? demoKeys : asList<any>(keysQuery.data)
+
+  // 当前引擎元信息（每页数量上限依赖它）
   const activeProviderMeta = providers.find((item) => item.value === provider) || providers[0]
-  const enabledProviders = new Set(keys.filter((item) => item.enabled !== false).map((item) => String(item.provider).toLowerCase()))
-  const currentProviderReady = enabledProviders.has(provider)
 
   const searchMutation = useMutation({
     mutationFn: async (options?: { page?: number }) => {
@@ -91,8 +83,6 @@ export function SpaceSearchView({ demoMode }: { demoMode: boolean }) {
     onSuccess: (response: any) => {
       const data = unwrap<any>(response) || {}
       setRows(Array.isArray(data.list) ? data.list : [])
-      setTotal(Number(data.total || 0))
-      setLastSearchedAt(new Date().toISOString())
       toast.success(`查询完成，返回 ${Array.isArray(data.list) ? data.list.length : 0} 条`)
     },
     onError: (error: any) => toast.error(error.message || '查询失败'),
@@ -147,12 +137,6 @@ export function SpaceSearchView({ demoMode }: { demoMode: boolean }) {
   return (
     <div className="grid gap-4">
       <PageTitle title="空间测绘 - 在线搜索" description="通过已配置的在线资产引擎查询外部空间测绘数据。" />
-      <div className="grid gap-4 md:grid-cols-4">
-        <Metric label="已启用引擎" value={compactNumber(enabledProviders.size)} icon={Database} tone={enabledProviders.size ? 'success' : 'warning'} badgeLabel="Key" />
-        <Metric label="当前引擎" value={activeProviderMeta.label} icon={KeyRound} tone={currentProviderReady ? 'success' : 'warning'} badgeLabel={currentProviderReady ? '可用' : '未启用'} />
-        <Metric label="匹配总数" value={compactNumber(total)} icon={Layers3} tone="info" badgeLabel="Total" />
-        <Metric label="当前页结果" value={compactNumber(rows.length)} icon={MapPin} tone="accent" badgeLabel={lastSearchedAt ? formatTime(lastSearchedAt) : '结果'} />
-      </div>
 
       <Card>
         <CardContent className="grid gap-4 p-4">
@@ -237,13 +221,6 @@ function copyText(value: string) {
   navigator.clipboard?.writeText(value).then(() => toast.success('已复制')).catch(() => toast.error('复制失败'))
 }
 
-const demoKeys = [
-  { id: 1, provider: 'fofa', name: 'FOFA', enabled: true },
-  { id: 2, provider: 'hunter', name: 'Hunter', enabled: true },
-  { id: 3, provider: 'quake', name: 'Quake', enabled: true },
-  { id: 4, provider: 'shodan', name: 'Shodan', enabled: true },
-  { id: 5, provider: 'zoomeye', name: 'ZoomEye', enabled: true },
-]
 
 const demoResults: SpaceSearchResult[] = [
   { host: 'https://example.com', ip: '93.184.216.34', port: 443, protocol: 'https', domain: 'example.com', title: 'Example Domain', server: 'ECS', country: 'US', city: 'Los Angeles', product: 'Akamai' },
