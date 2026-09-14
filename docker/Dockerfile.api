@@ -1,6 +1,6 @@
 FROM golang:1.25-alpine AS builder
 WORKDIR /src
-ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 ENV GOPROXY=$GOPROXY
 COPY go.mod go.sum ./
 COPY backend/engine/lib/gonmap/go.mod backend/engine/lib/gonmap/go.sum ./backend/engine/lib/gonmap/

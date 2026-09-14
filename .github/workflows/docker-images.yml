@@ -109,7 +109,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
           build-args: |
-            GOPROXY=https://goproxy.cn,direct
+            GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
 
   mirror-runtime-images:
     needs: prepare
@@ -137,15 +137,19 @@ jobs:
           IMAGE_PREFIX: ${{ needs.prepare.outputs.image_prefix }}
         run: |
           set -euo pipefail
-          skopeo copy --override-os linux --override-arch amd64 --all=false \
-            "docker://docker.io/library/postgres:${POSTGRES_VERSION}" \
-            "docker://${IMAGE_PREFIX}-postgres:${POSTGRES_VERSION}"
-          skopeo copy --override-os linux --override-arch amd64 --all=false \
-            "docker://docker.io/library/redis:${REDIS_VERSION}" \
-            "docker://${IMAGE_PREFIX}-redis:${REDIS_VERSION}"
-          skopeo copy --override-os linux --override-arch amd64 --all=false \
-            "docker://docker.io/minio/minio:${MINIO_VERSION}" \
-            "docker://${IMAGE_PREFIX}-minio:${MINIO_VERSION}"
+          # 上游公共仓库可能变更策略（例如 MinIO 已不再允许匿名拉取）或限流；
+          # 运行时镜像通常已在 ACR 中，因此这里失败只告警，不阻断业务镜像发布。
+          mirror() {
+            local src="$1" dst="$2"
+            if skopeo copy --override-os linux --override-arch amd64 --all=false "$src" "$dst"; then
+              echo "已同步：$src"
+            else
+              echo "::warning::运行时镜像同步失败（可能为上游仓库策略变化或限流），已跳过：$src"
+            fi
+          }
+          mirror "docker://docker.io/library/postgres:${POSTGRES_VERSION}" "docker://${IMAGE_PREFIX}-postgres:${POSTGRES_VERSION}"
+          mirror "docker://docker.io/library/redis:${REDIS_VERSION}" "docker://${IMAGE_PREFIX}-redis:${REDIS_VERSION}"
+          mirror "docker://docker.io/minio/minio:${MINIO_VERSION}" "docker://${IMAGE_PREFIX}-minio:${MINIO_VERSION}"
 
   release-summary:
     needs: [prepare, build-business-images, mirror-runtime-images]
