@@ -12,10 +12,12 @@ inner_port="${DSH_INNER_PORT:-8991}"
 log_file="/tmp/dsh-web.log"
 
 # 叠加层：接入统一工具镜像的 MCP server（覆盖 dsh-mcp-studio 配置）
+# 注意：不能写成 `dsh web ... --patch`——web 子命令不接受父级 --patch；
+# 正确形式是 `dsh --patch <file> --profile web <应用参数>`。
 if [ -f /opt/dsh-redteam/fusionweb-mcp.patch.yml ]; then
-  set -- --patch /opt/dsh-redteam/fusionweb-mcp.patch.yml web --host 127.0.0.1 --port "$inner_port" --no-open
+  set -- --patch /opt/dsh-redteam/fusionweb-mcp.patch.yml --profile web --host 127.0.0.1 --port "$inner_port" --no-open
 else
-  set -- web --host 127.0.0.1 --port "$inner_port" --no-open
+  set -- --profile web --host 127.0.0.1 --port "$inner_port" --no-open
 fi
 
 # 允许外部浏览器地址访问 DSH 的 /api（host 或 host:port，空格分隔）
