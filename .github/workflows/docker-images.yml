@@ -83,7 +83,7 @@ jobs:
             context: .
             dockerfile: docker/Dockerfile.dsh
             cache_scope: fusionweb-dsh
-          - name: toolkit
+          - name: tools
             context: .
             dockerfile: docker/Dockerfile.toolkit
             cache_scope: fusionweb-toolkit

@@ -181,8 +181,8 @@ services:
   #   DSH    → http://fusionweb-toolkit:7000/mcp（MCP，经 dsh-mcp-studio 接入）
   # 仅容器网络内可达，不对外发布端口。
   fusionweb-toolkit:
-    image: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-toolkit:${FUSIONWEB_VERSION:-latest}
-    container_name: fusionweb_toolkit
+    image: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-tools:${FUSIONWEB_VERSION:-latest}
+    container_name: fusionweb_tools
     restart: unless-stopped
     environment:
       # /app/data 与 worker 共享（路径两侧一致）；/workspace 供 DSH 侧产物
