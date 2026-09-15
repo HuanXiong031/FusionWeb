@@ -83,6 +83,10 @@ jobs:
             context: .
             dockerfile: docker/Dockerfile.dsh
             cache_scope: fusionweb-dsh
+          - name: toolkit
+            context: .
+            dockerfile: docker/Dockerfile.toolkit
+            cache_scope: fusionweb-toolkit
     steps:
       - uses: actions/checkout@v4
 

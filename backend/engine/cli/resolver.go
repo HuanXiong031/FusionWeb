@@ -25,7 +25,12 @@ func ResolveTool(name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("未找到 CLI 工具 %s，请确认 Worker 镜像已安装该工具，或配置 FUSIONWEB_TOOL_%s", name, envToolName(name))
+	// 本机未安装时，若已配置统一工具镜像（toolkit）且其提供该工具，则交给远程执行。
+	if ToolkitHas(name) {
+		return toolkitPathPrefix + toolkitToolName(name), nil
+	}
+
+	return "", fmt.Errorf("未找到 CLI 工具 %s，请确认 Worker 镜像或 toolkit 已安装该工具，或配置 FUSIONWEB_TOOL_%s", name, envToolName(name))
 }
 
 func normalizeToolName(name string) string {

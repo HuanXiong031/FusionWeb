@@ -39,6 +39,11 @@ func Execute(ctx context.Context, tool string, args []string, options ExecuteOpt
 		return result, err
 	}
 
+	// 工具由统一工具镜像（toolkit）提供时，转发远程执行
+	if strings.HasPrefix(path, toolkitPathPrefix) {
+		return executeViaToolkit(ctx, tool, args, options)
+	}
+
 	if options.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, options.Timeout)

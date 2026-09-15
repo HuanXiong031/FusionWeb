@@ -1,0 +1,146 @@
+# FusionWeb × DSH 统一工具镜像（toolkit）
+#
+# 目标：把 FusionWeb worker 与 DSH 红队模式用到的**全部工具**收敛到一个镜像里：
+#   L1 扫描类    nmap / masscan / naabu / httpx / nuclei(+模板) / subfinder / dnsx / ffuf
+#   L2 审计逆向  semgrep / gitleaks / jadx(含 JRE) / apktool / binwalk / yara / volatility3
+#   L3 免杀编译  mingw-w64 / nasm / upx
+#   L4 应急云    awscli / kubectl / 常用取证 CLI
+#
+# 两个消费方：
+#   * DSH 红队模式  → 通过镜像内的 MCP server（HTTP/SSE，端口 7000）调用
+#   * FusionWeb worker → 通过镜像内的执行 API（HTTP，端口 7001）远程执行工具
+#
+# 纪律（与 dsh-scanner-tools 的契约对齐）：工具白名单、速率默认值、产物落盘、
+# 每次调用写审计日志（JSONL）。具体实现见 tools/toolkit/。
+#
+# 构建：docker build -f docker/Dockerfile.toolkit -t fusionweb-toolkit .
+
+# syntax=docker/dockerfile:1.7
+
+# ── L1：扫描类工具（与 worker 镜像同源，集中在此构建，worker 不再重复构建） ──
+FROM golang:1.26-bookworm AS tool-builder
+ARG GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
+ENV GOSUMDB=off
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git gcc libc6-dev libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+# Go 模块代理偶发断流会让整次构建失败，且 GOPROXY 降级链只对 404 生效，故统一重试包装
+RUN printf '%s\n' '#!/bin/sh' 'n=0' \
+      'until "$@"; do n=$((n+1)); if [ "$n" -ge 5 ]; then echo "重试 5 次仍失败: $*" >&2; exit 1; fi; echo "第 $n 次失败，5 秒后重试: $*" >&2; sleep 5; done' \
+      > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
+
+FROM tool-builder AS tool-httpx
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/httpx/cmd/httpx@v1.10.0
+FROM tool-builder AS tool-nuclei
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1
+FROM tool-builder AS tool-naabu
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.6.1
+FROM tool-builder AS tool-subfinder
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.15.0
+FROM tool-builder AS tool-dnsx
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=1 go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@v1.3.0
+FROM tool-builder AS tool-ffuf
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    retry env CGO_ENABLED=0 go install -v github.com/ffuf/ffuf/v2@v2.2.1
+
+# ── 运行镜像 ───────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+ARG DEBIAN_MIRROR=http://deb.debian.org/debian
+ARG DEBIAN_SECURITY_MIRROR=http://deb.debian.org/debian-security
+ARG JADX_VERSION=1.5.0
+ARG APKTOOL_VERSION=2.9.3
+ARG GITLEAKS_VERSION=8.18.4
+ARG KUBECTL_VERSION=v1.30.5
+ARG UPX_VERSION=4.2.4
+
+RUN sed -i \
+      -e "s|http://deb.debian.org/debian|${DEBIAN_MIRROR}|g" \
+      -e "s|http://security.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g" \
+      -e "s|http://deb.debian.org/debian-security|${DEBIAN_SECURITY_MIRROR}|g" \
+      /etc/apt/sources.list.d/debian.sources \
+    && rm -f /etc/apt/apt.conf.d/docker-clean
+
+# L1 运行时依赖 + L2/L3/L4 通过 apt 安装的部分
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates tzdata dumb-init iputils-ping curl unzip xz-utils git jq \
+       nmap masscan libpcap0.8 \
+       python3 python3-pip python3-venv \
+       default-jre-headless \
+       mingw-w64 nasm \
+       binwalk yara sleuthkit \
+    && rm -rf /var/lib/apt/lists/*
+
+# L2：Python 生态工具（semgrep / volatility3 等）
+RUN pip3 install --no-cache-dir --break-system-packages \
+      semgrep \
+      volatility3 \
+      requests \
+      "mcp>=1.2.0"
+
+# L2：jadx / apktool / gitleaks（发布包）
+RUN set -eux; \
+    curl -fsSL -o /tmp/jadx.zip "https://github.com/skylot/jadx/releases/download/v${JADX_VERSION}/jadx-${JADX_VERSION}.zip"; \
+    mkdir -p /opt/jadx && unzip -q /tmp/jadx.zip -d /opt/jadx && rm /tmp/jadx.zip; \
+    ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx; \
+    ln -sf /opt/jadx/bin/jadx-gui /usr/local/bin/jadx-gui; \
+    curl -fsSL -o /usr/local/bin/apktool.jar "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar"; \
+    printf '#!/bin/sh\nexec java -jar /usr/local/bin/apktool.jar "$@"\n' > /usr/local/bin/apktool; \
+    chmod +x /usr/local/bin/apktool; \
+    curl -fsSL -o /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"; \
+    tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks && rm /tmp/gitleaks.tar.gz; \
+    chmod +x /usr/local/bin/gitleaks
+# UPX：bookworm 仓库已无此包，改用官方静态发布包
+RUN set -eux; \
+    curl -fsSL -o /tmp/upx.tar.xz "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz"; \
+    tar -xJf /tmp/upx.tar.xz -C /tmp; \
+    install -m 0755 "/tmp/upx-${UPX_VERSION}-amd64_linux/upx" /usr/local/bin/upx; \
+    rm -rf /tmp/upx.tar.xz "/tmp/upx-${UPX_VERSION}-amd64_linux"
+
+# L4：kubectl（云原生）
+RUN set -eux; \
+    curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"; \
+    chmod +x /usr/local/bin/kubectl
+
+# L1：从构建阶段拷入 Go 工具
+COPY --from=tool-httpx /go/bin/httpx /usr/local/bin/httpx
+COPY --from=tool-nuclei /go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=tool-naabu /go/bin/naabu /usr/local/bin/naabu
+COPY --from=tool-subfinder /go/bin/subfinder /usr/local/bin/subfinder
+COPY --from=tool-dnsx /go/bin/dnsx /usr/local/bin/dnsx
+COPY --from=tool-ffuf /go/bin/ffuf /usr/local/bin/ffuf
+
+# nuclei 官方模板（离线随镜像分发，避免运行期下载）
+RUN nuclei -update-templates -silent >/dev/null 2>&1 || true
+
+# 执行服务 + MCP server（Python，共享一套"工具纪律"实现）
+COPY tools/toolkit /opt/toolkit
+COPY docker/toolkit-entrypoint.sh /usr/local/bin/toolkit-entrypoint
+RUN chmod +x /usr/local/bin/toolkit-entrypoint \
+    && mkdir -p /workspace /var/log/toolkit \
+    && python3 -c "import mcp" \
+    && httpx -version && nuclei -version && naabu -version && subfinder -version && dnsx -version && ffuf -V \
+    && nmap --version | head -n 1 && masscan --version 2>&1 | head -n 1 \
+    && semgrep --version && gitleaks version && jadx --version | head -n 1 \
+    && apktool --version && binwalk --help >/dev/null && yara --version \
+    && x86_64-w64-mingw32-gcc --version | head -n 1 && nasm -v && upx --version | head -n 1 \
+    && kubectl version --client=true --output=yaml | head -n 3
+
+ENV TZ=Asia/Shanghai
+ENV TOOLKIT_WORKSPACE=/workspace
+ENV TOOLKIT_AUDIT_LOG=/var/log/toolkit/audit.jsonl
+ENV TOOLKIT_EXEC_PORT=7001
+ENV TOOLKIT_MCP_PORT=7000
+
+EXPOSE 7000 7001
+
+ENTRYPOINT ["dumb-init", "--", "/usr/local/bin/toolkit-entrypoint"]

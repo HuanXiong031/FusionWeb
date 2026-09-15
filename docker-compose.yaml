@@ -83,6 +83,10 @@ services:
       FUSIONWEB_MINIO_USE_SSL: "false"
       FUSIONWEB_MINIO_PUBLIC_URL: ${FUSIONWEB_MINIO_PUBLIC_URL:-}
       FUSIONWEB_WORKER_KEY: ${FUSIONWEB_WORKER_KEY:-fusionweb-worker-key}
+      # 统一工具镜像：worker 的工具调用转发到 toolkit（为空则回退本机执行）
+      FUSIONWEB_TOOLKIT_URL: ${FUSIONWEB_TOOLKIT_URL:-http://fusionweb-toolkit:7001}
+      FUSIONWEB_TOOLKIT_TOKEN: ${FUSIONWEB_TOOLKIT_TOKEN:-}
+      FUSIONWEB_TOOLKIT_WORKSPACE: /app/data
       FUSIONWEB_WORKER_IMAGE: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-worker:${FUSIONWEB_VERSION:-latest}
       FUSIONWEB_WORKER_EXTERNAL_PG_DSN: ${FUSIONWEB_WORKER_EXTERNAL_PG_DSN:-}
       FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR: ${FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR:-}
@@ -172,6 +176,25 @@ services:
       - fusionweb_dsh_home:/root/.dsh
     networks: [fusionweb]
 
+  # 统一工具镜像：扫描/审计/逆向/免杀/应急云 全部工具的唯一来源
+  #   worker → http://fusionweb-toolkit:7001（执行 API）
+  #   DSH    → http://fusionweb-toolkit:7000/mcp（MCP，经 dsh-mcp-studio 接入）
+  # 仅容器网络内可达，不对外发布端口。
+  fusionweb-toolkit:
+    image: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-toolkit:${FUSIONWEB_VERSION:-latest}
+    container_name: fusionweb_toolkit
+    restart: unless-stopped
+    environment:
+      # /app/data 与 worker 共享（路径两侧一致）；/workspace 供 DSH 侧产物
+      TOOLKIT_WORKSPACES: /app/data:/workspace
+      TOOLKIT_TOKEN: ${FUSIONWEB_TOOLKIT_TOKEN:-}
+      TZ: Asia/Shanghai
+    volumes:
+      # 与 worker 共享数据盘，保证传入的产物路径在两侧一致
+      - fusionweb_data:/app/data
+      - fusionweb_toolkit_workspace:/workspace
+    networks: [fusionweb]
+
 networks:
   fusionweb:
     driver: bridge
@@ -183,6 +206,7 @@ volumes:
   fusionweb_data:
   fusionweb_secrets:
   fusionweb_ssl:
+  fusionweb_toolkit_workspace:
 
 
 

@@ -17,3 +17,7 @@ frontend/logs-next/
 
 # TypeScript 增量构建缓存（不应入库）
 frontend/tsconfig.tsbuildinfo
+
+# Python 编译产物
+__pycache__/
+*.pyc
