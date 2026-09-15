@@ -53,6 +53,15 @@ RUN set -eu; \
       ln -sfn "$p" /opt/dsh-redteam/node_modules/; \
     done; \
     ls /opt/dsh-redteam/node_modules/@deepseek-ai/dsh-settings >/dev/null
+# 插件之间存在互相引用（例如 dsh-hunter 导入 @dsh-external/dsh-redteam-results），
+# 因此把全部插件也链进包自身的 node_modules，保证无论启用哪些子集都能解析。
+RUN set -eu; \
+    mkdir -p /opt/dsh-redteam/node_modules/@dsh-external; \
+    for p in /opt/dsh-redteam/plugins/*; do \
+      [ -d "$p" ] || continue; \
+      ln -sfn "$p" /opt/dsh-redteam/node_modules/@dsh-external/$(basename "$p"); \
+    done; \
+    ls /opt/dsh-redteam/node_modules/@dsh-external | wc -l
 
 # 默认启用的红队插件（宿主平面；可用环境变量覆盖，无需重建镜像）
 # 不含 dsh-scanner-tools（扫描改由 FusionWeb 承担）与需要外部 CLI/MCP 的插件。
