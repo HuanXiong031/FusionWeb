@@ -83,10 +83,6 @@ services:
       FUSIONWEB_MINIO_USE_SSL: "false"
       FUSIONWEB_MINIO_PUBLIC_URL: ${FUSIONWEB_MINIO_PUBLIC_URL:-}
       FUSIONWEB_WORKER_KEY: ${FUSIONWEB_WORKER_KEY:-fusionweb-worker-key}
-      # 统一工具镜像：worker 的工具调用转发到 toolkit（为空则回退本机执行）
-      FUSIONWEB_TOOLKIT_URL: ${FUSIONWEB_TOOLKIT_URL:-http://fusionweb-toolkit:7001}
-      FUSIONWEB_TOOLKIT_TOKEN: ${FUSIONWEB_TOOLKIT_TOKEN:-}
-      FUSIONWEB_TOOLKIT_WORKSPACE: /app/data
       FUSIONWEB_WORKER_IMAGE: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-worker:${FUSIONWEB_VERSION:-latest}
       FUSIONWEB_WORKER_EXTERNAL_PG_DSN: ${FUSIONWEB_WORKER_EXTERNAL_PG_DSN:-}
       FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR: ${FUSIONWEB_WORKER_EXTERNAL_REDIS_ADDR:-}
@@ -136,6 +132,10 @@ services:
     environment:
       FUSIONWEB_SERVER: http://fusionweb-api:8082
       FUSIONWEB_KEY: ${FUSIONWEB_WORKER_KEY:-fusionweb-worker-key}
+      # 统一工具镜像：worker 的工具调用转发到 toolkit（为空则回退本机执行）
+      FUSIONWEB_TOOLKIT_URL: ${FUSIONWEB_TOOLKIT_URL:-http://fusionweb-tools:7001}
+      FUSIONWEB_TOOLKIT_TOKEN: ${FUSIONWEB_TOOLKIT_TOKEN:-}
+      FUSIONWEB_TOOLKIT_WORKSPACE: /app/data
       FUSIONWEB_NAME: ${FUSIONWEB_WORKER_NAME:-default-worker}
       FUSIONWEB_CONCURRENCY: ${FUSIONWEB_WORKER_CONCURRENCY:-5}
       FUSIONWEB_ENCRYPTION_KEY: ${FUSIONWEB_ENCRYPTION_KEY:-}
@@ -156,6 +156,8 @@ services:
       - fusionweb_data:/app/data
     depends_on:
       fusionweb-api: { condition: service_healthy }
+      fusionweb-tools:
+        condition: service_healthy
     networks: [fusionweb]
 
   # DeepSeek Harness（DSH）：自带 Web UI，作为 FusionWeb 的智能体入口。
@@ -180,7 +182,7 @@ services:
   #   worker → http://fusionweb-toolkit:7001（执行 API）
   #   DSH    → http://fusionweb-toolkit:7000/mcp（MCP，经 dsh-mcp-studio 接入）
   # 仅容器网络内可达，不对外发布端口。
-  fusionweb-toolkit:
+  fusionweb-tools:
     image: ${FUSIONWEB_IMAGE_PREFIX:?请设置 FUSIONWEB_IMAGE_PREFIX}-tools:${FUSIONWEB_VERSION:-latest}
     container_name: fusionweb_tools
     restart: unless-stopped
@@ -194,6 +196,12 @@ services:
       - fusionweb_data:/app/data
       - fusionweb_toolkit_workspace:/workspace
     networks: [fusionweb]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "5", "http://127.0.0.1:7001/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 networks:
   fusionweb:
