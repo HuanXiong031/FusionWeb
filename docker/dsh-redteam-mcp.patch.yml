@@ -1,0 +1,18 @@
+# FusionWeb 统一工具镜像（fusionweb-tools）的 MCP 接入。
+#
+# 通过 DSH 的 --patch 叠加层覆盖 dsh-mcp-studio 的配置（该叠加层在 profile 层之后应用），
+# 把镜像内的 MCP server 挂进来，使红队各模式可以直接调用
+# semgrep / jadx / apktool / binwalk / yara / volatility / mingw / nasm / upx / kubectl 等工具。
+#
+# 注意：扫描类工具（nuclei_scan / httpx_probe / ffuf_fuzz）由 fusionweb-tools 插件以
+# FusionWeb 为后端提供，因此 toolkit 侧同名工具在 MCP 上带 toolkit_ 前缀，避免重名冲突。
+- id: dsh-mcp-studio
+  config:
+    servers:
+      - id: fusionweb-toolkit
+        enabled: true
+        name: fusionweb-toolkit
+        transport: streamable-http
+        url: http://fusionweb-tools:7000/mcp
+        toolCallTimeoutMs: 900000
+        failOnStartupError: false
