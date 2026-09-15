@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { toast } from 'sonner'
 import { CheckCircle2, Edit3, Loader2, Pause, Play, Plus, Save, Search, ShieldCheck, Trash2, XCircle } from 'lucide-react'
-import { Badge, Button, Card, CardContent, Drawer, Field, Input, Select, Textarea } from '@/components/ui'
+import { Badge, Button, Drawer, Field, Input, Select, Textarea } from '@/components/ui'
 import { DataTable } from '@/components/data-table'
 import {
   createSpaceEngineKey,
@@ -198,30 +198,6 @@ export function SpaceApiKeysView({ demoMode }: { demoMode: boolean }) {
   return (
     <div className="grid gap-4">
       <PageTitle title="空间测绘 - API 密钥配置" description="维护 FOFA、Hunter、Quake、Shodan、ZoomEye 在线搜索使用的 API Key。" />
-      <div className="grid gap-4 lg:grid-cols-3 2xl:grid-cols-5">
-        {providers.map((provider) => {
-          const configured = rows.find((row) => row.provider === provider.value)
-          return (
-            <Card key={provider.value}>
-              <CardContent className="grid gap-3 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold">{provider.label}</div>
-                    <div className="mt-1 text-xs text-muted">{provider.description}</div>
-                  </div>
-                  <Badge tone={configured?.enabled === false ? 'warning' : configured ? 'success' : 'neutral'}>
-                    {configured?.enabled === false ? '禁用' : configured ? '已配置' : '未配置'}
-                  </Badge>
-                </div>
-                <Button variant="outline" onClick={() => configured ? openEdit(configured) : openCreate(provider.value)}>
-                  {configured ? <Edit3 className="size-4" /> : <Plus className="size-4" />}
-                  {configured ? '编辑配置' : '添加配置'}
-                </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
 
       <DataTable
         columns={columns}
