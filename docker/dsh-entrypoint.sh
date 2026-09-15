@@ -40,6 +40,48 @@ install_fusionweb_tools() {
 }
 install_fusionweb_tools
 
+# ── 注册 dsh-redteam-model（红队十模式 + 插件，已 vendor 进镜像） ────────
+# 幂等：模式目录用符号链接接入发现路径；插件以符号链接挂进各 profile 的 node_modules
+# 并登记到 bundle 列表（等价于 dsh plugin add，但离线、无需 pnpm）。
+install_redteam() {
+  [ -d /opt/dsh-redteam ] || return 0
+  dsh_home="${DSH_HOME:-/root/.dsh}"
+
+  # ① 模式发现：$DSH_HOME/.agent-presets 指向 modes/（DSH 只扫其直接子目录）
+  presets="$dsh_home/.agent-presets"
+  if [ ! -e "$presets" ]; then
+    ln -sfn /opt/dsh-redteam/modes "$presets" 2>/dev/null || cp -r /opt/dsh-redteam/modes "$presets"
+    echo "已接入红队模式目录：$presets -> /opt/dsh-redteam/modes"
+  fi
+
+  # ② 全局指令文件（DSH 原生机制，对所有会话生效；已存在则不覆盖）
+  if [ ! -f "$dsh_home/AGENTS.md" ] && [ -f /opt/dsh-redteam/AGENTS.md ]; then
+    cp /opt/dsh-redteam/AGENTS.md "$dsh_home/AGENTS.md"
+    echo "已写入 DSH 全局指令：$dsh_home/AGENTS.md"
+  fi
+
+  # ③ 各 profile 挂载管理器包与选定的运行时插件
+  for profile_name in web headless; do
+    profile_dir="$dsh_home/profiles/$profile_name"
+    if [ ! -d "$profile_dir" ]; then
+      dsh --profile "$profile_name" --dump-config >/dev/null 2>&1 || true
+    fi
+    [ -d "$profile_dir" ] || continue
+
+    mkdir -p "$profile_dir/node_modules/@dsh-external"
+    ln -sfn /opt/dsh-redteam "$profile_dir/node_modules/@dsh-external/dsh-redteam-model"
+    node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" "@dsh-external/dsh-redteam-model" || true
+
+    for plugin in ${DSH_REDTEAM_PLUGINS:-}; do
+      [ -d "/opt/dsh-redteam/plugins/$plugin" ] || continue
+      ln -sfn "/opt/dsh-redteam/plugins/$plugin" "$profile_dir/node_modules/@dsh-external/$plugin"
+      node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" "@dsh-external/$plugin" || true
+    done
+    echo "红队插件已登记到 profile: $profile_name"
+  done
+}
+install_redteam
+
 # ── 启动 DSH 桥（把钉钉消息转成 DSH 任务，并把结果推回钉钉） ───────────
 node /usr/local/bin/dsh-bridge.mjs &
 bridge_pid=$!

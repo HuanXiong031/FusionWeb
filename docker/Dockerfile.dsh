@@ -27,6 +27,37 @@ ENV DSH_PORT=8990
 # 前置反代已做认证（FusionWeb nginx Basic Auth），DSH 侧放行
 ENV DSH_AUTH_PROXY=1
 
+# ── 运行期工具 ────────────────────────────────────────────────────────
+# git：DSH 插件管理（Redteam Manager 走 `dsh plugin` → pnpm）解析 github: 依赖需要它
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── 预置 dsh-redteam-model（红队十模式 + 十七插件，vendor 固定 commit） ──
+# 目的：镜像自包含，容器启动不依赖 GitHub/网络；版本可复现（固定 commit）。
+# 参考：https://github.com/SeaOf0/dsh-redteam-model （MIT）
+ARG REDTEAM_REPO=https://github.com/SeaOf0/dsh-redteam-model
+ARG REDTEAM_REF=6d2554c8a6b9e47bafd78b5b6e0d5896cfbf7b8e
+RUN git clone --filter=blob:none --no-checkout "$REDTEAM_REPO" /opt/dsh-redteam \
+    && cd /opt/dsh-redteam \
+    && git checkout "$REDTEAM_REF" \
+    && rm -rf .git \
+    && test -f /opt/dsh-redteam/cordis.patch.yml
+# 让它能解析 DSH 及其依赖（等价于被装进 DSH 的 node_modules 环境），无需运行时 pnpm 安装
+RUN set -eu; \
+    DSH_NM=/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules; \
+    mkdir -p /opt/dsh-redteam/node_modules/@deepseek-ai; \
+    for p in "$DSH_NM"/@deepseek-ai/*; do ln -sfn "$p" /opt/dsh-redteam/node_modules/@deepseek-ai/; done; \
+    for p in "$DSH_NM"/*; do \
+      [ "$(basename "$p")" = "@deepseek-ai" ] && continue; \
+      ln -sfn "$p" /opt/dsh-redteam/node_modules/; \
+    done; \
+    ls /opt/dsh-redteam/node_modules/@deepseek-ai/dsh-settings >/dev/null
+
+# 默认启用的红队插件（宿主平面；可用环境变量覆盖，无需重建镜像）
+# 不含 dsh-scanner-tools（扫描改由 FusionWeb 承担）与需要外部 CLI/MCP 的插件。
+ENV DSH_REDTEAM_PLUGINS="dsh-stage-gate dsh-route-boost dsh-sec-enforce dsh-refusal-guard dsh-trace-vault dsh-auto-advance dsh-redteam-results dsh-campaign-memory dsh-mode-group dsh-session-pulse dsh-attack-atlas dsh-mcp-studio dsh-hunter dsh-webshell-mgr"
+
 COPY docker/dsh-entrypoint.sh /usr/local/bin/dsh-entrypoint
 COPY docker/dsh-proxy.mjs /usr/local/bin/dsh-proxy.mjs
 COPY docker/dsh-bridge.mjs /usr/local/bin/dsh-bridge.mjs
