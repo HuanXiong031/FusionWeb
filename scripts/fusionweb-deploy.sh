@@ -41,6 +41,17 @@ else
   echo "WARN: 未找到 fusionweb-enable-self-scan.sh，跳过" >&2
 fi
 
+if [ "${PRUNE_OLD_IMAGES:-1}" = "1" ] && [ -n "$VERSION" ]; then
+  echo "── 清理旧版本镜像（只清本项目的，保留 $VERSION 与运行中的）──"
+  PREFIX="$(grep -E '^FUSIONWEB_IMAGE_PREFIX=' .env 2>/dev/null | cut -d= -f2- | tr -d "\"'")"
+  PREFIX="${PREFIX:-crpi-bw40e2qu21b597zs.cn-hangzhou.personal.cr.aliyuncs.com/fusionweb/fusionweb}"
+  removed=0
+  for id in $(docker images --filter "reference=${PREFIX}-*" --format '{{.ID}} {{.Tag}}' | awk -v v="$VERSION" '$2 != v && $2 != "latest" {print $1}' | sort -u); do
+    docker image rm "$id" >/dev/null 2>&1 && removed=$((removed + 1)) || true
+  done
+  echo "  已清理旧镜像层：$removed 个（保留 $VERSION / latest）"
+fi
+
 echo "── 容器状态 ──"
 docker compose ps --format 'table {{.Name}}\t{{.Status}}' 2>/dev/null || docker ps --format 'table {{.Names}}\t{{.Status}}'
 
