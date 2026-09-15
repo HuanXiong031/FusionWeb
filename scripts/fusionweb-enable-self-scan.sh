@@ -133,6 +133,25 @@ remove_one() {
   done
 }
 
+# 应用前先清掉本网桥上的旧 self-scan 规则（容器重建后 IP 可能变化、Docker 也可能重建链），
+# 避免残留指向已失效 IP 的规则。
+purge_stale() {
+  local spec removed=0
+  while spec=$($IPT -t nat -S DOCKER 2>/dev/null | grep -m1 -- "-A DOCKER -i $BRIDGE "); do
+    $DRY $IPT -t nat -D DOCKER ${spec#-A DOCKER }
+    removed=$((removed + 1))
+  done
+  while spec=$($IPT -t nat -S POSTROUTING 2>/dev/null | grep -m1 -- "-A POSTROUTING .*-j SNAT --to-source $GATEWAY"); do
+    $DRY $IPT -t nat -D POSTROUTING ${spec#-A POSTROUTING }
+    removed=$((removed + 1))
+  done
+  [ "$removed" -gt 0 ] && log "  [清理] 移除 $removed 条旧的 self-scan 规则"
+}
+
+if [ "$MODE" = "apply" ]; then
+  purge_stale
+fi
+
 count=0
 while IFS=$'\t' read -r name hostport cport ip; do
   [ -z "${name:-}" ] && continue

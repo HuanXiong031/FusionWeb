@@ -1,0 +1,45 @@
+package service
+
+// FusionWeb 报告内嵌 Logo（128×128 PNG，base64，约 2657 字节）。
+//
+// 说明：报告 HTML 需要自包含（可能在离线环境打开或导出 PDF），
+// 因此这里直接内嵌 logo 数据，不依赖外部图片、静态资源或网络。
+// 源图取自前端品牌资源 frontend/src/assets/images/logo.png（缩放到 128px 并量化压缩）。
+const fusionWebReportLogoBase64 = "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"
+
+// fusionWebReportLogoDataURI 返回可直接放进 <img src> 的 data URI。
+func fusionWebReportLogoDataURI() string {
+	if fusionWebReportLogoBase64 == "" {
+		return ""
+	}
+	return "data:image/png;base64," + fusionWebReportLogoBase64
+}

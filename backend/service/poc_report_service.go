@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-
 	"github.com/xuri/excelize/v2"
 )
 
@@ -49,6 +48,7 @@ func (s *ReportService) buildPocHTMLContent(data *ReportData) string {
 		.container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
 		.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; }
 		.header h1 { font-size: 32px; margin-bottom: 10px; }
+		.header-logo { width: 34px; height: 34px; border-radius: 9px; background: #ffffff; vertical-align: middle; margin-right: 12px; display: inline-block; object-fit: contain; }
 		.header .meta { opacity: 0.9; font-size: 14px; }
 		.section { padding: 30px; border-bottom: 1px solid #eee; }
 		.section:last-child { border-bottom: none; }
@@ -103,12 +103,12 @@ func (s *ReportService) buildPocHTMLContent(data *ReportData) string {
 
 	html.WriteString(fmt.Sprintf(`
 		<div class="header">
-			<h1>🔍 FusionWeb POC扫描报告</h1>
+			<h1><img class="header-logo" src="%s" alt="FusionWeb" />FusionWeb POC扫描报告</h1>
 			<div class="meta">
 				<p>任务名称: %s | 任务ID: %s</p>
 			</div>
 		</div>
-`, escapeHTML(data.TaskInfo.TaskName), escapeHTML(data.TaskInfo.TaskID)))
+`, fusionWebReportLogoDataURI(), escapeHTML(data.TaskInfo.TaskName), escapeHTML(data.TaskInfo.TaskID)))
 
 	// 统计概览
 	html.WriteString(fmt.Sprintf(`
@@ -481,4 +481,3 @@ func (s *ReportService) GeneratePocMDReport(outputPath string) error {
 // saveReportMetadata 保存报告元数据
 
 // 辅助函数
-

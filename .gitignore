@@ -14,3 +14,6 @@ frontend/out/
 frontend/logs-next/
 .bat-script-test/
 .git.disabled/
+
+# TypeScript 增量构建缓存（不应入库）
+frontend/tsconfig.tsbuildinfo
