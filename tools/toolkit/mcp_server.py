@@ -40,49 +40,49 @@ def _run(tool: str, args: str, workspace: str, timeout: int) -> dict:
 
 
 @mcp.tool(description=_describe("nmap_scan"))
-def nmap_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
+def toolkit_nmap_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
     """执行 nmap（默认附加 -Pn；不要用 --script 之外的越界参数）。"""
     return _run("nmap_scan", f"-Pn {args}" if "-Pn" not in args else args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("masscan_scan"))
-def masscan_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
+def toolkit_masscan_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
     """执行 masscan（大范围端口发现）。"""
     return _run("masscan_scan", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("naabu_scan"))
-def naabu_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
+def toolkit_naabu_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
     """执行 naabu（端口扫描）。"""
     return _run("naabu_scan", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("httpx_probe"))
-def httpx_probe(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
+def toolkit_httpx_probe(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
     """执行 httpx（存活与指纹探测）。"""
     return _run("httpx_probe", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("nuclei_scan"))
-def nuclei_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 900) -> dict:
+def toolkit_nuclei_scan(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 900) -> dict:
     """执行 nuclei（模板扫描；模板已随镜像内置）。"""
     return _run("nuclei_scan", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("subfinder_enum"))
-def subfinder_enum(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
+def toolkit_subfinder_enum(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
     """执行 subfinder（被动子域枚举）。"""
     return _run("subfinder_enum", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("dnsx_resolve"))
-def dnsx_resolve(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
+def toolkit_dnsx_resolve(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 300) -> dict:
     """执行 dnsx（DNS 解析/校验）。"""
     return _run("dnsx_resolve", args, workspace, timeout)
 
 
 @mcp.tool(description=_describe("ffuf_fuzz"))
-def ffuf_fuzz(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
+def toolkit_ffuf_fuzz(args: str, workspace: str = WORKSPACE_HINT, timeout: int = 600) -> dict:
     """执行 ffuf（目录/参数模糊测试；字典需显式给出 -w）。"""
     return _run("ffuf_fuzz", args, workspace, timeout)
 

@@ -174,6 +174,8 @@ services:
       # fusionweb-tools 插件调用 FusionWeb 的地址与服务账号令牌
       FUSIONWEB_SVC_URL: http://fusionweb-api:8082
       FUSIONWEB_SVC_TOKEN: ${FUSIONWEB_SVC_TOKEN:-}
+      # 高危操作（approval/request）转钉钉确认：等待秒数
+      FUSIONWEB_APPROVAL_TIMEOUT: ${FUSIONWEB_APPROVAL_TIMEOUT:-300}
     volumes:
       - fusionweb_dsh_home:/root/.dsh
     networks: [fusionweb]

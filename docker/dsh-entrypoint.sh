@@ -20,25 +20,30 @@ done
 
 echo "DSH starting: dsh $*"
 
-# ── 安装内置插件 fusionweb-tools ──────────────────────────────────────
+# ── 安装 FusionWeb 内置插件（fusionweb-tools / fusionweb-approval） ────
 # 直接放入 profile 的 node_modules 并登记到 bundle 列表，无需 pnpm、无需联网。
 # web profile 供界面使用；headless profile 供桥（钉钉消息转 DSH 任务）使用。
-install_fusionweb_tools() {
-  for profile_name in web headless; do
-    profile_dir="${DSH_HOME:-/root/.dsh}/profiles/${profile_name}"
-    if [ ! -d "$profile_dir" ]; then
-      dsh --profile "$profile_name" --dump-config >/dev/null 2>&1 || true
-    fi
-    if [ ! -d "$profile_dir" ]; then
-      echo "WARN: 未找到 DSH profile（$profile_dir），跳过 fusionweb-tools 安装" >&2
-      continue
-    fi
-    mkdir -p "$profile_dir/node_modules/fusionweb-tools"
-    cp -r /opt/fusionweb-tools/. "$profile_dir/node_modules/fusionweb-tools/" 2>/dev/null || true
-    node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" fusionweb-tools /opt/fusionweb-tools || true
+FUSIONWEB_PLUGINS="${FUSIONWEB_PLUGINS:-fusionweb-tools fusionweb-approval}"
+
+install_fusionweb_plugins() {
+  for plugin in $FUSIONWEB_PLUGINS; do
+    [ -d "/opt/$plugin" ] || continue
+    for profile_name in web headless; do
+      profile_dir="${DSH_HOME:-/root/.dsh}/profiles/${profile_name}"
+      if [ ! -d "$profile_dir" ]; then
+        dsh --profile "$profile_name" --dump-config >/dev/null 2>&1 || true
+      fi
+      if [ ! -d "$profile_dir" ]; then
+        echo "WARN: 未找到 DSH profile（$profile_dir），跳过 $plugin 安装" >&2
+        continue
+      fi
+      mkdir -p "$profile_dir/node_modules/$plugin"
+      cp -r "/opt/$plugin/." "$profile_dir/node_modules/$plugin/" 2>/dev/null || true
+      node /usr/local/bin/dsh-ensure-bundle.mjs "$profile_dir/package.json" "$plugin" "/opt/$plugin" || true
+    done
   done
 }
-install_fusionweb_tools
+install_fusionweb_plugins
 
 # ── 注册 dsh-redteam-model（红队十模式 + 插件，已 vendor 进镜像） ────────
 # 幂等：模式目录用符号链接接入发现路径；插件以符号链接挂进各 profile 的 node_modules

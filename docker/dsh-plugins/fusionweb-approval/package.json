@@ -1,0 +1,18 @@
+{
+  "name": "fusionweb-approval",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DSH 插件：把需要用户批准的高危操作（approval/request）转发到钉钉，按回复放行或拒绝。",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

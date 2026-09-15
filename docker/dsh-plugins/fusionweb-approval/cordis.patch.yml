@@ -1,0 +1,5 @@
+# fusionweb-approval 的 profile 补丁层：向 Loader 树插入本插件的一个条目。
+# 它注册 approval/request 应答者，把高危操作的确认请求转发到钉钉。
+- insert:
+    - id: fusionweb-approval
+      name: 'fusionweb-approval'
