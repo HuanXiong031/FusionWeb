@@ -346,8 +346,8 @@ function Do-Uninstall {
   if (-not (Test-Path $ENV_FILE)) { throw "未找到 $ENV_FILE。" }
   Write-Host '警告：此操作会删除 FusionWeb 六个容器以及 PostgreSQL、Redis、MinIO、应用、密钥和 SSL 数据卷。'
   Write-Host '源码目录、VERSION 和 .env 不会被删除。'
-  $answer = Read-Host '请输入 DELETE 确认永久删除数据'
-  if ($answer -cne 'DELETE') { Info '已取消卸载。'; return }
+  $answer = Read-Host '确认永久删除以上数据？[y/N]'
+  if ($answer -notmatch '^[Yy]$') { Info '已取消卸载。'; return }
   Invoke-Compose @('down', '-v', '--remove-orphans')
   if ($LASTEXITCODE -ne 0) { throw '卸载失败。' }
   Info '容器和数据卷已删除；源码与 .env 已保留。'

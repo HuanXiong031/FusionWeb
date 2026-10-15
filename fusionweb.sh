@@ -424,10 +424,7 @@ cmd_uninstall() {
   [[ -f "${ENV_FILE}" ]] || fail "未找到 .env。"
   echo "警告：此操作会删除 FusionWeb 六个容器以及 PostgreSQL、Redis、MinIO、应用、密钥和 SSL 数据卷。"
   echo "源码目录、VERSION 和 .env 不会被删除。"
-  local answer
-  printf '请输入 DELETE 确认永久删除数据: '
-  read -r answer
-  [[ "${answer}" == "DELETE" ]] || { info "已取消卸载。"; return 0; }
+  confirm "确认永久删除以上数据" || { info "已取消卸载。"; return 0; }
   compose down -v --remove-orphans || fail "卸载失败。"
   info "容器和数据卷已删除；源码与 .env 已保留。"
 }
