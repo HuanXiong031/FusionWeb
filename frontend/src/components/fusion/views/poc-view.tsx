@@ -248,19 +248,21 @@ export function PocView({ demoMode, onCreateTemplate }: { demoMode: boolean; onC
       ]
     : asList<any>(query.data)
   const normalizedKeyword = keyword.trim().toLowerCase()
+  const isFiltered = Boolean(category || severity || normalizedKeyword)
   const rows = allRows.filter((item) => {
     if (category && item.category !== category) return false
     if (severity && normalizeSeverityStatKey(item.severity || item.info?.severity) !== severity) return false
     if (!normalizedKeyword) return true
     return JSON.stringify(item).toLowerCase().includes(normalizedKeyword)
   })
+  // 等级卡片始终统计全量模板：否则按等级筛选后，其它等级会全部显示为 0。
   const templateSeverityStats = React.useMemo(() => {
     const stats: Record<SeverityStatKey, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0, unknown: 0 }
-    rows.forEach((row) => {
+    allRows.forEach((row) => {
       stats[normalizeSeverityStatKey(row.severity || row.info?.severity)] += 1
     })
     return stats
-  }, [rows])
+  }, [allRows])
   const mutation = useMutation({
     mutationFn: async ({ action, row }: { action: string; row?: any }) => {
       if (demoMode) return null
@@ -430,7 +432,7 @@ export function PocView({ demoMode, onCreateTemplate }: { demoMode: boolean; onC
     <div className="grid min-w-0 gap-4">
       <PageTitle title="模板管理" description="管理 POC 模板文件，支持搜索、导入、导出、编辑和删除。" />
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-7">
-        <Metric label="模板总数" value={rows.length} icon={FileCode2} tone="neutral" badgeLabel="总数" />
+        <Metric label="模板总数" value={rows.length} icon={FileCode2} tone="neutral" badgeLabel={isFiltered ? '筛选结果' : '总数'} />
         {severityMetricCards.map((item) => (
           <Metric key={item.key} label={item.label} value={templateSeverityStats[item.key]} icon={item.icon} tone={item.tone} badgeLabel={item.label} />
         ))}
