@@ -430,7 +430,7 @@ const themes: Array<{
 
 function applyTheme(themeKey: string) {
   if (typeof document === 'undefined') return
-  const theme = themes.find((item) => item.key === themeKey) || themes[1]
+  const theme = themes.find((item) => item.key === themeKey) || themes[0]
   const root = document.documentElement
   root.dataset.theme = theme.key
   root.classList.remove('light', 'dark')
@@ -438,11 +438,11 @@ function applyTheme(themeKey: string) {
 }
 
 function useThemeState() {
-  const [theme, setThemeState] = React.useState<ThemeKey>('vercel-dark')
+  const [theme, setThemeState] = React.useState<ThemeKey>('vercel')
 
   React.useEffect(() => {
     const saved = localStorage.getItem('fusionweb-theme')
-    const resolved = themes.some((item) => item.key === saved) ? (saved as ThemeKey) : ((document.documentElement.dataset.theme as ThemeKey) || 'vercel-dark')
+    const resolved = themes.some((item) => item.key === saved) ? (saved as ThemeKey) : ((document.documentElement.dataset.theme as ThemeKey) || 'vercel')
     setThemeState(resolved)
     applyTheme(resolved)
   }, [])
@@ -470,7 +470,7 @@ function FusionRuntime() {
   const [runtimeError, setRuntimeError] = React.useState('')
   const [appTitle, setAppTitle] = React.useState('FusionWeb')
   const { theme, setTheme } = useThemeState()
-  const activeTheme = themes.find((item) => item.key === theme) || themes[1]
+  const activeTheme = themes.find((item) => item.key === theme) || themes[0]
 
   React.useEffect(() => {
     let cancelled = false
@@ -1102,7 +1102,7 @@ function AppShell({
 
 function ThemeSwitcher({ value, onChange }: { value: ThemeKey; onChange: (theme: ThemeKey) => void }) {
   const [open, setOpen] = React.useState(false)
-  const activeTheme = themes.find((item) => item.key === value) || themes[1]
+  const activeTheme = themes.find((item) => item.key === value) || themes[0]
   const Icon = activeTheme.icon
 
   React.useEffect(() => {

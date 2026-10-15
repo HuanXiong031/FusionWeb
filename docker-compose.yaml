@@ -115,7 +115,6 @@ services:
       FUSIONWEB_SECRETS_DIR: /run/fusionweb-secrets
       FUSIONWEB_HTTPS_PORT: ${FUSIONWEB_HTTPS_PORT:-8988}
     ports:
-      - "${FUSIONWEB_HTTP_PORT:-8756}:80"
       - "${FUSIONWEB_HTTPS_PORT:-8988}:80"
       - "${FUSIONWEB_DSH_PORT:-8990}:8990"
     volumes:

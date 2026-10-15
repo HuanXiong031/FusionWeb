@@ -279,13 +279,11 @@ check_containers() {
 }
 
 show_access() {
-  local http_port https_port user pass
-  http_port="$(get_env FUSIONWEB_HTTP_PORT)"; http_port="${http_port:-8756}"
-  https_port="$(get_env FUSIONWEB_HTTPS_PORT)"; https_port="${https_port:-8988}"
+  local web_port user pass
+  web_port="$(get_env FUSIONWEB_HTTPS_PORT)"; web_port="${web_port:-8988}"
   user="$(get_env FUSIONWEB_BASIC_USER)"; user="${user:-admin}"
   info "FusionWeb 已启动。"
-  echo "  HTTP : http://localhost:${http_port}"
-  echo "  HTTPS: https://localhost:${https_port}"
+  echo "  访问地址: http://localhost:${web_port}"
   pass="$(get_env FUSIONWEB_BASIC_PASS)"
   if [[ -z "${pass}" ]]; then
     warn "未找到 FUSIONWEB_BASIC_PASS，请先运行 install 生成随机密码。"
@@ -293,7 +291,7 @@ show_access() {
   fi
   echo "  Basic Auth 用户名: ${user}"
   echo "  Basic Auth 密码: ${pass}"
-  echo "  首次访问自签证书时，浏览器会要求确认。"
+  echo "  首次登录后必须修改初始密码。"
 }
 
 cmd_install() {

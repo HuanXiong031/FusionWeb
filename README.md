@@ -202,7 +202,7 @@ docker compose -f docker-compose.yaml -f docker-compose.dev.yaml --env-file .env
 
 ### 访问与登录
 
-- Web 控制台：`http://<服务器IP>:8756`，或 HTTPS `https://<服务器IP>:8988`
+- Web 控制台：`http://<服务器IP>:8988`
 - 一键脚本安装完成后会输出访问地址与登录信息
 - 首次安装会自动生成管理员密码并写入 `fusionweb_secrets` 卷；生产环境请在首次登录后立即修改密码
 

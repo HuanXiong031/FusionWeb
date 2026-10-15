@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" className="dark" data-theme="vercel-dark" suppressHydrationWarning>
+    <html lang="zh-CN" className="light" data-theme="vercel" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -24,8 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   var key = 'fusionweb-theme';
                   var themes = ['vercel','vercel-dark','violet-bloom','bubblegum','quantum-rose','clean-slate','cosmic-night','cyberpunk','eva-unit-01'];
                   var darkThemes = ['vercel-dark','quantum-rose','cosmic-night','cyberpunk','eva-unit-01'];
-                  var saved = localStorage.getItem(key) || 'vercel-dark';
-                  var resolved = themes.indexOf(saved) >= 0 ? saved : 'vercel-dark';
+                  var saved = localStorage.getItem(key) || 'vercel';
+                  var resolved = themes.indexOf(saved) >= 0 ? saved : 'vercel';
                   var root = document.documentElement;
                   root.dataset.theme = resolved;
                   root.classList.remove('light', 'dark');

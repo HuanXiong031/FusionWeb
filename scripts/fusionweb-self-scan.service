@@ -1,5 +1,5 @@
 [Unit]
-Description=FusionWeb self-scan（为容器开放宿主映射端口，使扫描容器能扫到 8988/8756/8990 等）
+Description=FusionWeb self-scan（为容器开放宿主映射端口，使扫描容器能扫到 8988/8990 等）
 Documentation=https://github.com/HuanXiong031/FusionWeb
 After=docker.service network-online.target
 Requires=docker.service

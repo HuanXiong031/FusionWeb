@@ -205,12 +205,10 @@ function Test-Containers {
 }
 
 function Show-Access {
-  $httpPort = Get-Env 'FUSIONWEB_HTTP_PORT'; if (-not $httpPort) { $httpPort = '8756' }
-  $httpsPort = Get-Env 'FUSIONWEB_HTTPS_PORT'; if (-not $httpsPort) { $httpsPort = '8988' }
+  $webPort = Get-Env 'FUSIONWEB_HTTPS_PORT'; if (-not $webPort) { $webPort = '8988' }
   $user = Get-Env 'FUSIONWEB_BASIC_USER'; if (-not $user) { $user = 'admin' }
   Info 'FusionWeb 已启动。'
-  Write-Host "  HTTP : http://localhost:$httpPort"
-  Write-Host "  HTTPS: https://localhost:$httpsPort"
+  Write-Host "  访问地址: http://localhost:$webPort"
   $pass = Get-Env 'FUSIONWEB_BASIC_PASS'
   if (-not $pass) {
     Warn '未找到 FUSIONWEB_BASIC_PASS，请先执行「一键安装」生成随机密码。'
@@ -218,7 +216,7 @@ function Show-Access {
   }
   Write-Host "  Basic Auth 用户名: $user"
   Write-Host "  Basic Auth 密码: $pass"
-  Write-Host '  首次访问自签证书时，浏览器会要求确认。'
+  Write-Host '  首次登录后必须修改初始密码。'
 }
 
 function Require-RuntimeEnv {
