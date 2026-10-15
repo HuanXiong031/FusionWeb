@@ -81,10 +81,16 @@ func InitDatabase() error {
 		DB = nil
 		return fmt.Errorf("创建数据表失败: %w", err)
 	}
-	if err := initDefaultAdmin(); err != nil {
-		logger.Warn("初始化默认管理员账户失败: %v", err)
-	}
+	// 管理员凭据同步只由 API 进程负责（见 EnsureAdminCredentials）。
+	// Worker 等组件也会调用 InitDatabase，若在此同步会把管理员密码重置为兜底默认值。
 	return nil
+}
+
+// EnsureAdminCredentials 确保系统管理员账号与 Basic Auth 配置一致。
+// 仅应在 API 服务启动时调用：该操作会写入/重置 users 表中的管理员密码，
+// Worker 等没有 Basic Auth 配置的组件调用会覆盖真实密码。
+func EnsureAdminCredentials() error {
+	return initDefaultAdmin()
 }
 
 func openPostgresDatabase(config DatabaseConfig) (*sql.DB, error) {

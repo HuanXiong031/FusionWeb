@@ -29,6 +29,10 @@ func main() {
 		logger.Error("运行依赖初始化失败: %v", err)
 		panic(err)
 	}
+	// 管理员凭据同步仅由 API 进程执行，避免 Worker 用兜底默认密码覆盖真实管理员密码。
+	if err := database.EnsureAdminCredentials(); err != nil {
+		logger.Warn("初始化默认管理员账户失败: %v", err)
+	}
 	defer database.Close()
 	logger.AttachDatabase(database.DB)
 	if logger.GologWriter != nil {
