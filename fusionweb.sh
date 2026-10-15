@@ -118,21 +118,17 @@ random_password() {
 ensure_secret() {
   local key="$1" weak="${2:-}" bytes="${3:-32}" current generated
   current="$(get_env "${key}")"
+  # 初始密码固定为 admin@123：首次登录会强制跳转修改密码页。
   if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
     if [[ -z "${current}" ]]; then
-      generated="$(random_password 24)"
-      set_env "${key}" "${generated}"
-      info "已生成 ${key}。"
+      set_env "${key}" 'admin@123'
+      info "已写入默认初始密码 ${key}（首次登录需强制修改）。"
     fi
     return 0
   fi
 
   if [[ -z "${current}" || ( -n "${weak}" && "${current}" == "${weak}" ) ]]; then
-    if [[ "${key}" == "FUSIONWEB_BASIC_PASS" ]]; then
-      generated='$$X5_fK8T+&%=U@X*5j|f'
-    else
-      generated="$(random_hex "${bytes}")"
-    fi
+    generated="$(random_hex "${bytes}")"
     set_env "${key}" "${generated}"
     info "已生成 ${key}。"
   fi

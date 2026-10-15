@@ -28,7 +28,7 @@ import (
 // 业务代码仍直接使用该变量，新增代码优先通过 GetDB 获取，便于后续替换为依赖注入。
 var DB *sql.DB
 
-const fallbackAdminPassword = "$X5_fK8T+&%=U@X*5j|f"
+const fallbackAdminPassword = "admin@123"
 
 // GetDB 返回当前数据库连接池。
 func GetDB() *sql.DB {
@@ -143,8 +143,13 @@ func defaultAdminCredentials() (string, string) {
 	if username == "" {
 		username = "admin"
 	}
-	password := cfg.BasicPass
-	if strings.TrimSpace(password) == "" {
+	// 优先复用共享 secret 文件中的密码：控制台改密会写入该文件，
+	// 避免服务重启时把管理员密码回滚成 .env 里的初始密码。
+	password := strings.TrimSpace(readSecretFileValue(basicPassSecretFile))
+	if password == "" {
+		password = strings.TrimSpace(cfg.BasicPass)
+	}
+	if password == "" {
 		password = fallbackAdminPassword
 	}
 	return username, password

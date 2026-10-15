@@ -32,7 +32,7 @@ import (
 
 // validatePasswordStrength 验证密码是否满足平台安全强度要求。
 // 强度策略（强密码要求）：
-//  1. 长度 >= 20位（对抗暴力破解）
+//  1. 长度 >= 8位
 //  2. 必须包含大写字母
 //  3. 必须包含小写字母
 //  4. 必须包含数字
@@ -45,8 +45,8 @@ import (
 //   - bool: true表示密码符合强度要求
 //   - string: 不符合时的具体原因描述（如"密码必须包含：大写字母、特殊符号"）
 func validatePasswordStrength(password string) (bool, string) {
-	if len(password) < 20 {
-		return false, "密码长度必须大于等于20位"
+	if len(password) < 8 {
+		return false, "密码长度必须大于等于8位"
 	}
 
 	hasUpper := false

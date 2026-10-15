@@ -71,10 +71,11 @@ function New-RandomPassword([int]$len) {
 
 function Ensure-Secret([string]$key, [string]$weak, [int]$bytes) {
   $current = Get-Env $key
+  # 初始密码固定为 admin@123：首次登录会强制跳转修改密码页。
   if ($key -eq 'FUSIONWEB_BASIC_PASS') {
     if ([string]::IsNullOrEmpty($current)) {
-      Set-Env $key (New-RandomPassword 24)
-      Info "已生成 $key。"
+      Set-Env $key 'admin@123'
+      Info "已写入默认初始密码 $key（首次登录需强制修改）。"
     }
     return
   }

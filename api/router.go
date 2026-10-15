@@ -52,6 +52,8 @@ func NewRouter(app *App) *gin.Engine {
 	// 需要认证的路由
 	v1 := r.Group("/api/v1")
 	v1.Use(JWTAuthMiddleware)
+	// 首次登录（must_change_password=1）只允许访问改密相关接口
+	v1.Use(PasswordChangeRequiredMiddleware)
 	{
 		// 用户管理
 		users := v1.Group("/users")

@@ -176,7 +176,7 @@ func mustChangePasswordFlag(password string) int {
 }
 
 func passwordMeetsPlatformPolicy(password string) bool {
-	if len(password) < 20 {
+	if len(password) < 8 {
 		return false
 	}
 	var hasUpper, hasLower, hasDigit, hasSpecial bool

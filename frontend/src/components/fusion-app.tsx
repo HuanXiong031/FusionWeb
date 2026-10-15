@@ -62,6 +62,7 @@ import { getWebSocketURL } from '@/lib/request'
 import { clearPublicKey, encryptPassword, encryptUsername, initPublicKey } from '@/lib/crypto'
 import { asList, cn, formatTime, getStatusLabel, unwrap } from '@/lib/utils'
 import { Badge, Button, Card, CardContent, Field, Input } from '@/components/ui'
+import { ForcedPasswordChangeView } from '@/components/fusion/forced-password-change'
 import { DashboardView } from '@/components/fusion/views/dashboard-view'
 import { AdvancedScanView, type ScanTaskType } from '@/components/fusion/views/advanced-scan-view'
 import { TasksView } from '@/components/fusion/views/tasks-view'
@@ -559,6 +560,25 @@ function FusionRuntime() {
     return (
       <>
         <LoginView appTitle={appTitle} onSuccess={(nextUser) => { setUser(nextUser); setStatus('authenticated') }} />
+        {toaster}
+      </>
+    )
+  }
+
+  // 首次登录（初始密码未修改）强制停留在改密页面，后端也会拦截其他接口。
+  if (status === 'authenticated' && user?.mustChangePassword) {
+    const resetToLogin = () => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('role')
+      setUser(null)
+      setStatus('login')
+      // Basic Auth 与登录密码同步，刷新让浏览器用新密码重新认证。
+      if (typeof window !== 'undefined') window.location.reload()
+    }
+    return (
+      <>
+        <ForcedPasswordChangeView appTitle={appTitle} user={user} onDone={resetToLogin} onLogout={handleLogout} />
         {toaster}
       </>
     )

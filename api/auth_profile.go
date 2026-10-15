@@ -149,7 +149,7 @@ type ChangePasswordRequest struct {
 // HandleChangePassword 处理用户修改密码请求。
 // POST /api/auth/change-password
 // 修改流程：
-//  1. 校验请求参数（新密码长度预检 >= 20）
+//  1. 校验请求参数（新密码长度预检 >= 8）
 //  2. 查询当前用户的bcrypt密码哈希和must_change_password标志
 //  3. SM2解密旧密码，bcrypt验证旧密码是否正确
 //  4. SM2解密新密码，验证新密码复杂度（大小写+数字+符号）
@@ -171,10 +171,10 @@ func HandleChangePassword(c *gin.Context) {
 	}
 
 	// 验证新密码强度（先检查长度，解密后再完整验证）
-	if len(req.NewPassword) < 20 {
+	if len(req.NewPassword) < 8 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    1,
-			"message": "密码长度必须大于等于20位",
+			"message": "密码长度必须大于等于8位",
 		})
 		return
 	}
