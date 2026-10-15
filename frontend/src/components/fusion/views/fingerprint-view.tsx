@@ -231,6 +231,14 @@ import {
 
 type FingerprintTab = 'passive' | 'active' | 'blacklist'
 
+// 指纹类型统一显示为中文，后端仍使用 passive/active 原值。
+function fingerprintTypeLabel(type?: string, fallback?: string) {
+  const value = String(type || fallback || '').toLowerCase()
+  if (value === 'active') return '主动指纹'
+  if (value === 'passive') return '被动指纹'
+  return String(type || fallback || '-')
+}
+
 function getPageTotal(value: any, fallback: number) {
   const data = unwrap<any>(value) || {}
   const total = Number(data.total ?? value?.total)
@@ -378,7 +386,7 @@ export function FingerprintView({ demoMode, initialTab = 'passive' }: { demoMode
   }
   const columns: ColumnDef<any>[] = [
     { header: '指纹名称', accessorKey: 'name', cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-    { header: '类型', accessorKey: 'type', cell: ({ row }) => <Badge>{row.original.type || activeType}</Badge> },
+    { header: '类型', accessorKey: 'type', cell: ({ row }) => <Badge>{fingerprintTypeLabel(row.original.type, activeType)}</Badge> },
     { header: '分类', accessorKey: 'category', cell: ({ row }) => <Badge tone="info">{row.original.category || '-'}</Badge> },
     { header: '规则数', cell: ({ row }) => <span className="text-muted">{Array.isArray(row.original.rules) ? row.original.rules.length : '-'}</span> },
     { header: '状态', accessorKey: 'enabled', cell: ({ row }) => <Badge tone={(row.original.isEnabled ?? row.original.enabled) ? 'success' : 'warning'}>{(row.original.isEnabled ?? row.original.enabled) ? '启用' : '禁用'}</Badge> },
@@ -455,8 +463,8 @@ export function FingerprintView({ demoMode, initialTab = 'passive' }: { demoMode
             <datalist id="fingerprint-categories">{categories.map((item) => <option key={item} value={item} />)}</datalist>
             <Field label="指纹类型">
               <Select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value })}>
-                <option value="passive">passive</option>
-                <option value="active">active</option>
+                <option value="passive">被动指纹</option>
+                <option value="active">主动指纹</option>
               </Select>
             </Field>
             <Field label="说明"><Input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></Field>
