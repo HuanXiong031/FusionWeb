@@ -19,7 +19,7 @@ FusionWeb 是一个面向资产发现、端口扫描、Web 指纹识别、POC �
 - 默认本机 Worker 自动消费扫描流程
 - 远程 Worker 一键部署与接入
 - 生产环境镜像化部署
-- Linux / Windows 管理脚本：安装、升级、状态、日志、卸载
+- Linux / Windows 交互式管理脚本：安装、升级、卸载、状态、日志、启停、重启、检查更新
 
 ## 软件总体流程图
 
@@ -125,7 +125,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    F1[克隆 GitHub 仓库] --> F2[执行 fusionweb.sh install 或 fusionweb.bat install]
+    F1[克隆 GitHub 仓库] --> F2[执行 fusionweb.sh / fusionweb.bat 并选择「一键安装」]
     F2 --> F3[检查 Docker / Compose 环境]
     F3 --> F4[生成 .env 与随机密钥]
     F4 --> F5[拉取 API、Web、Worker、PostgreSQL、Redis、MinIO 镜像]
@@ -139,27 +139,72 @@ flowchart TD
 - **后端**：Go、Gin
 - **基础设施**：Docker、Docker Compose、PostgreSQL、Redis、MinIO
 
-## 快速开始
+## 安装部署
 
-### 生产部署
+### 方式一：一键安装脚本（推荐）
+
+Linux / macOS：
 
 ```bash
+git clone https://github.com/HuanXiong031/FusionWeb.git
+cd FusionWeb
 ./fusionweb.sh
 ```
 
-Windows 环境使用：
+Windows（PowerShell）：
 
 ```bat
+git clone https://github.com/HuanXiong031/FusionWeb.git
+cd FusionWeb
 fusionweb.bat
 ```
 
-运行后进入交互式管理菜单，按数字选项执行安装、升级、卸载、启停服务、查看状态与日志等操作。
+脚本启动后进入交互式管理菜单，输入数字选择对应操作：
 
-### 开发模式
+```text
+  1. 一键安装
+  2. 一键升级
+  3. 一键卸载
+  4. 查看状态
+  5. 查看日志
+  6. 启动服务
+  7. 停止服务
+  8. 重启服务
+  9. 检查更新
+  0. 退出
+```
+
+选择 `1` 执行一键安装后会自动完成：检查 Docker / Docker Compose 环境 → 生成 `.env` 与随机密钥 → 拉取 API、Web、Worker、PostgreSQL、Redis、MinIO 六个镜像 → `docker compose up -d --wait` → 校验容器状态并输出访问地址与登录信息。
+
+### 方式二：Docker Compose 手动部署
 
 ```bash
+git clone https://github.com/HuanXiong031/FusionWeb.git
+cd FusionWeb
+cp .env.example .env
+# 按需修改 .env：镜像前缀、端口、数据库/Redis/MinIO 密码、Worker Key、JWT 密钥等
+docker compose --env-file .env pull
+docker compose --env-file .env up -d
+```
+
+镜像托管在阿里云 ACR。若仓库未开放匿名拉取，先执行 `docker login <registry-host>` 登录，`<registry-host>` 即 `.env` 中 `FUSIONWEB_IMAGE_PREFIX` 的域名部分。
+
+### 方式三：源码开发模式（本机构建）
+
+使用源码构建覆盖层，在本机重新编译 API、Web、Worker 镜像：
+
+```bash
+git clone https://github.com/HuanXiong031/FusionWeb.git
+cd FusionWeb
+cp .env.example .env
 docker compose -f docker-compose.yaml -f docker-compose.dev.yaml --env-file .env up -d --build
 ```
+
+### 访问与登录
+
+- Web 控制台：`http://<服务器IP>:8756`，或 HTTPS `https://<服务器IP>:8988`
+- 一键脚本安装完成后会输出访问地址与登录信息
+- 首次安装会自动生成管理员密码并写入 `fusionweb_secrets` 卷；生产环境请在首次登录后立即修改密码
 
 ## 目录结构
 
